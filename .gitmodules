@@ -1,0 +1,3 @@
+[submodule "koios"]
+	path = koios
+	url = git@github.com:JPewterschmidt/koios.git
