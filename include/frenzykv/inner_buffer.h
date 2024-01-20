@@ -84,12 +84,12 @@ public:
 #endif
     }
 
-    ::std::span<const ::std::byte> valid_span() noexcept
+    ::std::span<const ::std::byte> valid_span() const noexcept
     {
         return { reinterpret_cast<const ::std::byte*>(m_storage), size() };
     }
 
-    ::std::span<const ::std::byte> whole_span() noexcept
+    ::std::span<const ::std::byte> whole_span() const noexcept
     {
         return { reinterpret_cast<const ::std::byte*>(m_storage), capacity() };
     }
