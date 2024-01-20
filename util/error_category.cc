@@ -25,6 +25,7 @@ namespace
             case status_t::FRZ_KVDB_NOT_IMPLEMENTED:  return "Not Implemented";
             case status_t::FRZ_KVDB_INVALID_ARGUMENT: return "Invalid Argument";
             case status_t::FRZ_KVDB_IO_ERROR:         return "IO Error";
+            case status_t::FRZ_KVDB_OUT_OF_SPACE:     return "Out of Space";
             default: 
             case status_t::FRZ_KVDB_UNKNOW:  return "Unknown Status";
         }
@@ -35,6 +36,16 @@ const ::std::error_category& kvdb_category() noexcept
 {
     static const kvdb_category_t result;
     return result;
+}
+
+::std::error_code make_frzkv_ok() noexcept
+{
+    return { FRZ_KVDB_OK, kvdb_category() };
+}
+
+::std::error_code make_frzkv_out_of_space() noexcept
+{
+    return { FRZ_KVDB_OUT_OF_SPACE, kvdb_category() };
 }
 
 } // namespace frenzykv

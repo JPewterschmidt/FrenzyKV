@@ -17,7 +17,11 @@ enum status_t : int
     FRZ_KVDB_INVALID_ARGUMENT  = 4, 
     FRZ_KVDB_IO_ERROR          = 5, 
     FRZ_KVDB_UNKNOW            = 6,
+    FRZ_KVDB_OUT_OF_SPACE      = 7,
 };
+
+::std::error_code make_frzkv_ok() noexcept;
+::std::error_code make_frzkv_out_of_space() noexcept;
 
 } // namespace frenzykv
 

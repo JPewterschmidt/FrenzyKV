@@ -24,6 +24,11 @@ add_includedirs(
     { public = true }
 )
 
+add_includedirs(
+    ".",
+    { public = false }
+)
+
 set_languages("c++23", "c17")
 set_policy("build.warning", true)
 set_policy("build.optimization.lto", false)
