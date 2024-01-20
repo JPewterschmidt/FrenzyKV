@@ -1,4 +1,4 @@
-#include "frenzykv/in_mem_writable.h"
+#include "frenzykv/in_mem_rw.h"
 #include "koios/task.h"
 #include <stdexcept>
 #include <cassert>
@@ -8,7 +8,7 @@ namespace frenzykv
 {
 
 koios::task<::std::error_code> 
-in_mem_writable::
+in_mem_rw::
 append(::std::span<const ::std::byte> buffer) noexcept 
 try
 {
@@ -43,7 +43,7 @@ catch (...)
 }
 
 koios::task<::std::error_code>
-in_mem_writable::
+in_mem_rw::
 read(::std::span<::std::byte> dest, size_t offset) const noexcept
 try
 {

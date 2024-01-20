@@ -1,5 +1,5 @@
-#ifndef FRENZYKV_IN_MEM_WRITABLE_H
-#define FRENZYKV_IN_MEM_WRITABLE_H
+#ifndef FRENZYKV_IN_MEM_RW_H
+#define FRENZYKV_IN_MEM_RW_H
 
 #include "frenzykv/writable.h"
 #include "frenzykv/readable.h"
@@ -12,21 +12,21 @@
 namespace frenzykv
 {
 
-class in_mem_writable : public writable, public readable
+class in_mem_rw : public writable, public readable
 {
 public:
-    in_mem_writable(size_t block_size) noexcept
+    in_mem_rw(size_t block_size) noexcept
         : m_block_size{ block_size }
     {
     }
 
-    in_mem_writable(in_mem_writable&& other) noexcept
+    in_mem_rw(in_mem_rw&& other) noexcept
         : m_blocks{ ::std::move(other.m_blocks) }, 
           m_block_size{ other.m_block_size }
     {
     }
 
-    in_mem_writable& operator = (in_mem_writable&& other) noexcept
+    in_mem_rw& operator = (in_mem_rw&& other) noexcept
     {
         m_blocks = ::std::move(other.m_blocks);
         m_block_size = other.m_block_size;
