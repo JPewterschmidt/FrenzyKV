@@ -6,7 +6,7 @@
 namespace frenzykv
 {
 
-class stdout_writable : public writable
+class stdout_writable : public seq_writable
 {
 public:
     virtual koios::task<::std::error_code> append(::std::span<const ::std::byte> buffer) noexcept override;

@@ -15,7 +15,7 @@
 namespace frenzykv
 {
 
-class posix_writable_file : public writable
+class posix_writable_file : public seq_writable
 {
 public:
     posix_writable_file(::std::filesystem::path path, options opt = get_global_options());

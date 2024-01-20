@@ -13,7 +13,8 @@ namespace frenzykv
 class readable
 {
 public:
-    virtual koios::task<::std::error_code> read(::std::span<::std::byte>, size_t offset) const = 0;
+    virtual koios::task<::std::error_code> 
+    read(::std::span<::std::byte>, size_t offset) const = 0;
 };
 
 }

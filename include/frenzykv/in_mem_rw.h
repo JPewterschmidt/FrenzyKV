@@ -12,7 +12,7 @@
 namespace frenzykv
 {
 
-class in_mem_rw : public writable, public readable
+class in_mem_rw : public seq_writable, public readable
 {
 public:
     in_mem_rw(size_t block_size) noexcept

@@ -9,11 +9,11 @@
 namespace frenzykv
 {
 
-class writable : public toolpex::move_only
+class seq_writable : public toolpex::move_only
 {
 public:
-    writable() = default;
-    virtual ~writable() noexcept {}
+    seq_writable() = default;
+    virtual ~seq_writable() noexcept {}
 
     koios::task<::std::error_code> 
     append(::std::string_view buffer) noexcept 
