@@ -12,12 +12,16 @@
 namespace frenzykv
 {
 
-class in_mem_rw : public seq_writable, public readable
+class in_mem_rw final 
+    : public seq_writable, 
+      public readable, 
+      public seq_readable_context
 {
 public:
-    in_mem_rw(size_t block_size) noexcept
+    in_mem_rw(size_t block_size) 
         : m_block_size{ block_size }
     {
+        m_blocks.emplace_back(m_block_size);
     }
 
     in_mem_rw(in_mem_rw&& other) noexcept
@@ -26,6 +30,8 @@ public:
     {
     }
 
+    virtual ~in_mem_rw() noexcept {}
+
     in_mem_rw& operator = (in_mem_rw&& other) noexcept
     {
         m_blocks = ::std::move(other.m_blocks);
@@ -33,13 +39,19 @@ public:
         return *this;
     }
 
-    virtual koios::task<::std::error_code> append(::std::span<const ::std::byte> buffer) noexcept override;
-    virtual koios::task<::std::error_code> sync() noexcept override { co_return make_frzkv_ok(); }
-    virtual koios::task<::std::error_code> flush() noexcept override { co_return make_frzkv_ok(); };
-    virtual void close() noexcept override {}
+    koios::task<::std::error_code> append(::std::span<const ::std::byte> buffer) noexcept override;
+    koios::task<::std::error_code> sync() noexcept override { co_return make_frzkv_ok(); }
+    koios::task<::std::error_code> flush() noexcept override { co_return make_frzkv_ok(); };
+    void close() noexcept override {}
 
     koios::task<::std::error_code> 
     read(::std::span<::std::byte> dest, size_t offset) const noexcept override;
+
+    koios::task<::std::error_code>
+    read(::std::span<::std::byte> dest) noexcept override;
+
+private:
+    ::std::vector<::std::span<const ::std::byte>> target_spans(size_t offset, size_t dest_size) const noexcept;
 
 private:
     ::std::vector<detials::buffer<>> m_blocks;

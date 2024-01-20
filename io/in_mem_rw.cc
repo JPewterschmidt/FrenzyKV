@@ -27,7 +27,7 @@ try
         last_buf.append(buffer.subspan(
             0, ::std::min(last_buf.left(), buffer.size())
         ));
-        buffer = buffer.subspan(last_buf.left());
+        buffer = buffer.subspan(last_buf.size());
     }
     while (!buffer.empty());
 
@@ -42,42 +42,45 @@ catch (...)
     co_return make_frzkv_exception_catched();
 }
 
+::std::vector<::std::span<const ::std::byte>> 
+in_mem_rw::
+target_spans(size_t offset, size_t dest_size) const noexcept
+{
+    size_t idx = offset / m_block_size;
+    const size_t first_cursor = offset % m_block_size;
+    size_t selected_bytes{};
+    
+    ::std::vector<::std::span<const ::std::byte>> result{};
+    auto first_span = m_blocks[idx++]
+        .valid_span()
+        .subspan(first_cursor);
+    selected_bytes += first_span.size_bytes();
+    result.emplace_back(first_span);
+    while (selected_bytes < dest_size && idx < m_blocks.size())
+    {
+        auto sp = m_blocks[idx++].valid_span();
+        selected_bytes += sp.size_bytes();
+        result.push_back(sp);
+    }
+
+    return result;
+};
+
+static bool append_to_dest(auto& dest, const auto& src) noexcept
+{
+    if (dest.empty()) return false;
+    const size_t write_size = ::std::min(dest.size(), src.size());
+    ::std::memcpy(dest.data(), src.data(), write_size);
+    assert(write_size <= dest.size_bytes());
+    dest = dest.subspan(write_size);
+    return true;
+}
+
 koios::task<::std::error_code>
 in_mem_rw::
 read(::std::span<::std::byte> dest, size_t offset) const noexcept
 try
 {
-    const auto append_to_dest = [](auto& dest, const auto& src) noexcept
-    {
-        if (dest.empty()) return false;
-        const size_t write_size = ::std::min(dest.size(), src.size());
-        ::std::memcpy(dest.data(), src.data(), write_size);
-        assert(write_size <= dest.size_bytes());
-        dest = dest.subspan(0, write_size);
-        return true;
-    };
-
-    const auto target_spans = [this](size_t offset, size_t dest_size) noexcept
-    {
-        size_t idx = offset / m_block_size;
-        const size_t first_cursor = offset % m_block_size;
-        size_t selected_bytes{};
-        
-        ::std::vector<::std::span<const ::std::byte>> result{};
-        auto first_span = m_blocks[idx++]
-            .valid_span()
-            .subspan(first_cursor);
-        selected_bytes += first_span.size_bytes();
-        result.emplace_back(first_span);
-        while (selected_bytes < dest_size && idx < m_blocks.size())
-        {
-            auto sp = m_blocks[idx++].valid_span();
-            selected_bytes += sp.size_bytes();
-        }
-
-        return result;
-    };
-
     auto lk = co_await m_mutex.acquire();
 
     for (auto s : target_spans(offset, dest.size_bytes()))
@@ -90,6 +93,23 @@ try
 catch (...)
 {
     co_return make_frzkv_exception_catched();
+}
+
+koios::task<::std::error_code>
+in_mem_rw::
+read(::std::span<::std::byte> dest) noexcept
+{
+    seq_readable_context ctx = *this;
+
+    if (auto ec = co_await read(dest, ctx.cursor()); !ec)
+    {
+        // Success
+        ctx.has_read(dest.size_bytes());
+    }
+    else co_return ec;
+
+    this->seq_readable_context::reset(ctx);
+    co_return make_frzkv_ok();
 }
 
 } // namespace frenzykv

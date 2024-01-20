@@ -24,6 +24,9 @@ public:
         m_storage = ::std::allocator_traits<Alloc>::allocate(
             m_alloc, m_capa
         );
+#ifdef FRENZYKV_DEBUG
+        turncate();
+#endif
     }
 
     ~buffer() noexcept
@@ -54,6 +57,7 @@ public:
 
     size_t capacity() const noexcept { return m_capa; }
     size_t left() const noexcept { return m_left; }
+    size_t size() const noexcept { return capacity() - left(); }
     bool full() const noexcept { return m_capa == m_left; }
     bool valid() const noexcept 
     { 
@@ -62,7 +66,7 @@ public:
 
     bool fit(size_t want_to_appen_nbytes) const noexcept
     {
-        return m_left <= want_to_appen_nbytes;
+        return m_left >= want_to_appen_nbytes;
     }
 
     bool append(::std::span<const ::std::byte> buffer) noexcept
@@ -70,8 +74,10 @@ public:
         bool result = fit(buffer.size_bytes());
         if (result)
         {
+            const size_t buffer_sz = buffer.size_bytes();
             char* beg = cursor();
-            ::std::memcpy(beg, buffer.data(), buffer.size_bytes());
+            ::std::memcpy(beg, buffer.data(), buffer_sz);
+            m_left -= buffer_sz;
         }
         return result;
     }
@@ -95,11 +101,6 @@ public:
     }
 
 private:
-    size_t size() const noexcept
-    {
-        return capacity() - left();
-    }
-
     char* cursor() const noexcept
     {
         return m_storage + size();
