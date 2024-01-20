@@ -1,6 +1,4 @@
-#include <iostream>
-#include "nlohmann/json.hpp"
-
+#include "gtest/gtest.h"
 #include "frenzykv/readable.h"
 #include "frenzykv/writable.h"
 #include "frenzykv/in_mem_rw.h"
@@ -11,7 +9,7 @@ using namespace ::std::string_view_literals;
 
 namespace
 {
-    in_mem_rw r{6};
+    in_mem_rw r{3};
     task<void> env_setup()
     {
         seq_writable& w = r;
@@ -40,12 +38,8 @@ namespace
     }
 }
 
-int main()
+TEST(readable_test_env, basic)
 {
-    runtime_init(10);
-
     env_setup().result();
-    ::std::cout << testbody().result() << ::std::endl;
-
-    runtime_exit();
+    ASSERT_TRUE(testbody().result());
 }

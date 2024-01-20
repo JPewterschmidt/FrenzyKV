@@ -9,7 +9,8 @@ add_requires(
     "gtest", 
     "concurrentqueue master",
     "benchmark", 
-    "botan"
+    "botan", 
+    "nlohmann_json"
 )
 
 includes(
@@ -23,7 +24,12 @@ add_includedirs(
     { public = true }
 )
 
-set_languages("c++2b", "c17")
+add_includedirs(
+    ".",
+    { public = false }
+)
+
+set_languages("c++23", "c17")
 set_policy("build.warning", true)
 set_policy("build.optimization.lto", false)
 
@@ -33,15 +39,22 @@ target("FrenzyKV")
         "fmt", 
         "gflags", 
         "concurrentqueue", 
-        "botan"
+        "botan", 
+        "nlohmann_json"
     )
+    if not is_mode("release") then
+        add_cxxflags("-DFRENZYKV_DEBUG", {force = true})
+    end
     set_warnings("all", "error")
     add_cxflags("-Wconversion", { force = true })
     add_syslinks(
         "spdlog", 
         "uring"
     )
-    add_files("src/*.cc")
+    add_files(
+        "util/*.cc", 
+        "io/*.cc"
+    )
 
 --target("FrenzyKV-test")
 --    set_kind("binary")
@@ -52,12 +65,13 @@ target("FrenzyKV")
 --    add_files( "test/*.cc")
 --    add_packages(
 --        "gtest", "fmt", "spdlog",
---        "botan"
---    )
+--        "botan",
+--        "nlohmann_json"
 --    after_build(function (target)
---        os.exec(target:targetfile())
---        print("xmake: unittest complete.")
---    end)
+--    )
+--    if not is_mode("release") then
+--        add_cxxflags("-DFRENZYKV_DEBUG", {force = true})
+--    end
 --    on_run(function (target)
 --        --nothing
 --    end)
@@ -71,9 +85,31 @@ target("FrenzyKV")
 --    add_syslinks("spdlog")
 --    set_policy("build.warning", true)
 --    add_packages(
+--    after_build(function (target)
+--        os.exec(target:targetfile())
+--        print("xmake: unittest complete.")
+--    end)
+--    on_run(function (target)
+--        --nothing
+--    end)
+    
+--target("FrenzyKV-example")
+--    set_kind("binary")
+--    add_packages("")
+--    add_cxflags("-Wconversion", { force = true })
+--    add_deps("FrenzyKV", "koios")
+--    if not is_mode("release") then
+--        add_cxxflags("-DFRENZYKV_DEBUG", {force = true})
+--    end
+--    )
+--    add_files( "example/*.cc")
+--    add_syslinks("spdlog")
+--    set_policy("build.warning", true)
+--    add_packages(
 --        "fmt", "gflags", 
 --        "concurrentqueue", 
---        "botan"
+--        "botan",
+--        "nlohmann_json"
 --    )
     
 
