@@ -33,6 +33,14 @@ set_languages("c++23", "c17")
 set_policy("build.warning", true)
 set_policy("build.optimization.lto", false)
 
+if not is_mode("release") then
+    add_cxxflags(
+        "-DFRENZYKV_DEBUG", 
+        "-DKOIOS_DEBUG", 
+        {force = true}
+    )
+end
+
 target("FrenzyKV")
     set_kind("shared")
     add_packages(
@@ -42,9 +50,6 @@ target("FrenzyKV")
         "botan", 
         "nlohmann_json"
     )
-    if not is_mode("release") then
-        add_cxxflags("-DFRENZYKV_DEBUG", {force = true})
-    end
     set_warnings("all", "error")
     add_cxflags("-Wconversion", { force = true })
     add_syslinks(
@@ -68,9 +73,6 @@ target("FrenzyKV-test")
         "botan",
         "nlohmann_json"
     )
-    if not is_mode("release") then
-        add_cxxflags("-DFRENZYKV_DEBUG", {force = true})
-    end
     after_build(function (target)
         os.exec(target:targetfile())
         print("xmake: unittest complete.")
@@ -84,9 +86,6 @@ target("FrenzyKV-example")
     add_packages("")
     add_cxflags("-Wconversion", { force = true })
     add_deps("FrenzyKV", "koios")
-    if not is_mode("release") then
-        add_cxxflags("-DFRENZYKV_DEBUG", {force = true})
-    end
     add_files( "example/*.cc")
     add_syslinks("spdlog")
     set_policy("build.warning", true)

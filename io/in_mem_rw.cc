@@ -42,7 +42,7 @@ catch (...)
     co_return make_frzkv_exception_catched();
 }
 
-::std::vector<::std::span<const ::std::byte>> 
+koios::generator<::std::span<const ::std::byte>> 
 in_mem_rw::
 target_spans(size_t offset, size_t dest_size) const noexcept
 {
@@ -50,20 +50,19 @@ target_spans(size_t offset, size_t dest_size) const noexcept
     const size_t first_cursor = offset % m_block_size;
     size_t selected_bytes{};
     
-    ::std::vector<::std::span<const ::std::byte>> result{};
     auto first_span = m_blocks[idx++]
         .valid_span()
         .subspan(first_cursor);
+
     selected_bytes += first_span.size_bytes();
-    result.emplace_back(first_span);
+    co_yield first_span;
+
     while (selected_bytes < dest_size && idx < m_blocks.size())
     {
         auto sp = m_blocks[idx++].valid_span();
         selected_bytes += sp.size_bytes();
-        result.push_back(sp);
+        co_yield sp;
     }
-
-    return result;
 };
 
 static bool append_to_dest(auto& dest, const auto& src) noexcept

@@ -19,16 +19,16 @@ namespace
     {
         switch (condition)
         {
-            case status_t::FRZ_KVDB_OK:               return "Ok";
-            case status_t::FRZ_KVDB_NOTFOUND:         return "Not Found";
-            case status_t::FRZ_KVDB_CORRUPTION:       return "Corruption";
-            case status_t::FRZ_KVDB_NOT_IMPLEMENTED:  return "Not Implemented";
-            case status_t::FRZ_KVDB_INVALID_ARGUMENT: return "Invalid Argument";
-            case status_t::FRZ_KVDB_IO_ERROR:         return "IO Error";
-            case status_t::FRZ_KVDB_OUT_OF_RANGE:     return "Out of Range";
-            case status_t::FRZ_KVDB_EXCEPTION_CATCHED:return "Exception Catched";
+            case status_t::FRZ_KVDB_OK:               return "frenzykv: Ok";
+            case status_t::FRZ_KVDB_NOTFOUND:         return "frenzykv: Not Found";
+            case status_t::FRZ_KVDB_CORRUPTION:       return "frenzykv: Corruption";
+            case status_t::FRZ_KVDB_NOT_IMPLEMENTED:  return "frenzykv: Not Implemented";
+            case status_t::FRZ_KVDB_INVALID_ARGUMENT: return "frenzykv: Invalid Argument";
+            case status_t::FRZ_KVDB_IO_ERROR:         return "frenzykv: IO Error";
+            case status_t::FRZ_KVDB_OUT_OF_RANGE:     return "frenzykv: Out of Range";
+            case status_t::FRZ_KVDB_EXCEPTION_CATCHED:return "frenzykv: Exception Catched";
             default: 
-            case status_t::FRZ_KVDB_UNKNOW:  return "Unknown Status";
+            case status_t::FRZ_KVDB_UNKNOW:  return "frenzykv: Unknown Status";
         }
     }
 } // namespace <anaoymous>

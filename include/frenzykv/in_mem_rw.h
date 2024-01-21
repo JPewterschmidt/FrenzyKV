@@ -6,6 +6,7 @@
 #include "frenzykv/inner_buffer.h"
 #include "frenzykv/error_category.h"
 #include "koios/coroutine_mutex.h"
+#include "koios/generator.h"
 
 #include <vector>
 
@@ -51,7 +52,8 @@ public:
     read(::std::span<::std::byte> dest) noexcept override;
 
 private:
-    ::std::vector<::std::span<const ::std::byte>> target_spans(size_t offset, size_t dest_size) const noexcept;
+    koios::generator<::std::span<const ::std::byte>> 
+    target_spans(size_t offset, size_t dest_size) const noexcept;
 
 private:
     ::std::vector<detials::buffer<>> m_blocks;
