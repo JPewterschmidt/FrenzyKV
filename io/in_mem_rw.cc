@@ -7,7 +7,7 @@
 namespace frenzykv
 {
 
-koios::task<::std::error_code> 
+koios::taskec 
 in_mem_rw::
 append(::std::span<const ::std::byte> buffer) noexcept 
 try
@@ -75,7 +75,7 @@ static bool append_to_dest(auto& dest, const auto& src) noexcept
     return true;
 }
 
-koios::task<::std::error_code>
+koios::taskec
 in_mem_rw::
 read(::std::span<::std::byte> dest, size_t offset) const noexcept
 try
@@ -94,7 +94,7 @@ catch (...)
     co_return make_frzkv_exception_catched();
 }
 
-koios::task<::std::error_code>
+koios::taskec
 in_mem_rw::
 read(::std::span<::std::byte> dest) noexcept
 {

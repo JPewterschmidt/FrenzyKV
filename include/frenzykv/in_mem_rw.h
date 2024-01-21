@@ -40,15 +40,15 @@ public:
         return *this;
     }
 
-    koios::task<::std::error_code> append(::std::span<const ::std::byte> buffer) noexcept override;
-    koios::task<::std::error_code> sync() noexcept override { co_return make_frzkv_ok(); }
-    koios::task<::std::error_code> flush() noexcept override { co_return make_frzkv_ok(); };
-    void close() noexcept override {}
+    koios::taskec append(::std::span<const ::std::byte> buffer) noexcept override;
+    koios::taskec sync() noexcept override { co_return make_frzkv_ok(); }
+    koios::taskec flush() noexcept override { co_return make_frzkv_ok(); }
+    koios::taskec close() noexcept override { co_return make_frzkv_ok(); }
 
-    koios::task<::std::error_code> 
+    koios::taskec
     read(::std::span<::std::byte> dest, size_t offset) const noexcept override;
 
-    koios::task<::std::error_code>
+    koios::taskec
     read(::std::span<::std::byte> dest) noexcept override;
 
 private:

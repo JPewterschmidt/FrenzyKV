@@ -32,4 +32,12 @@ flush() noexcept
     co_return make_frzkv_ok();
 }
 
+koios::taskec 
+stdout_writable::
+close() noexcept 
+{ 
+    co_await flush(); 
+    co_return make_frzkv_ok(); 
+}
+
 } // namespace frenzykv

@@ -1,4 +1,4 @@
-#include "frenzykv/posix_writable_file.h"
+#include "frenzykv/posix_writable.h"
 #include "frenzykv/error_category.h"
 #include "toolpex/errret_thrower.h"
 #include "koios/iouring_awaitables.h"
@@ -9,13 +9,13 @@ namespace frenzykv
 
 using namespace koios;
 
-posix_writable_file::
-posix_writable_file(::std::filesystem::path path, options opt)
+posix_writable::
+posix_writable(::std::filesystem::path path, options opt)
     : m_options{ ::std::move(opt) }, 
       m_path{ ::std::move(path) }, 
       m_buffer{ buffer_size_nbytes() }
 {
-    const int open_flags = O_CREAT 
+    const int open_flags = O_CREAT | O_WRONLY
                          | O_APPEND 
                          | (m_options.sync_write ? O_DSYNC : 0);
 
@@ -24,8 +24,30 @@ posix_writable_file(::std::filesystem::path path, options opt)
     m_fd = { et << ::open(pathstr.c_str(), open_flags) };
 }
 
-koios::task<::std::error_code> 
-posix_writable_file::
+posix_writable::
+posix_writable(toolpex::unique_posix_fd fd, options opt) noexcept
+    : m_options{ ::std::move(opt) }, 
+      m_buffer{ buffer_size_nbytes() }, 
+      m_fd{ ::std::move(fd) }
+{
+}
+
+posix_writable::
+~posix_writable() noexcept
+{
+    (void)flush().result();
+}
+
+koios::taskec
+posix_writable::
+close() noexcept
+{
+    co_await flush();
+    co_return make_frzkv_ok();
+}
+
+koios::taskec 
+posix_writable::
 sync_impl(koios::unique_lock& lk) noexcept
 {
     ::std::error_code ec = co_await uring::append_all(
@@ -35,16 +57,16 @@ sync_impl(koios::unique_lock& lk) noexcept
     co_return (co_await uring::fdatasync(m_fd)).error_code();
 }
 
-koios::task<::std::error_code> 
-posix_writable_file::sync() noexcept
+koios::taskec 
+posix_writable::sync() noexcept
 {
     if (m_options.sync_write) co_return make_frzkv_ok();
     auto lk = co_await m_mutex.acquire();
     co_return co_await sync_impl(lk);
 }
 
-koios::task<::std::error_code> 
-posix_writable_file::
+koios::taskec 
+posix_writable::
 append(::std::span<const ::std::byte> buffer) noexcept
 {
     auto lk = co_await m_mutex.acquire();
@@ -66,33 +88,33 @@ append(::std::span<const ::std::byte> buffer) noexcept
     co_return make_frzkv_ok();
 }
 
-koios::task<::std::error_code> 
-posix_writable_file::
+koios::taskec 
+posix_writable::
 append(::std::span<const char> buffer) noexcept
 {
     return append(as_bytes(buffer));
 }
 
-bool posix_writable_file::need_buffered() const noexcept
+bool posix_writable::need_buffered() const noexcept
 {
     return m_options.need_buffered_write;
 }
 
-size_t posix_writable_file::buffer_size_nbytes() const noexcept
+size_t posix_writable::buffer_size_nbytes() const noexcept
 {
     return need_buffered() ? m_options.disk_block_bytes : 0;
 }
 
-koios::task<::std::error_code> 
-posix_writable_file::
+koios::taskec 
+posix_writable::
 flush() noexcept
 {
     auto lk = co_await m_mutex.acquire();
     co_return co_await flush_valid(lk);
 }
 
-koios::task<::std::error_code> 
-posix_writable_file::
+koios::taskec 
+posix_writable::
 flush_block(koios::unique_lock& lk) noexcept
 {
     ::std::error_code ret = co_await uring::append_all(
@@ -102,8 +124,8 @@ flush_block(koios::unique_lock& lk) noexcept
     co_return ret;
 }
 
-koios::task<::std::error_code> 
-posix_writable_file::
+koios::taskec 
+posix_writable::
 flush_valid(koios::unique_lock& lk) noexcept
 {
     ::std::error_code ret = co_await uring::append_all(
