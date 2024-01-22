@@ -11,6 +11,7 @@
 #include <span>
 #include <memory>
 #include <filesystem>
+#include <sys/types.h>
 
 namespace frenzykv
 {
@@ -18,7 +19,10 @@ namespace frenzykv
 class posix_writable : public seq_writable
 {
 public:
-    posix_writable(::std::filesystem::path path, options opt = get_global_options());
+    posix_writable(::std::filesystem::path path, 
+                   options opt = get_global_options(), 
+                   mode_t create_mode = 
+                       S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     posix_writable(toolpex::unique_posix_fd fd, options opt = get_global_options()) noexcept;
     virtual ~posix_writable() noexcept override;
     const ::std::filesystem::path path() const noexcept { return m_path; }

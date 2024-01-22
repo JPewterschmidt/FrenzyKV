@@ -15,7 +15,7 @@ namespace frenzykv
 
 class in_mem_rw final 
     : public seq_writable, 
-      public readable, 
+      public random_readable, 
       public seq_readable_context
 {
 public:

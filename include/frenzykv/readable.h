@@ -19,7 +19,7 @@ public:
     virtual ~seq_readable() noexcept {}
 };
 
-class readable : public seq_readable
+class random_readable : public seq_readable
 {
 public:
     virtual koios::task<::std::error_code> 
@@ -28,7 +28,7 @@ public:
     virtual koios::task<::std::error_code>
     read(::std::span<::std::byte> dest) override = 0;
 
-    virtual ~readable() noexcept {}
+    virtual ~random_readable() noexcept {}
 };
 
 class seq_readable_context

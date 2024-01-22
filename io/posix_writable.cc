@@ -10,18 +10,19 @@ namespace frenzykv
 using namespace koios;
 
 posix_writable::
-posix_writable(::std::filesystem::path path, options opt)
+posix_writable(::std::filesystem::path path, options opt, mode_t create_mode)
     : m_options{ ::std::move(opt) }, 
       m_path{ ::std::move(path) }, 
       m_buffer{ buffer_size_nbytes() }
 {
-    const int open_flags = O_CREAT | O_WRONLY
+    const int open_flags = O_CREAT 
+                         | O_WRONLY
                          | O_APPEND 
                          | (m_options.sync_write ? O_DSYNC : 0);
 
     const ::std::string pathstr = m_path;
     toolpex::errret_thrower et;
-    m_fd = { et << ::open(pathstr.c_str(), open_flags) };
+    m_fd = { et << ::open(pathstr.c_str(), open_flags, create_mode) };
 }
 
 posix_writable::
@@ -35,7 +36,6 @@ posix_writable(toolpex::unique_posix_fd fd, options opt) noexcept
 posix_writable::
 ~posix_writable() noexcept
 {
-    (void)flush().result();
 }
 
 koios::taskec
@@ -50,10 +50,7 @@ koios::taskec
 posix_writable::
 sync_impl(koios::unique_lock& lk) noexcept
 {
-    ::std::error_code ec = co_await uring::append_all(
-        m_fd, m_buffer.valid_span()
-    );
-    if (ec) co_return ec;
+    co_await flush_valid(lk);
     co_return (co_await uring::fdatasync(m_fd)).error_code();
 }
 

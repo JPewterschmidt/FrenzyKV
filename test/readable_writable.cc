@@ -31,7 +31,7 @@ namespace
         
         ::std::error_code ec;
         
-        readable& ref = r;
+        seq_readable& ref = r;
 
         ec = co_await ref.read(as_writable_bytes(sp));
         if (ec) co_return false;
@@ -51,12 +51,12 @@ namespace
         ::std::string test_txt = "1234567890abcdefg\n";
         ::std::error_code ec;
 
-        auto ret = co_await uring::unlink(filename);
-        if (ret.error_code()) co_return false;
         ec = co_await ref.append(test_txt);
         if (ec) co_return false;
         ec = co_await ref.append(test_txt);
         if (ec) co_return false;
+
+        ec = co_await ref.flush();
         ec = co_await ref.close();
         if (ec) co_return false;
 
@@ -65,9 +65,13 @@ namespace
             ::std::ifstream ifs{ filename };
             while (getline(ifs, dummy))
             {
-                if (dummy != test_txt) co_return false;
+                if (dummy + "\n" != test_txt) co_return false;
             }
         }
+
+        auto ret = co_await uring::unlink(filename);
+        if (ret.error_code()) co_return false;
+
         co_return true;
     }
 }

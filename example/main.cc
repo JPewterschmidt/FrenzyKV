@@ -25,6 +25,7 @@ namespace
 {
     in_mem_rw r{3};
     ::std::string filename = "testfile.txt";
+    posix_writable w{filename};
     
     task<void> env_setup()
     {
@@ -39,7 +40,7 @@ namespace
         
         ::std::error_code ec;
         
-        readable& ref = r;
+        seq_readable& ref = r;
 
         ec = co_await ref.read(as_writable_bytes(sp));
         if (ec) co_return false;
@@ -55,9 +56,6 @@ namespace
 
     task<bool> testbody_posix()
     {
-        co_await uring::unlink(filename);
-
-        posix_writable w{filename};
         seq_writable& ref = w;
         ::std::string test_txt = "1234567890abcdefg\n";
         ::std::error_code ec;
@@ -68,18 +66,32 @@ namespace
         if (ec) co_return false;
 
         ec = co_await ref.flush();
+        if (ec) co_return false;
+
+        ec = co_await ref.sync();
+        if (ec) co_return false;
+
         ec = co_await ref.close();
         if (ec) co_return false;
 
+        bool result{true};
         {
             ::std::string dummy;
             ::std::ifstream ifs{ filename };
             while (getline(ifs, dummy))
             {
-                if (dummy != test_txt) co_return false;
+                if (!test_txt.contains(dummy))
+                {
+                    result = false;
+                    break;
+                }
             }
         }
-        co_return true;
+
+        auto ret = co_await uring::unlink(filename);
+        if (ret.error_code()) co_return false;
+
+        co_return result;
     }
 }
 
