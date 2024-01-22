@@ -18,10 +18,11 @@ namespace
     ::std::string filename = "testfile.txt";
     posix_writable w{filename};
     
-    task<void> env_setup()
+    task<bool> env_setup()
     {
         seq_writable& w = r;
-        co_await w.append("123456789abcdefghijk"sv);
+        const auto str = "123456789abcdefghijk"sv;
+        co_return str.size() == co_await w.append(str);
     }
 
     task<bool> testbody_in_mem_rw()
@@ -29,21 +30,20 @@ namespace
         ::std::array<char, 5> buffer{};
         ::std::span sp{ buffer.begin(), buffer.end() };
         
-        ::std::error_code ec;
-        
         seq_readable& ref = r;
         if (auto exp = co_await ref.read(as_writable_bytes(sp)); !exp.has_value()) co_return false;
-        if (auto exp = co_await ref.read(as_writable_bytes(sp)); !exp.has_value()) co_return false;
-        if (auto exp = co_await ref.read(as_writable_bytes(sp)); !exp.has_value()) co_return false;
+        bool partial_result{ true };
+        partial_result &= co_await ref.read(as_writable_bytes(sp)) == 5;
+        partial_result &= co_await ref.read(as_writable_bytes(sp)) == 5;
+        partial_result &= co_await ref.read(as_writable_bytes(sp)) == 5;
 
-        co_return ::std::memcmp(buffer.data(), "bcdef", 5) == 0;
+        co_return ::std::memcmp(buffer.data(), "bcdef", 5) == 0 && partial_result;
     }
 
     task<bool> testbody_posix()
     {
         seq_writable& ref = w;
         ::std::string test_txt = "1234567890abcdefg\n";
-        ::std::error_code ec;
 
         co_await ref.append(test_txt);
         co_await ref.append(test_txt);
@@ -68,7 +68,7 @@ namespace
 
 TEST(readable_test_env, basic)
 {
-    env_setup().result();
+    ASSERT_TRUE(env_setup().result());
     ASSERT_TRUE(testbody_in_mem_rw().result());
     ASSERT_TRUE(testbody_posix().result());
 }

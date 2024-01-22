@@ -9,10 +9,10 @@ namespace frenzykv
 class stdout_writable : public seq_writable
 {
 public:
-    virtual koios::exp_taskec<> append(::std::span<const ::std::byte> buffer) noexcept override;
-    virtual koios::exp_taskec<> sync() noexcept override;
-    virtual koios::exp_taskec<> flush() noexcept override;
-    virtual koios::exp_taskec<> close() noexcept override; 
+    virtual koios::task<size_t> append(::std::span<const ::std::byte> buffer) override;
+    virtual koios::task<> sync() noexcept override;
+    virtual koios::task<> flush() noexcept override;
+    virtual koios::task<> close() noexcept override; 
 };
 
 } // namespace frenzykv

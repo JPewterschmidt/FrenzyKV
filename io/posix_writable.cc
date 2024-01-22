@@ -3,6 +3,7 @@
 #include "toolpex/errret_thrower.h"
 #include "koios/iouring_awaitables.h"
 #include <fcntl.h>
+#include <cassert>
 
 namespace frenzykv
 {
@@ -38,63 +39,59 @@ posix_writable::
 {
 }
 
-koios::exp_taskec<>
+koios::task<>
 posix_writable::
-close() noexcept
+close()
 {
     co_await flush();
-    co_return koios::ok();
+    m_fd.close();
 }
 
-koios::exp_taskec<> 
+koios::task<>
 posix_writable::
-sync_impl(koios::unique_lock& lk) noexcept
+sync_impl(koios::unique_lock& lk) 
 {
     co_await flush_valid(lk);
-    if (auto ec = (co_await uring::fdatasync(m_fd)).error_code(); ec)
-    {
-        co_return koios::unexpected(ec);
-    }
-    co_return koios::ok();
+    co_await uring::fdatasync(m_fd);
 }
 
-koios::exp_taskec<> 
-posix_writable::sync() noexcept
+koios::task<>
+posix_writable::sync()
 {
-    if (m_options.sync_write) co_return koios::ok();
-    auto lk = co_await m_mutex.acquire();
-    co_return co_await sync_impl(lk);
+    if (m_options.sync_write) 
+    {
+        auto lk = co_await m_mutex.acquire();
+        co_await sync_impl(lk);
+    }
 }
 
-koios::exp_taskec<> 
+koios::task<size_t>
 posix_writable::
-append(::std::span<const ::std::byte> buffer) noexcept
+append(::std::span<const ::std::byte> buffer) 
 {
     auto lk = co_await m_mutex.acquire();
     if (!need_buffered())
     {
-        auto ec = co_await uring::append_all(m_fd, m_buffer.valid_span());
-        if (ec) co_return koios::unexpected(ec);
-        co_return koios::ok();
+        co_await uring::append_all(m_fd, m_buffer.valid_span());
+        co_return buffer.size_bytes();
     }
     if (m_buffer.append(buffer)) // fit in
-        co_return koios::ok();
+        co_return buffer.size_bytes();
     
-    auto ec = co_await flush_valid(lk);
-    if (!ec.has_value()) co_return koios::unexpected(ec.error());
+    co_await flush_valid(lk);
     
     if (buffer.size_bytes() > m_buffer.capacity())
     {
-        auto ec = co_await uring::append_all(m_fd, m_buffer.valid_span());
-        if (ec) co_return koios::unexpected(ec);
+        co_await uring::append_all(m_fd, m_buffer.valid_span());
     }
-    m_buffer.append(buffer);
-    co_return koios::ok();
+    if (!m_buffer.append(buffer))
+        throw koios::exception{"posix_writable append error"};
+    co_return buffer.size_bytes();
 }
 
-koios::exp_taskec<> 
+koios::task<size_t>
 posix_writable::
-append(::std::span<const char> buffer) noexcept
+append(::std::span<const char> buffer)
 {
     return append(as_bytes(buffer));
 }
@@ -109,42 +106,28 @@ size_t posix_writable::buffer_size_nbytes() const noexcept
     return need_buffered() ? m_options.disk_block_bytes : 0;
 }
 
-koios::exp_taskec<> 
+koios::task<>
 posix_writable::
-flush() noexcept
+flush()
 {
     auto lk = co_await m_mutex.acquire();
-    co_return co_await flush_valid(lk);
+    co_await flush_valid(lk);
 }
 
-koios::exp_taskec<> 
+koios::task<>
 posix_writable::
-flush_block(koios::unique_lock& lk) noexcept
+flush_block(koios::unique_lock& lk) 
 {
-    ::std::error_code ret = co_await uring::append_all(
-        m_fd, m_buffer.whole_span()
-    );
-    if (ret)
-    {
-        co_return koios::unexpected(ret);
-    }
-    else m_buffer.turncate(); // expcetion safe.
-    co_return koios::ok();
+    co_await uring::append_all(m_fd, m_buffer.whole_span());
+    m_buffer.turncate();
 }
 
-koios::exp_taskec<> 
+koios::task<>
 posix_writable::
-flush_valid(koios::unique_lock& lk) noexcept
+flush_valid(koios::unique_lock& lk)
 {
-    ::std::error_code ret = co_await uring::append_all(
-        m_fd, m_buffer.valid_span()
-    );
-    if (ret)
-    {
-        co_return koios::unexpected(ret);
-    }
-    else m_buffer.turncate(); // expcetion safe.
-    co_return koios::ok();
+    co_await uring::append_all(m_fd, m_buffer.valid_span());
+    m_buffer.turncate();
 }
 
 }

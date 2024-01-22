@@ -8,37 +8,35 @@ namespace frenzykv
 
 using namespace koios;
 
-koios::exp_taskec<> 
+koios::task<size_t> 
 stdout_writable::
-append(::std::span<const ::std::byte> buffer) noexcept 
+append(::std::span<const ::std::byte> buffer) 
 {
     toolpex::unique_posix_fd stdoutfd{::fileno(stdout)};
-    if (auto ec = co_await uring::append_all(stdoutfd, buffer); ec)
-        co_return koios::unexpected(ec);
-    co_return koios::ok();
+    co_await uring::append_all(stdoutfd, buffer);
 }
 
-koios::exp_taskec<> 
+koios::task<> 
 stdout_writable::
 sync() noexcept
 {
-    co_return koios::ok();
+    ::fflush(stdout);
+    co_return;
 }
 
-koios::exp_taskec<> 
+koios::task<> 
 stdout_writable::
 flush() noexcept
 {
     ::fflush(stdout);
-    co_return koios::ok();
+    co_return;
 }
 
-koios::exp_taskec<>
+koios::task<>
 stdout_writable::
 close() noexcept 
 { 
     co_await flush(); 
-    co_return koios::ok();
 }
 
 } // namespace frenzykv

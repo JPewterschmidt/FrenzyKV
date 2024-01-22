@@ -7,10 +7,9 @@
 namespace frenzykv
 {
 
-koios::exp_taskec<> 
+koios::task<size_t> 
 in_mem_rw::
-append(::std::span<const ::std::byte> buffer) noexcept 
-try
+append(::std::span<const ::std::byte> buffer)
 {
     const auto next_writable_buffer = [this] -> decltype(auto) 
     {
@@ -20,6 +19,7 @@ try
         return m_blocks.emplace_back(m_block_size);
     };
 
+    const size_t result = buffer.size_bytes();
     auto lk = co_await m_mutex.acquire();
     do
     {
@@ -31,15 +31,7 @@ try
     }
     while (!buffer.empty());
 
-    co_return koios::ok();
-}
-catch (const ::std::out_of_range& e)
-{
-    co_return koios::unexpected(make_frzkv_out_of_range());
-}
-catch (...)
-{
-    co_return koios::unexpected(make_frzkv_exception_catched());
+    co_return result;
 }
 
 koios::generator<::std::span<const ::std::byte>> 
@@ -65,50 +57,46 @@ target_spans(size_t offset, size_t dest_size) const noexcept
     }
 };
 
-static bool append_to_dest(auto& dest, const auto& src) noexcept
+static size_t append_to_dest(auto& dest, const auto& src) noexcept
 {
-    if (dest.empty()) return false;
-    const size_t write_size = ::std::min(dest.size(), src.size());
+    if (dest.empty()) return 0;
+    const size_t write_size = ::std::min(dest.size_bytes(), src.size_bytes());
+
     ::std::memcpy(dest.data(), src.data(), write_size);
     assert(write_size <= dest.size_bytes());
     dest = dest.subspan(write_size);
-    return true;
+
+    return write_size;
 }
 
-koios::exp_taskec<>
+koios::task<size_t>
 in_mem_rw::
-read(::std::span<::std::byte> dest, size_t offset) const noexcept
-try
+read(::std::span<::std::byte> dest, size_t offset) const 
 {
     auto lk = co_await m_mutex.acquire();
+    size_t result{};
 
     for (auto s : target_spans(offset, dest.size_bytes()))
     {
-        if (!append_to_dest(dest, s)) break;
+        const size_t readed = append_to_dest(dest, s);
+        if (readed == 0) break;
+        result += readed;
     }
 
-    co_return koios::ok();
-}
-catch (...)
-{
-    co_return koios::unexpected(make_frzkv_exception_catched());
+    co_return result;
 }
 
-koios::exp_taskec<>
+koios::task<size_t>
 in_mem_rw::
-read(::std::span<::std::byte> dest) noexcept
+read(::std::span<::std::byte> dest) 
 {
     seq_readable_context ctx = *this;
 
-    if (auto ec = co_await read(dest, ctx.cursor()); ec.has_value())
-    {
-        // Success
-        ctx.has_read(dest.size_bytes());
-    }
-    else co_return koios::unexpected(ec.error());
-
+    const size_t ret = co_await read(dest, ctx.cursor());;
+    ctx.has_read(ret);
     this->seq_readable_context::reset(ctx);
-    co_return koios::ok();
+
+    co_return ret;
 }
 
 } // namespace frenzykv
