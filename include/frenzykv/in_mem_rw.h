@@ -6,6 +6,7 @@
 #include "frenzykv/inner_buffer.h"
 #include "frenzykv/error_category.h"
 #include "koios/coroutine_mutex.h"
+#include "koios/generator.h"
 
 #include <vector>
 
@@ -14,7 +15,7 @@ namespace frenzykv
 
 class in_mem_rw final 
     : public seq_writable, 
-      public readable, 
+      public random_readable, 
       public seq_readable_context
 {
 public:
@@ -39,19 +40,20 @@ public:
         return *this;
     }
 
-    koios::task<::std::error_code> append(::std::span<const ::std::byte> buffer) noexcept override;
-    koios::task<::std::error_code> sync() noexcept override { co_return make_frzkv_ok(); }
-    koios::task<::std::error_code> flush() noexcept override { co_return make_frzkv_ok(); };
-    void close() noexcept override {}
+    koios::task<size_t> append(::std::span<const ::std::byte> buffer) override;
+    koios::task<> sync() noexcept override { co_return; }
+    koios::task<> flush() noexcept override { co_return; }
+    koios::task<> close() noexcept override { co_return; }
 
-    koios::task<::std::error_code> 
-    read(::std::span<::std::byte> dest, size_t offset) const noexcept override;
+    koios::task<size_t>
+    read(::std::span<::std::byte> dest, size_t offset) const override;
 
-    koios::task<::std::error_code>
-    read(::std::span<::std::byte> dest) noexcept override;
+    koios::task<size_t>
+    read(::std::span<::std::byte> dest) override;
 
 private:
-    ::std::vector<::std::span<const ::std::byte>> target_spans(size_t offset, size_t dest_size) const noexcept;
+    koios::generator<::std::span<const ::std::byte>> 
+    target_spans(size_t offset, size_t dest_size) const noexcept;
 
 private:
     ::std::vector<detials::buffer<>> m_blocks;

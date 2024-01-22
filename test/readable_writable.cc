@@ -2,6 +2,11 @@
 #include "frenzykv/readable.h"
 #include "frenzykv/writable.h"
 #include "frenzykv/in_mem_rw.h"
+#include "frenzykv/posix_writable.h"
+#include "koios/iouring_awaitables.h"
+#include "koios/iouring_unlink_aw.h"
+
+#include <fstream>
 
 using namespace koios;
 using namespace frenzykv;
@@ -10,36 +15,60 @@ using namespace ::std::string_view_literals;
 namespace
 {
     in_mem_rw r{3};
-    task<void> env_setup()
+    ::std::string filename = "testfile.txt";
+    posix_writable w{filename};
+    
+    task<bool> env_setup()
     {
         seq_writable& w = r;
-        co_await w.append("123456789abcdefghijk"sv);
+        const auto str = "123456789abcdefghijk"sv;
+        co_return str.size() == co_await w.append(str);
     }
 
-    task<bool> testbody()
+    task<bool> testbody_in_mem_rw()
     {
         ::std::array<char, 5> buffer{};
         ::std::span sp{ buffer.begin(), buffer.end() };
         
-        ::std::error_code ec;
-        
-        readable& ref = r;
+        seq_readable& ref = r;
+        if (auto exp = co_await ref.read(as_writable_bytes(sp)); !exp.has_value()) co_return false;
+        bool partial_result{ true };
+        partial_result &= co_await ref.read(as_writable_bytes(sp)) == 5;
+        partial_result &= co_await ref.read(as_writable_bytes(sp)) == 5;
+        partial_result &= co_await ref.read(as_writable_bytes(sp)) == 5;
 
-        ec = co_await ref.read(as_writable_bytes(sp));
-        if (ec) co_return false;
+        co_return ::std::memcmp(buffer.data(), "bcdef", 5) == 0 && partial_result;
+    }
 
-        ec = co_await ref.read(as_writable_bytes(sp));
-        if (ec) co_return false;
+    task<bool> testbody_posix()
+    {
+        seq_writable& ref = w;
+        ::std::string test_txt = "1234567890abcdefg\n";
 
-        ec = co_await ref.read(as_writable_bytes(sp));
-        if (ec) co_return false;
+        co_await ref.append(test_txt);
+        co_await ref.append(test_txt);
+        co_await ref.flush();
+        co_await ref.close();
 
-        co_return ::std::memcmp(buffer.data(), "bcdef", 5) == 0;
+        {
+            ::std::string dummy;
+            ::std::ifstream ifs{ filename };
+            while (getline(ifs, dummy))
+            {
+                if (dummy + "\n" != test_txt) co_return false;
+            }
+        }
+
+        auto ret = co_await uring::unlink(filename);
+        if (ret.error_code()) co_return false;
+
+        co_return true;
     }
 }
 
 TEST(readable_test_env, basic)
 {
-    env_setup().result();
-    ASSERT_TRUE(testbody().result());
+    ASSERT_TRUE(env_setup().result());
+    ASSERT_TRUE(testbody_in_mem_rw().result());
+    ASSERT_TRUE(testbody_posix().result());
 }
