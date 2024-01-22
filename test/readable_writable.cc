@@ -31,7 +31,6 @@ namespace
         ::std::span sp{ buffer.begin(), buffer.end() };
         
         seq_readable& ref = r;
-        if (auto exp = co_await ref.read(as_writable_bytes(sp)); !exp.has_value()) co_return false;
         bool partial_result{ true };
         partial_result &= co_await ref.read(as_writable_bytes(sp)) == 5;
         partial_result &= co_await ref.read(as_writable_bytes(sp)) == 5;
