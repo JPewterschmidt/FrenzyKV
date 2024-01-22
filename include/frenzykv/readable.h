@@ -13,7 +13,7 @@ namespace frenzykv
 class seq_readable
 {
 public:
-    virtual koios::task<::std::error_code>
+    virtual koios::task<size_t>
     read(::std::span<::std::byte> dest) = 0;
 
     virtual ~seq_readable() noexcept {}
@@ -22,13 +22,13 @@ public:
 class random_readable : public seq_readable
 {
 public:
-    virtual koios::task<::std::error_code> 
-    read(::std::span<::std::byte>, size_t offset) const noexcept = 0;
+    virtual koios::task<size_t> 
+    read(::std::span<::std::byte>, size_t offset) const = 0;
 
-    virtual koios::task<::std::error_code>
+    virtual koios::task<size_t>
     read(::std::span<::std::byte> dest) override = 0;
 
-    virtual ~random_readable() noexcept {}
+    virtual ~random_readable() noexcept override {}
 };
 
 class seq_readable_context

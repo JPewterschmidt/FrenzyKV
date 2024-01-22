@@ -15,17 +15,17 @@ public:
     seq_writable() = default;
     virtual ~seq_writable() noexcept {}
 
-    koios::taskec 
+    koios::task<size_t> 
     append(::std::string_view buffer) noexcept 
     {
         ::std::span<const char> temp{ buffer.begin(), buffer.end() };
         return append(as_bytes(temp));
     }
 
-    virtual koios::taskec append(::std::span<const ::std::byte> buffer) noexcept = 0;
-    virtual koios::taskec sync() noexcept = 0;
-    virtual koios::taskec flush() noexcept = 0;
-    virtual koios::taskec close() noexcept = 0;
+    virtual koios::task<size_t> append(::std::span<const ::std::byte> buffer) = 0;
+    virtual koios::task<> sync() = 0;
+    virtual koios::task<> flush() = 0;
+    virtual koios::task<> close() = 0;
 };
 
 } // namespace frenzykv
