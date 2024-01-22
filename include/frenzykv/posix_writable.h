@@ -26,22 +26,22 @@ public:
     posix_writable(toolpex::unique_posix_fd fd, options opt = get_global_options()) noexcept;
     virtual ~posix_writable() noexcept override;
     const ::std::filesystem::path path() const noexcept { return m_path; }
-    virtual koios::taskec close() noexcept override;
+    virtual koios::exp_taskec<> close() noexcept override;
 
-    virtual koios::taskec append(::std::span<const ::std::byte> buffer) noexcept override;
-    virtual koios::taskec sync() noexcept override;
-    virtual koios::taskec flush() noexcept override;
+    virtual koios::exp_taskec<> append(::std::span<const ::std::byte> buffer) noexcept override;
+    virtual koios::exp_taskec<> sync() noexcept override;
+    virtual koios::exp_taskec<> flush() noexcept override;
 
-    koios::taskec append(::std::span<const char> buffer) noexcept;
+    koios::exp_taskec<> append(::std::span<const char> buffer) noexcept;
 
 private:
-    koios::taskec sync_impl(koios::unique_lock&) noexcept;
+    koios::exp_taskec<> sync_impl(koios::unique_lock&) noexcept;
 
 private:
     bool need_buffered() const noexcept;
     size_t buffer_size_nbytes() const noexcept;
-    koios::taskec flush_block(koios::unique_lock& lk) noexcept;
-    koios::taskec flush_valid(koios::unique_lock& lk) noexcept;
+    koios::exp_taskec<> flush_block(koios::unique_lock& lk) noexcept;
+    koios::exp_taskec<> flush_valid(koios::unique_lock& lk) noexcept;
 
 private:
     options m_options;

@@ -38,54 +38,61 @@ posix_writable::
 {
 }
 
-koios::taskec
+koios::exp_taskec<>
 posix_writable::
 close() noexcept
 {
     co_await flush();
-    co_return make_frzkv_ok();
+    co_return koios::ok();
 }
 
-koios::taskec 
+koios::exp_taskec<> 
 posix_writable::
 sync_impl(koios::unique_lock& lk) noexcept
 {
     co_await flush_valid(lk);
-    co_return (co_await uring::fdatasync(m_fd)).error_code();
+    if (auto ec = (co_await uring::fdatasync(m_fd)).error_code(); ec)
+    {
+        co_return koios::unexpected(ec);
+    }
+    co_return koios::ok();
 }
 
-koios::taskec 
+koios::exp_taskec<> 
 posix_writable::sync() noexcept
 {
-    if (m_options.sync_write) co_return make_frzkv_ok();
+    if (m_options.sync_write) co_return koios::ok();
     auto lk = co_await m_mutex.acquire();
     co_return co_await sync_impl(lk);
 }
 
-koios::taskec 
+koios::exp_taskec<> 
 posix_writable::
 append(::std::span<const ::std::byte> buffer) noexcept
 {
     auto lk = co_await m_mutex.acquire();
     if (!need_buffered())
     {
-        co_return co_await uring::append_all(m_fd, m_buffer.valid_span());
+        auto ec = co_await uring::append_all(m_fd, m_buffer.valid_span());
+        if (ec) co_return koios::unexpected(ec);
+        co_return koios::ok();
     }
     if (m_buffer.append(buffer)) // fit in
-        co_return make_frzkv_ok();
+        co_return koios::ok();
     
     auto ec = co_await flush_valid(lk);
-    if (ec) co_return ec;
+    if (!ec.has_value()) co_return koios::unexpected(ec.error());
     
     if (buffer.size_bytes() > m_buffer.capacity())
     {
-        co_return co_await uring::append_all(m_fd, m_buffer.valid_span());
+        auto ec = co_await uring::append_all(m_fd, m_buffer.valid_span());
+        if (ec) co_return koios::unexpected(ec);
     }
     m_buffer.append(buffer);
-    co_return make_frzkv_ok();
+    co_return koios::ok();
 }
 
-koios::taskec 
+koios::exp_taskec<> 
 posix_writable::
 append(::std::span<const char> buffer) noexcept
 {
@@ -102,7 +109,7 @@ size_t posix_writable::buffer_size_nbytes() const noexcept
     return need_buffered() ? m_options.disk_block_bytes : 0;
 }
 
-koios::taskec 
+koios::exp_taskec<> 
 posix_writable::
 flush() noexcept
 {
@@ -110,26 +117,34 @@ flush() noexcept
     co_return co_await flush_valid(lk);
 }
 
-koios::taskec 
+koios::exp_taskec<> 
 posix_writable::
 flush_block(koios::unique_lock& lk) noexcept
 {
     ::std::error_code ret = co_await uring::append_all(
         m_fd, m_buffer.whole_span()
     );
-    if (!ret) m_buffer.turncate(); // expcetion safe.
-    co_return ret;
+    if (ret)
+    {
+        co_return koios::unexpected(ret);
+    }
+    else m_buffer.turncate(); // expcetion safe.
+    co_return koios::ok();
 }
 
-koios::taskec 
+koios::exp_taskec<> 
 posix_writable::
 flush_valid(koios::unique_lock& lk) noexcept
 {
     ::std::error_code ret = co_await uring::append_all(
         m_fd, m_buffer.valid_span()
     );
-    if (!ret) m_buffer.turncate();
-    co_return ret;
+    if (ret)
+    {
+        co_return koios::unexpected(ret);
+    }
+    else m_buffer.turncate(); // expcetion safe.
+    co_return koios::ok();
 }
 
 }

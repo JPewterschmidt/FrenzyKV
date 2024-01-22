@@ -7,7 +7,7 @@
 namespace frenzykv
 {
 
-koios::taskec 
+koios::exp_taskec<> 
 in_mem_rw::
 append(::std::span<const ::std::byte> buffer) noexcept 
 try
@@ -31,15 +31,15 @@ try
     }
     while (!buffer.empty());
 
-    co_return make_frzkv_ok();
+    co_return koios::ok();
 }
 catch (const ::std::out_of_range& e)
 {
-    co_return make_frzkv_out_of_range();
+    co_return koios::unexpected(make_frzkv_out_of_range());
 }
 catch (...)
 {
-    co_return make_frzkv_exception_catched();
+    co_return koios::unexpected(make_frzkv_exception_catched());
 }
 
 koios::generator<::std::span<const ::std::byte>> 
@@ -75,7 +75,7 @@ static bool append_to_dest(auto& dest, const auto& src) noexcept
     return true;
 }
 
-koios::taskec
+koios::exp_taskec<>
 in_mem_rw::
 read(::std::span<::std::byte> dest, size_t offset) const noexcept
 try
@@ -87,28 +87,28 @@ try
         if (!append_to_dest(dest, s)) break;
     }
 
-    co_return make_frzkv_ok();
+    co_return koios::ok();
 }
 catch (...)
 {
-    co_return make_frzkv_exception_catched();
+    co_return koios::unexpected(make_frzkv_exception_catched());
 }
 
-koios::taskec
+koios::exp_taskec<>
 in_mem_rw::
 read(::std::span<::std::byte> dest) noexcept
 {
     seq_readable_context ctx = *this;
 
-    if (auto ec = co_await read(dest, ctx.cursor()); !ec)
+    if (auto ec = co_await read(dest, ctx.cursor()); ec.has_value())
     {
         // Success
         ctx.has_read(dest.size_bytes());
     }
-    else co_return ec;
+    else co_return koios::unexpected(ec.error());
 
     this->seq_readable_context::reset(ctx);
-    co_return make_frzkv_ok();
+    co_return koios::ok();
 }
 
 } // namespace frenzykv

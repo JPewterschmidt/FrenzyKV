@@ -32,15 +32,9 @@ namespace
         ::std::error_code ec;
         
         seq_readable& ref = r;
-
-        ec = co_await ref.read(as_writable_bytes(sp));
-        if (ec) co_return false;
-
-        ec = co_await ref.read(as_writable_bytes(sp));
-        if (ec) co_return false;
-
-        ec = co_await ref.read(as_writable_bytes(sp));
-        if (ec) co_return false;
+        if (auto exp = co_await ref.read(as_writable_bytes(sp)); !exp.has_value()) co_return false;
+        if (auto exp = co_await ref.read(as_writable_bytes(sp)); !exp.has_value()) co_return false;
+        if (auto exp = co_await ref.read(as_writable_bytes(sp)); !exp.has_value()) co_return false;
 
         co_return ::std::memcmp(buffer.data(), "bcdef", 5) == 0;
     }
@@ -51,14 +45,10 @@ namespace
         ::std::string test_txt = "1234567890abcdefg\n";
         ::std::error_code ec;
 
-        ec = co_await ref.append(test_txt);
-        if (ec) co_return false;
-        ec = co_await ref.append(test_txt);
-        if (ec) co_return false;
-
-        ec = co_await ref.flush();
-        ec = co_await ref.close();
-        if (ec) co_return false;
+        co_await ref.append(test_txt);
+        co_await ref.append(test_txt);
+        co_await ref.flush();
+        co_await ref.close();
 
         {
             ::std::string dummy;
