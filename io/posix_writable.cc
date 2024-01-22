@@ -82,8 +82,7 @@ append(::std::span<const ::std::byte> buffer)
     
     if (buffer.size_bytes() > m_buffer.capacity())
     {
-        auto ec = co_await uring::append_all(m_fd, m_buffer.valid_span());
-        assert(!ec); // TODO make append_all throwable !
+        co_await uring::append_all(m_fd, m_buffer.valid_span());
     }
     if (!m_buffer.append(buffer))
         throw koios::exception{"posix_writable append error"};
@@ -119,21 +118,15 @@ koios::task<>
 posix_writable::
 flush_block(koios::unique_lock& lk) 
 {
-    ::std::error_code ret = co_await uring::append_all(
-        m_fd, m_buffer.whole_span()
-    );
-    assert(!ret);
-    m_buffer.turncate(); // expcetion safe.
+    co_await uring::append_all(m_fd, m_buffer.whole_span());
+    m_buffer.turncate();
 }
 
 koios::task<>
 posix_writable::
 flush_valid(koios::unique_lock& lk)
 {
-    ::std::error_code ret = co_await uring::append_all(
-        m_fd, m_buffer.valid_span()
-    );
-    assert(!ret);
+    co_await uring::append_all(m_fd, m_buffer.valid_span());
     m_buffer.turncate();
 }
 

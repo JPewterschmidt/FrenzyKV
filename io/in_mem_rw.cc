@@ -19,6 +19,7 @@ append(::std::span<const ::std::byte> buffer)
         return m_blocks.emplace_back(m_block_size);
     };
 
+    const size_t result = buffer.size_bytes();
     auto lk = co_await m_mutex.acquire();
     do
     {
@@ -30,7 +31,7 @@ append(::std::span<const ::std::byte> buffer)
     }
     while (!buffer.empty());
 
-    co_return buffer.size_bytes();
+    co_return result;
 }
 
 koios::generator<::std::span<const ::std::byte>> 
@@ -59,7 +60,7 @@ target_spans(size_t offset, size_t dest_size) const noexcept
 static size_t append_to_dest(auto& dest, const auto& src) noexcept
 {
     if (dest.empty()) return 0;
-    const size_t write_size = ::std::min(dest.size(), src.size());
+    const size_t write_size = ::std::min(dest.size_bytes(), src.size_bytes());
 
     ::std::memcpy(dest.data(), src.data(), write_size);
     assert(write_size <= dest.size_bytes());
@@ -77,9 +78,9 @@ read(::std::span<::std::byte> dest, size_t offset) const
 
     for (auto s : target_spans(offset, dest.size_bytes()))
     {
-        const size_t wrote = append_to_dest(dest, s);
-        if (wrote == 0) break;
-        result += wrote;
+        const size_t readed = append_to_dest(dest, s);
+        if (readed == 0) break;
+        result += readed;
     }
 
     co_return result;

@@ -18,10 +18,11 @@ namespace
     ::std::string filename = "testfile.txt";
     posix_writable w{filename};
     
-    task<void> env_setup()
+    task<bool> env_setup()
     {
         seq_writable& w = r;
-        co_await w.append("123456789abcdefghijk"sv);
+        const auto str = "123456789abcdefghijk"sv;
+        co_return str.size() == co_await w.append(str);
     }
 
     task<bool> testbody_in_mem_rw()
@@ -31,11 +32,12 @@ namespace
         
         seq_readable& ref = r;
 
-        co_await ref.read(as_writable_bytes(sp));
-        co_await ref.read(as_writable_bytes(sp));
-        co_await ref.read(as_writable_bytes(sp));
+        bool partial_result{ true };
+        partial_result &= co_await ref.read(as_writable_bytes(sp)) == 5;
+        partial_result &= co_await ref.read(as_writable_bytes(sp)) == 5;
+        partial_result &= co_await ref.read(as_writable_bytes(sp)) == 5;
 
-        co_return ::std::memcmp(buffer.data(), "bcdef", 5) == 0;
+        co_return ::std::memcmp(buffer.data(), "bcdef", 5) == 0 && partial_result;
     }
 
     task<bool> testbody_posix()
@@ -66,7 +68,7 @@ namespace
 
 TEST(readable_test_env, basic)
 {
-    env_setup().result();
+    ASSERT_TRUE(env_setup().result());
     ASSERT_TRUE(testbody_in_mem_rw().result());
     ASSERT_TRUE(testbody_posix().result());
 }
