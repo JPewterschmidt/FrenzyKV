@@ -1,4 +1,4 @@
-#include "frenzykv/posix_writable.h"
+#include "frenzykv/iouring_writable.h"
 #include "frenzykv/error_category.h"
 #include "toolpex/errret_thrower.h"
 #include "koios/iouring_awaitables.h"
@@ -10,8 +10,8 @@ namespace frenzykv
 
 using namespace koios;
 
-posix_writable::
-posix_writable(::std::filesystem::path path, options opt, mode_t create_mode)
+iouring_writable::
+iouring_writable(::std::filesystem::path path, options opt, mode_t create_mode)
     : m_options{ ::std::move(opt) }, 
       m_path{ ::std::move(path) }, 
       m_buffer{ buffer_size_nbytes() }
@@ -26,21 +26,21 @@ posix_writable(::std::filesystem::path path, options opt, mode_t create_mode)
     m_fd = { et << ::open(pathstr.c_str(), open_flags, create_mode) };
 }
 
-posix_writable::
-posix_writable(toolpex::unique_posix_fd fd, options opt) noexcept
+iouring_writable::
+iouring_writable(toolpex::unique_posix_fd fd, options opt) noexcept
     : m_options{ ::std::move(opt) }, 
       m_buffer{ buffer_size_nbytes() }, 
       m_fd{ ::std::move(fd) }
 {
 }
 
-posix_writable::
-~posix_writable() noexcept
+iouring_writable::
+~iouring_writable() noexcept
 {
 }
 
 koios::task<>
-posix_writable::
+iouring_writable::
 close()
 {
     co_await flush();
@@ -48,7 +48,7 @@ close()
 }
 
 koios::task<>
-posix_writable::
+iouring_writable::
 sync_impl(koios::unique_lock& lk) 
 {
     co_await flush_valid(lk);
@@ -56,7 +56,7 @@ sync_impl(koios::unique_lock& lk)
 }
 
 koios::task<>
-posix_writable::sync()
+iouring_writable::sync()
 {
     if (m_options.sync_write) 
     {
@@ -66,7 +66,7 @@ posix_writable::sync()
 }
 
 koios::task<size_t>
-posix_writable::
+iouring_writable::
 append(::std::span<const ::std::byte> buffer) 
 {
     auto lk = co_await m_mutex.acquire();
@@ -85,29 +85,29 @@ append(::std::span<const ::std::byte> buffer)
         co_await uring::append_all(m_fd, m_buffer.valid_span());
     }
     if (!m_buffer.append(buffer))
-        throw koios::exception{"posix_writable append error"};
+        throw koios::exception{"iouring_writable append error"};
     co_return buffer.size_bytes();
 }
 
 koios::task<size_t>
-posix_writable::
+iouring_writable::
 append(::std::span<const char> buffer)
 {
     return append(as_bytes(buffer));
 }
 
-bool posix_writable::need_buffered() const noexcept
+bool iouring_writable::need_buffered() const noexcept
 {
     return m_options.need_buffered_write;
 }
 
-size_t posix_writable::buffer_size_nbytes() const noexcept
+size_t iouring_writable::buffer_size_nbytes() const noexcept
 {
     return need_buffered() ? m_options.disk_block_bytes : 0;
 }
 
 koios::task<>
-posix_writable::
+iouring_writable::
 flush()
 {
     auto lk = co_await m_mutex.acquire();
@@ -115,7 +115,7 @@ flush()
 }
 
 koios::task<>
-posix_writable::
+iouring_writable::
 flush_block(koios::unique_lock& lk) 
 {
     co_await uring::append_all(m_fd, m_buffer.whole_span());
@@ -123,7 +123,7 @@ flush_block(koios::unique_lock& lk)
 }
 
 koios::task<>
-posix_writable::
+iouring_writable::
 flush_valid(koios::unique_lock& lk)
 {
     co_await uring::append_all(m_fd, m_buffer.valid_span());

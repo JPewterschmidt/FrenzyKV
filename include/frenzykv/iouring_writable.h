@@ -16,15 +16,15 @@
 namespace frenzykv
 {
 
-class posix_writable : public seq_writable
+class iouring_writable : public seq_writable
 {
 public:
-    posix_writable(::std::filesystem::path path, 
+    iouring_writable(::std::filesystem::path path, 
                    options opt = get_global_options(), 
                    mode_t create_mode = 
                        S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
-    posix_writable(toolpex::unique_posix_fd fd, options opt = get_global_options()) noexcept;
-    virtual ~posix_writable() noexcept override;
+    iouring_writable(toolpex::unique_posix_fd fd, options opt = get_global_options()) noexcept;
+    virtual ~iouring_writable() noexcept override;
     const ::std::filesystem::path path() const noexcept { return m_path; }
     virtual koios::task<> close() override;
 

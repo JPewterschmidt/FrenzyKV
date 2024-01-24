@@ -2,7 +2,7 @@
 #include "frenzykv/readable.h"
 #include "frenzykv/writable.h"
 #include "frenzykv/in_mem_rw.h"
-#include "frenzykv/posix_writable.h"
+#include "frenzykv/iouring_writable.h"
 #include "koios/iouring_awaitables.h"
 #include "koios/iouring_unlink_aw.h"
 
@@ -16,13 +16,20 @@ namespace
 {
     in_mem_rw r{3};
     ::std::string filename = "testfile.txt";
-    posix_writable w{filename};
+    iouring_writable w{filename};
     
     task<bool> env_setup()
     {
         seq_writable& w = r;
         const auto str = "123456789abcdefghijk"sv;
-        co_return str.size() == co_await w.append(str);
+        size_t count{};
+        count += co_await w.append(str);
+        count += co_await w.append(str);
+        count += co_await w.append(str);
+        count += co_await w.append(str);
+        count += co_await w.append(str);
+        count += co_await w.append(str);
+        co_return str.size() * 6 == count;
     }
 
     task<bool> testbody_in_mem_rw()
