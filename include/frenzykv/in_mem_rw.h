@@ -46,10 +46,10 @@ public:
     koios::task<> close() noexcept override { co_return; }
 
     koios::task<size_t>
-    read(::std::span<::std::byte> dest, size_t offset) const override;
+    read(::std::span<::std::byte> dest, size_t offset) const noexcept override;
 
     koios::task<size_t>
-    read(::std::span<::std::byte> dest) override;
+    read(::std::span<::std::byte> dest) noexcept override;
 
 private:
     koios::generator<::std::span<const ::std::byte>> 

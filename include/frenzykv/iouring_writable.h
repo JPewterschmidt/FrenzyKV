@@ -20,9 +20,9 @@ class iouring_writable : public seq_writable
 {
 public:
     iouring_writable(::std::filesystem::path path, 
-                   options opt = get_global_options(), 
-                   mode_t create_mode = 
-                       S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+                     options opt = get_global_options(), 
+                     mode_t create_mode = 
+                        S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     iouring_writable(toolpex::unique_posix_fd fd, options opt = get_global_options()) noexcept;
     virtual ~iouring_writable() noexcept override;
     const ::std::filesystem::path path() const noexcept { return m_path; }

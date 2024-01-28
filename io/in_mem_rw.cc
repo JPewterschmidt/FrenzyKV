@@ -71,7 +71,7 @@ static size_t append_to_dest(auto& dest, const auto& src) noexcept
 
 koios::task<size_t>
 in_mem_rw::
-read(::std::span<::std::byte> dest, size_t offset) const 
+read(::std::span<::std::byte> dest, size_t offset) const noexcept
 {
     auto lk = co_await m_mutex.acquire();
     size_t result{};
@@ -88,13 +88,10 @@ read(::std::span<::std::byte> dest, size_t offset) const
 
 koios::task<size_t>
 in_mem_rw::
-read(::std::span<::std::byte> dest) 
+read(::std::span<::std::byte> dest) noexcept
 {
-    seq_readable_context ctx = *this;
-
-    const size_t ret = co_await read(dest, ctx.cursor());;
-    ctx.has_read(ret);
-    this->seq_readable_context::reset(ctx);
+    const size_t ret = co_await read(dest, cursor());;
+    has_read(ret);
 
     co_return ret;
 }
