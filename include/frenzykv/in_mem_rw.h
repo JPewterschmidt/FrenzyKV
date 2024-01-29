@@ -9,6 +9,7 @@
 #include "koios/generator.h"
 
 #include <vector>
+#include <memory>
 
 namespace frenzykv
 {
@@ -41,7 +42,7 @@ public:
     }
 
     koios::task<size_t> append(::std::span<const ::std::byte> buffer) override;
-    koios::task<> sync() noexcept override { co_return; }
+    koios::task<> sync()  noexcept override { co_return; }
     koios::task<> flush() noexcept override { co_return; }
     koios::task<> close() noexcept override { co_return; }
 
