@@ -10,7 +10,8 @@ add_requires(
     "concurrentqueue master",
     "benchmark", 
     "botan", 
-    "nlohmann_json"
+    "nlohmann_json", 
+    "protobuf-cpp"
 )
 
 includes(
@@ -50,6 +51,8 @@ target("FrenzyKV")
         "botan", 
         "nlohmann_json"
     )
+    add_packages("protobuf-cpp")
+    add_rules("protobuf.cpp")
     set_warnings("all", "error")
     add_cxflags("-Wconversion", { force = true })
     add_syslinks(
@@ -60,9 +63,13 @@ target("FrenzyKV")
         "util/*.cc", 
         "io/*.cc"
     )
+    add_files("proto/*.proto", { proto_public = false })
 
 --target("FrenzyKV-test")
 --    set_kind("binary")
+--    add_packages("protobuf-cpp")
+--    add_rules("protobuf.cpp")
+--    add_files("proto/*.proto", { proto_public = false })
 --    add_packages("concurrentqueue")
 --    add_cxflags("-Wconversion", { force = true })
 --    add_deps("FrenzyKV", "koios")
@@ -72,24 +79,7 @@ target("FrenzyKV")
 --        "gtest", "fmt", "spdlog",
 --        "botan",
 --        "nlohmann_json"
---    after_build(function (target)
 --    )
---    if not is_mode("release") then
---        add_cxxflags("-DFRENZYKV_DEBUG", {force = true})
---    end
---    on_run(function (target)
---        --nothing
---    end)
---    
---target("FrenzyKV-example")
---    set_kind("binary")
---    add_packages("")
---    add_cxflags("-Wconversion", { force = true })
---    add_deps("FrenzyKV", "koios")
---    add_files( "example/*.cc")
---    add_syslinks("spdlog")
---    set_policy("build.warning", true)
---    add_packages(
 --    after_build(function (target)
 --        os.exec(target:targetfile())
 --        print("xmake: unittest complete.")
@@ -97,13 +87,14 @@ target("FrenzyKV")
 --    on_run(function (target)
 --        --nothing
 --    end)
-    
+--    
 --target("FrenzyKV-example")
 --    set_kind("binary")
---    add_packages("")
+--    add_packages("protobuf-cpp", { public = false })
+--    add_rules("protobuf.cpp")
+--    add_files("proto/*.proto", { proto_public = false })
 --    add_cxflags("-Wconversion", { force = true })
 --    add_deps("FrenzyKV", "koios")
---    )
 --    add_files( "example/*.cc")
 --    add_syslinks("spdlog")
 --    set_policy("build.warning", true)
@@ -113,5 +104,3 @@ target("FrenzyKV")
 --        "botan",
 --        "nlohmann_json"
 --    )
-    
-

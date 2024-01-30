@@ -9,6 +9,7 @@
 #include "koios/generator.h"
 
 #include <vector>
+#include <memory>
 
 namespace frenzykv
 {
@@ -41,23 +42,26 @@ public:
     }
 
     koios::task<size_t> append(::std::span<const ::std::byte> buffer) override;
-    koios::task<> sync() noexcept override { co_return; }
+    koios::task<> sync()  noexcept override { co_return; }
     koios::task<> flush() noexcept override { co_return; }
     koios::task<> close() noexcept override { co_return; }
 
     koios::task<size_t>
-    read(::std::span<::std::byte> dest, size_t offset) const override;
+    read(::std::span<::std::byte> dest, size_t offset) const noexcept override;
 
     koios::task<size_t>
-    read(::std::span<::std::byte> dest) override;
+    read(::std::span<::std::byte> dest) noexcept override;
+
+    ::std::span<::std::byte> writable_span() noexcept override;
+    koios::task<> commit(size_t wrote_len) noexcept override;
 
 private:
     koios::generator<::std::span<const ::std::byte>> 
     target_spans(size_t offset, size_t dest_size) const noexcept;
+    detials::buffer<>& next_writable_buffer();
 
 private:
     ::std::vector<detials::buffer<>> m_blocks;
-    mutable koios::mutex m_mutex;
     size_t m_block_size;
 };
 

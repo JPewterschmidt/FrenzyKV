@@ -5,6 +5,7 @@
 #include "koios/expected.h"
 
 #include <span>
+#include <memory>
 #include <cstddef>
 
 namespace frenzykv
@@ -12,6 +13,9 @@ namespace frenzykv
 
 class seq_readable
 {
+public:
+    using uptr = ::std::unique_ptr<seq_readable>;
+
 public:
     virtual koios::task<size_t>
     read(::std::span<::std::byte> dest) = 0;
@@ -23,7 +27,7 @@ class random_readable : public seq_readable
 {
 public:
     virtual koios::task<size_t> 
-    read(::std::span<::std::byte>, size_t offset) const = 0;
+    read(::std::span<::std::byte> dest, size_t offset) const = 0;
 
     virtual koios::task<size_t>
     read(::std::span<::std::byte> dest) override = 0;
@@ -41,7 +45,7 @@ public:
     seq_readable_context& operator = (const seq_readable_context&) = default;
 
     size_t cursor() const noexcept { return m_cursor; }
-    void has_read(size_t n) noexcept { m_cursor += n; }
+    size_t has_read(size_t n) noexcept { m_cursor += n; return n; }
     void reset() noexcept { m_cursor = 0; }
     void reset(const seq_readable_context& other) noexcept { m_cursor = other.m_cursor; }
 

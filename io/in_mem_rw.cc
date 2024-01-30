@@ -7,20 +7,36 @@
 namespace frenzykv
 {
 
+detials::buffer<>&
+in_mem_rw::
+next_writable_buffer()
+{
+    auto& last_buf = m_blocks.back();
+    if (last_buf.left() != 0)
+        return last_buf;
+    return m_blocks.emplace_back(m_block_size);
+}
+
+::std::span<::std::byte> 
+in_mem_rw::
+writable_span() noexcept 
+{
+    return next_writable_buffer().writable_span();
+}
+
+koios::task<> 
+in_mem_rw::
+commit(size_t wrote_len) noexcept 
+{
+    next_writable_buffer().commit(wrote_len);
+    co_return;
+}
+
 koios::task<size_t> 
 in_mem_rw::
 append(::std::span<const ::std::byte> buffer)
 {
-    const auto next_writable_buffer = [this] -> decltype(auto) 
-    {
-        auto& last_buf = m_blocks.back();
-        if (last_buf.left() != 0)
-            return last_buf;
-        return m_blocks.emplace_back(m_block_size);
-    };
-
     const size_t result = buffer.size_bytes();
-    auto lk = co_await m_mutex.acquire();
     do
     {
         auto& last_buf = next_writable_buffer();
@@ -71,9 +87,8 @@ static size_t append_to_dest(auto& dest, const auto& src) noexcept
 
 koios::task<size_t>
 in_mem_rw::
-read(::std::span<::std::byte> dest, size_t offset) const 
+read(::std::span<::std::byte> dest, size_t offset) const noexcept
 {
-    auto lk = co_await m_mutex.acquire();
     size_t result{};
 
     for (auto s : target_spans(offset, dest.size_bytes()))
@@ -88,13 +103,10 @@ read(::std::span<::std::byte> dest, size_t offset) const
 
 koios::task<size_t>
 in_mem_rw::
-read(::std::span<::std::byte> dest) 
+read(::std::span<::std::byte> dest) noexcept
 {
-    seq_readable_context ctx = *this;
-
-    const size_t ret = co_await read(dest, ctx.cursor());;
-    ctx.has_read(ret);
-    this->seq_readable_context::reset(ctx);
+    const size_t ret = co_await read(dest, cursor());;
+    has_read(ret);
 
     co_return ret;
 }
