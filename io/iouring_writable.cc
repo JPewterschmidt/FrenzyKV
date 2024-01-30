@@ -10,27 +10,32 @@ namespace frenzykv
 
 using namespace koios;
 
-iouring_writable::
-iouring_writable(::std::filesystem::path path, options opt, mode_t create_mode)
-    : m_options{ ::std::move(opt) }, 
-      m_path{ ::std::move(path) }, 
-      m_buffer{ buffer_size_nbytes() }
+static toolpex::unique_posix_fd
+open_helper(const auto& opts, const ::std::string& pathstr, mode_t create_mode)
 {
     const int open_flags = O_CREAT 
                          | O_WRONLY
                          | O_APPEND 
-                         | (m_options.sync_write ? O_DSYNC : 0);
+                         | (opts.sync_write ? O_DSYNC : 0);
 
-    const ::std::string pathstr = m_path;
     toolpex::errret_thrower et;
-    m_fd = { et << ::open(pathstr.c_str(), open_flags, create_mode) };
+    return { et << ::open(pathstr.c_str(), open_flags, create_mode) };
+}
+
+iouring_writable::
+iouring_writable(::std::filesystem::path path, options opt, mode_t create_mode)
+    : posix_base{ open_helper(opt, path, create_mode) }, 
+      m_options{ ::std::move(opt) }, 
+      m_path{ ::std::move(path) }, 
+      m_buffer{ buffer_size_nbytes() }
+{
 }
 
 iouring_writable::
 iouring_writable(toolpex::unique_posix_fd fd, options opt) noexcept
-    : m_options{ ::std::move(opt) }, 
-      m_buffer{ buffer_size_nbytes() }, 
-      m_fd{ ::std::move(fd) }
+    : posix_base{ ::std::move(fd) },
+      m_options{ ::std::move(opt) }, 
+      m_buffer{ buffer_size_nbytes() }
 {
 }
 
@@ -49,9 +54,9 @@ close()
 
 koios::task<>
 iouring_writable::
-sync_impl(koios::unique_lock& lk) 
+sync_impl() 
 {
-    co_await flush_valid(lk);
+    co_await flush_valid();
     co_await uring::fdatasync(m_fd);
 }
 
@@ -60,8 +65,7 @@ iouring_writable::sync()
 {
     if (m_options.sync_write) 
     {
-        auto lk = co_await m_mutex.acquire();
-        co_await sync_impl(lk);
+        co_await sync_impl();
     }
 }
 
@@ -69,16 +73,18 @@ koios::task<size_t>
 iouring_writable::
 append(::std::span<const ::std::byte> buffer) 
 {
-    auto lk = co_await m_mutex.acquire();
     if (!need_buffered())
     {
         co_await uring::append_all(m_fd, m_buffer.valid_span());
         co_return buffer.size_bytes();
     }
     if (m_buffer.append(buffer)) // fit in
+    {
+        if (m_buffer.full()) co_await flush_valid();
         co_return buffer.size_bytes();
+    }
     
-    co_await flush_valid(lk);
+    co_await flush_valid();
     
     if (buffer.size_bytes() > m_buffer.capacity())
     {
@@ -110,13 +116,12 @@ koios::task<>
 iouring_writable::
 flush()
 {
-    auto lk = co_await m_mutex.acquire();
-    co_await flush_valid(lk);
+    co_await flush_valid();
 }
 
 koios::task<>
 iouring_writable::
-flush_block(koios::unique_lock& lk) 
+flush_block() 
 {
     co_await uring::append_all(m_fd, m_buffer.whole_span());
     m_buffer.turncate();
@@ -124,10 +129,29 @@ flush_block(koios::unique_lock& lk)
 
 koios::task<>
 iouring_writable::
-flush_valid(koios::unique_lock& lk)
+flush_valid()
 {
     co_await uring::append_all(m_fd, m_buffer.valid_span());
     m_buffer.turncate();
+}
+
+::std::span<::std::byte> 
+iouring_writable::
+writable_span() noexcept
+{
+    return m_buffer.writable_span();
+}
+
+koios::task<> 
+iouring_writable::
+commit(size_t len) noexcept
+{
+    m_buffer.commit(len);
+    if (m_buffer.full())
+    {
+        co_await flush_valid();
+    }
+    co_return;
 }
 
 }

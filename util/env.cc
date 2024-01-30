@@ -5,7 +5,6 @@
 #include "frenzykv/in_mem_rw.h"
 #include "frenzykv/iouring_readable.h"
 #include "frenzykv/iouring_writable.h"
-#include "frenzykv/stdout_writable.h"
 
 #include "koios/iouring_awaitables.h"
 #include "koios/iouring_rename_aw.h"

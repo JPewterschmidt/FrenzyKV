@@ -26,6 +26,25 @@ public:
     virtual koios::task<> sync() = 0;
     virtual koios::task<> flush() = 0;
     virtual koios::task<> close() = 0;
+    
+    // The following 2 methods support users to get a writable range of memory to write.
+    // But the users must inform the actual number of bytes they want to commit.
+
+    /*! \brief  Get a writable range of memory.
+     *  \return When success, a non-empty span would return, represents the writable memory 
+     *          (typically from a buffer) which may or may not been initialized.
+     *          If the underlying facility isn't support buffered IO, then may return a empty span.
+     */
+    virtual ::std::span<::std::byte> writable_span() = 0;
+
+    /*! \brief  Commits the recent wrote.
+     *  \attention This function should be called after your write to the most recently returned span complete.
+     *             to inform the underlying IO facility to update the buffer state.
+     *             Or you will lose your data.
+     *             If you use method `append()`, do NOT call this function, 
+     *             or you will insert a gap in the buffer.
+     */
+    virtual koios::task<> commit(size_t wrote_len) = 0;
 };
 
 } // namespace frenzykv

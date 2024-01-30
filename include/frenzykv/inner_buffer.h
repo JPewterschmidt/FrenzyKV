@@ -9,9 +9,14 @@
 namespace frenzykv::detials
 {
 
-template<typename Alloc = ::std::allocator<char>>
+template<typename Alloc = ::std::allocator<::std::byte>>
 class buffer
 {
+public:
+    using allocator = Alloc;
+    using pointer = typename ::std::allocator_traits<allocator>::pointer;
+    using const_pointer = typename ::std::allocator_traits<allocator>::const_pointer;
+
 public:
     buffer(size_t capacity)
         : m_capa{ capacity }, m_left{ capacity }
@@ -75,11 +80,35 @@ public:
         if (result)
         {
             const size_t buffer_sz = buffer.size_bytes();
-            char* beg = cursor();
-            ::std::memcpy(beg, buffer.data(), buffer_sz);
-            m_left -= buffer_sz;
+            auto mem = writable_span();
+            ::std::memcpy(mem.data(), buffer.data(), buffer_sz);
+            [[assume(buffer_sz <= m_left)]];
+            commit(buffer_sz);
         }
         return result;
+    }
+
+    /*! \return Available memory span which could be wrote.
+     *
+     *  \attention After write, you have to call `commit()` 
+     *             to inform the buffer how many memory you wrote.
+     *
+     *  May be used to implement something meet the requirements of STL ostream.
+     */
+    ::std::span<::std::byte> writable_span() const noexcept { return { cursor(), left() }; }
+
+    /*! \brief Commits how many bytes has been wrote 
+     *         to the most recent returned writable span from `writable_span()`
+     *
+     *  \param wrote_len the number of bytes you have worten, 
+     *                   must less equal than the size of writable span.
+     *
+     *  May be used to implement something meet the requirements of STL ostream.
+     */
+    void commit(size_t wrote_len) noexcept
+    {
+        assert(wrote_len <= m_left);
+        m_left -= wrote_len;
     }
 
     void turncate() noexcept
@@ -101,14 +130,14 @@ public:
     }
 
 private:
-    char* cursor() const noexcept
+    ::std::byte* cursor() const noexcept
     {
-        return m_storage + size();
+        return reinterpret_cast<::std::byte*>(m_storage + size());
     }
 
 private:
-    Alloc m_alloc;
-    char* m_storage{};
+    allocator m_alloc;
+    pointer m_storage{};
     size_t m_capa;
     size_t m_left;
 };

@@ -10,7 +10,7 @@ namespace frenzykv
 {
 
 iouring_readable::iouring_readable(const ::std::filesystem::path& p)
-    : m_fd{ toolpex::errret_thrower{} << ::open(p.c_str(), O_RDONLY | O_CLOEXEC) }
+    : posix_base{ toolpex::errret_thrower{} << ::open(p.c_str(), O_RDONLY | O_CLOEXEC) }
 {
 }
 

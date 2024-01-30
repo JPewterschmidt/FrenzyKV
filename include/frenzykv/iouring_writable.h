@@ -7,6 +7,7 @@
 #include "frenzykv/options.h"
 #include "frenzykv/writable.h"
 #include "frenzykv/inner_buffer.h"
+#include "frenzykv/posix_base.h"
 
 #include <span>
 #include <memory>
@@ -16,7 +17,7 @@
 namespace frenzykv
 {
 
-class iouring_writable : public seq_writable
+class iouring_writable : public posix_base, public seq_writable
 {
 public:
     iouring_writable(::std::filesystem::path path, 
@@ -33,22 +34,22 @@ public:
     virtual koios::task<> flush() override;
 
     koios::task<size_t> append(::std::span<const char> buffer);
+    ::std::span<::std::byte> writable_span() noexcept override;
+    koios::task<> commit(size_t len) noexcept override;
 
 private:
-    koios::task<> sync_impl(koios::unique_lock&);
+    koios::task<> sync_impl();
 
 private:
     bool need_buffered() const noexcept;
     size_t buffer_size_nbytes() const noexcept;
-    koios::task<> flush_block(koios::unique_lock& lk);
-    koios::task<> flush_valid(koios::unique_lock& lk);
+    koios::task<> flush_block();
+    koios::task<> flush_valid();
 
 private:
     options m_options;
     ::std::filesystem::path m_path;
     detials::buffer<> m_buffer;
-    toolpex::unique_posix_fd m_fd;
-    koios::mutex m_mutex;
 };
 
 } // namespace frenzykv

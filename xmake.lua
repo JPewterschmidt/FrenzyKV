@@ -10,7 +10,8 @@ add_requires(
     "concurrentqueue master",
     "benchmark", 
     "botan", 
-    "nlohmann_json"
+    "nlohmann_json", 
+    "protobuf-cpp"
 )
 
 includes(
@@ -50,6 +51,8 @@ target("FrenzyKV")
         "botan", 
         "nlohmann_json"
     )
+    add_packages("protobuf-cpp")
+    add_rules("protobuf.cpp")
     set_warnings("all", "error")
     add_cxflags("-Wconversion", { force = true })
     add_syslinks(
@@ -60,9 +63,13 @@ target("FrenzyKV")
         "util/*.cc", 
         "io/*.cc"
     )
+    add_files("proto/*.proto", { proto_public = false })
 
 target("FrenzyKV-test")
     set_kind("binary")
+    add_packages("protobuf-cpp")
+    add_rules("protobuf.cpp")
+    add_files("proto/*.proto", { proto_public = false })
     add_packages("concurrentqueue")
     add_cxflags("-Wconversion", { force = true })
     add_deps("FrenzyKV", "koios")
@@ -83,7 +90,9 @@ target("FrenzyKV-test")
     
 target("FrenzyKV-example")
     set_kind("binary")
-    add_packages("")
+    add_packages("protobuf-cpp", { public = false })
+    add_rules("protobuf.cpp")
+    add_files("proto/*.proto", { proto_public = false })
     add_cxflags("-Wconversion", { force = true })
     add_deps("FrenzyKV", "koios")
     add_files( "example/*.cc")

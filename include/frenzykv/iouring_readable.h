@@ -4,18 +4,19 @@
 #include <filesystem>
 
 #include "frenzykv/readable.h"
+#include "frenzykv/posix_base.h"
 
 #include "toolpex/unique_posix_fd.h"
 
 namespace frenzykv
 {
 
-class iouring_readable : public random_readable, private seq_readable_context
+class iouring_readable : public posix_base, public random_readable, private seq_readable_context
 {
 public:
     iouring_readable(const ::std::filesystem::path& p);
-    iouring_readable(toolpex::unique_posix_fd fd) noexcept
-        : m_fd{ ::std::move(fd) }
+    iouring_readable(toolpex::unique_posix_fd fd)
+        : posix_base{ ::std::move(fd) }
     {
     }
 
@@ -26,9 +27,6 @@ public:
 
     koios::task<size_t> 
     read(::std::span<::std::byte>, size_t offset) const override;
-
-private:
-    toolpex::unique_posix_fd m_fd{};
 };
 
 }
