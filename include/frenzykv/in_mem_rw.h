@@ -54,6 +54,7 @@ public:
 
     ::std::span<::std::byte> writable_span() noexcept override;
     koios::task<> commit(size_t wrote_len) noexcept override;
+    ::std::streambuf* streambuf() override { toolpex::not_implemented(); return nullptr; }
 
 private:
     koios::generator<::std::span<const ::std::byte>> 

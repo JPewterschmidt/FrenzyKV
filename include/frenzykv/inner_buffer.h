@@ -129,6 +129,16 @@ public:
         return { reinterpret_cast<const ::std::byte*>(m_storage), capacity() };
     }
 
+    ::std::span<::std::byte> valid_span() noexcept
+    {
+        return { reinterpret_cast<::std::byte*>(m_storage), size() };
+    }
+
+    ::std::span<::std::byte> whole_span() noexcept
+    {
+        return { reinterpret_cast<::std::byte*>(m_storage), capacity() };
+    }
+
 private:
     ::std::byte* cursor() const noexcept
     {
@@ -140,6 +150,73 @@ private:
     pointer m_storage{};
     size_t m_capa;
     size_t m_left;
+};
+
+class outbuf_adapter : public ::std::streambuf
+{
+public:
+    outbuf_adapter(buffer<>& buf) : m_buf{ &buf } { update_state(); }
+
+    void update_state()
+    {
+        auto mem = m_buf->writable_span();
+        setp(reinterpret_cast<char*>(mem.data()), 
+             reinterpret_cast<char*>(mem.data() + mem.size_bytes()));
+    }
+
+protected:
+    // The two following functions means, 
+    // user should sync or flush the buffer bu hands with those async methods above.
+    virtual int_type overflow(int_type ch = traits_type::eof()) noexcept override
+    {
+        return traits_type::eof();
+    }
+    virtual int_type sync() noexcept override { return -1; }
+
+    virtual ::std::streamsize xsputn(const char* s, ::std::streamsize n) noexcept override
+    {
+        if (m_buf->append(as_bytes(::std::span{s, static_cast<size_t>(n)})))
+        {
+            update_state();
+            return n;
+        }
+        return 0;
+    }
+
+private:
+    buffer<>* m_buf;
+};
+
+class inbuf_adapter : public ::std::streambuf
+{
+public:
+    inbuf_adapter(buffer<>& buf) : m_buf{ &buf } { update_state(); }
+
+    void update_state()
+    {
+        auto mem = m_buf->valid_span();
+        setg(reinterpret_cast<char*>(mem.data()), 
+             reinterpret_cast<char*>(mem.data()), 
+             reinterpret_cast<char*>(mem.data() + mem.size_bytes()));
+    }
+
+protected:
+    // The two following functions means, 
+    // user should sync or flush the buffer bu hands with those async methods above.
+    virtual int_type underflow() noexcept override { return traits_type::eof(); }
+    virtual int_type sync() noexcept override { return -1; }
+
+    virtual ::std::streamsize xsgetn(char* s, ::std::streamsize n) noexcept override
+    {
+        auto vspn = m_buf->valid_span();
+        using size_type = decltype(vspn)::size_type;
+        auto actual_copy_from = vspn.subspan(0, ::std::min(static_cast<size_type>(n), vspn.size_bytes()));
+        ::std::memcpy(s, actual_copy_from.data(), actual_copy_from.size_bytes());
+        return actual_copy_from.size_bytes();
+    }
+
+private:
+    buffer<>* m_buf;
 };
 
 } // namespace frenzykv::detials

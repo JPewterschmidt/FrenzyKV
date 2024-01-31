@@ -5,6 +5,7 @@
 #include "toolpex/move_only.h"
 
 #include <string_view>
+#include <ostream>
 
 namespace frenzykv
 {
@@ -12,7 +13,6 @@ namespace frenzykv
 class seq_writable : public toolpex::move_only
 {
 public:
-    seq_writable() = default;
     virtual ~seq_writable() noexcept {}
 
     koios::task<size_t> 
@@ -45,6 +45,12 @@ public:
      *             or you will insert a gap in the buffer.
      */
     virtual koios::task<> commit(size_t wrote_len) = 0;
+
+    /*! \brief  To get the stream buffer of this object.
+     *  To support protobuf.
+     *  You can use this to build a temporary `std::ostream` object.
+     */
+    virtual ::std::streambuf* streambuf() = 0;
 };
 
 } // namespace frenzykv

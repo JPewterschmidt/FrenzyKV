@@ -27,7 +27,8 @@ iouring_writable(::std::filesystem::path path, options opt, mode_t create_mode)
     : posix_base{ open_helper(opt, path, create_mode) }, 
       m_options{ ::std::move(opt) }, 
       m_path{ ::std::move(path) }, 
-      m_buffer{ buffer_size_nbytes() }
+      m_buffer{ buffer_size_nbytes() }, 
+      m_streambuf{ m_buffer }
 {
 }
 
@@ -35,12 +36,8 @@ iouring_writable::
 iouring_writable(toolpex::unique_posix_fd fd, options opt) noexcept
     : posix_base{ ::std::move(fd) },
       m_options{ ::std::move(opt) }, 
-      m_buffer{ buffer_size_nbytes() }
-{
-}
-
-iouring_writable::
-~iouring_writable() noexcept
+      m_buffer{ buffer_size_nbytes() }, 
+      m_streambuf{ m_buffer }
 {
 }
 
@@ -63,10 +60,7 @@ sync_impl()
 koios::task<>
 iouring_writable::sync()
 {
-    if (m_options.sync_write) 
-    {
-        co_await sync_impl();
-    }
+    co_await sync_impl();
 }
 
 koios::task<size_t>
@@ -125,6 +119,7 @@ flush_block()
 {
     co_await uring::append_all(m_fd, m_buffer.whole_span());
     m_buffer.turncate();
+    m_streambuf.update_state();
 }
 
 koios::task<>
@@ -133,6 +128,7 @@ flush_valid()
 {
     co_await uring::append_all(m_fd, m_buffer.valid_span());
     m_buffer.turncate();
+    m_streambuf.update_state();
 }
 
 ::std::span<::std::byte> 
@@ -151,6 +147,7 @@ commit(size_t len) noexcept
     {
         co_await flush_valid();
     }
+    m_streambuf.update_state();
     co_return;
 }
 

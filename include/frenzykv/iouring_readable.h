@@ -4,19 +4,25 @@
 #include <filesystem>
 
 #include "frenzykv/readable.h"
+#include "frenzykv/options.h"
 #include "frenzykv/posix_base.h"
+#include "frenzykv/inner_buffer.h"
 
 #include "toolpex/unique_posix_fd.h"
 
 namespace frenzykv
 {
 
-class iouring_readable : public posix_base, public random_readable, private seq_readable_context
+class iouring_readable : public posix_base, public random_readable 
 {
 public:
-    iouring_readable(const ::std::filesystem::path& p);
-    iouring_readable(toolpex::unique_posix_fd fd)
-        : posix_base{ ::std::move(fd) }
+    iouring_readable(const ::std::filesystem::path& p, 
+                     options opt = get_global_options());
+
+    iouring_readable(toolpex::unique_posix_fd fd, 
+                     options opt = get_global_options())
+        : posix_base{ ::std::move(fd) }, 
+          m_opt{ ::std::move(opt) }
     {
     }
 
@@ -27,6 +33,10 @@ public:
 
     koios::task<size_t> 
     read(::std::span<::std::byte>, size_t offset) const override;
+
+private:
+    options m_opt;
+    seq_readable_context m_fdctx;
 };
 
 }
