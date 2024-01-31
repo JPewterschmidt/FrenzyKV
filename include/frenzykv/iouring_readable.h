@@ -34,6 +34,8 @@ public:
     koios::task<size_t> 
     read(::std::span<::std::byte>, size_t offset) const override;
 
+    constexpr bool is_buffering() const noexcept override { return false; }
+
 private:
     options m_opt;
     seq_readable_context m_fdctx;

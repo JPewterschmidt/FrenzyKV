@@ -21,6 +21,7 @@ public:
     read(::std::span<::std::byte> dest) = 0;
 
     virtual ~seq_readable() noexcept {}
+    virtual bool is_buffering() const = 0;
 };
 
 class random_readable : public seq_readable
@@ -33,6 +34,7 @@ public:
     read(::std::span<::std::byte> dest) override = 0;
 
     virtual ~random_readable() noexcept override {}
+    virtual bool is_buffering() const override = 0;
 };
 
 class seq_readable_context

@@ -6,7 +6,9 @@
 #include <span>
 #include <utility>
 
-namespace frenzykv::detials
+#include "frenzykv/options.h"
+
+namespace frenzykv
 {
 
 template<typename Alloc = ::std::allocator<::std::byte>>
@@ -32,6 +34,11 @@ public:
 #ifdef FRENZYKV_DEBUG
         turncate();
 #endif
+    }
+
+    buffer(const options& opt = get_global_options())
+        : buffer{ opt.memory_page_bytes }
+    {
     }
 
     ~buffer() noexcept
@@ -219,6 +226,6 @@ private:
     buffer<>* m_buf;
 };
 
-} // namespace frenzykv::detials
+} // namespace frenzykv
 
 #endif

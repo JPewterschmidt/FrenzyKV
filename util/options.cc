@@ -5,7 +5,7 @@ namespace frenzykv
 {
     static options g_opt;
 
-    options get_global_options() noexcept
+    const options& get_global_options() noexcept
     {
         return g_opt;
     }

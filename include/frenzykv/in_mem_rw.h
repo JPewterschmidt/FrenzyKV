@@ -56,13 +56,15 @@ public:
     koios::task<> commit(size_t wrote_len) noexcept override;
     ::std::streambuf* streambuf() override { toolpex::not_implemented(); return nullptr; }
 
+    constexpr bool is_buffering() const noexcept override { return true; }
+
 private:
     koios::generator<::std::span<const ::std::byte>> 
     target_spans(size_t offset, size_t dest_size) const noexcept;
-    detials::buffer<>& next_writable_buffer();
+    buffer<>& next_writable_buffer();
 
 private:
-    ::std::vector<detials::buffer<>> m_blocks;
+    ::std::vector<buffer<>> m_blocks;
     size_t m_block_size;
 };
 

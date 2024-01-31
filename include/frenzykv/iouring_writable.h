@@ -36,7 +36,7 @@ public:
     koios::task<size_t> append(::std::span<const char> buffer);
     virtual ::std::span<::std::byte> writable_span() noexcept override;
     virtual koios::task<> commit(size_t len) noexcept override;
-    virtual detials::outbuf_adapter* streambuf() noexcept override { return &m_streambuf; }
+    virtual outbuf_adapter* streambuf() noexcept override { return &m_streambuf; }
 
 private:
     koios::task<> sync_impl();
@@ -50,8 +50,8 @@ private:
 private:
     options m_options;
     ::std::filesystem::path m_path;
-    detials::buffer<> m_buffer;
-    detials::outbuf_adapter m_streambuf;
+    buffer<> m_buffer;
+    outbuf_adapter m_streambuf;
 };
 
 } // namespace frenzykv

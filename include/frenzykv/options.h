@@ -17,7 +17,7 @@ struct options
     bool buffered_read = true;
 };
 
-options get_global_options() noexcept;
+const options& get_global_options() noexcept;
 void set_global_options(const nlohmann::json& j);
 }
 

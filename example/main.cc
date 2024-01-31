@@ -5,6 +5,7 @@
 #include "frenzykv/writable.h"
 #include "frenzykv/in_mem_rw.h"
 #include "frenzykv/iouring_writable.h"
+#include "frenzykv/iouring_readable.h"
 #include "koios/iouring_awaitables.h"
 
 #include "entry_pbrep.pb.h"
@@ -14,6 +15,7 @@ using namespace frenzykv;
 using namespace ::std::string_view_literals;
 
 task<> ostest()
+try
 {
     entry_pbrep obj1;
     obj1.set_key(reinterpret_cast<const ::std::byte*>("123"sv.data()), 3);
@@ -25,15 +27,19 @@ task<> ostest()
     obj2.set_key(out1);
     obj2.set_value(out1);
 
-    co_await uring::unlink("testtesttest.txt");
-    iouring_writable w{ "testtesttest.txt" };
-    ::std::ostream wos{ w.streambuf() };
-    obj2.SerializeToOstream(&wos);
+    iouring_readable f{ "testtesttest" };
+    buffer<> buf{};
+    buf.commit(co_await f.read(buf.writable_span()));
+    entry_pbrep obj3;
+    obj3.ParseFromArray(buf.valid_span().data(), (int)buf.valid_span().size());
 
-    co_await w.sync();
-    ::std::cout << "ok" << ::std::endl;
+    ::std::cout << obj3.DebugString() << ::std::endl;
 
     co_return;
+}
+catch (const koios::exception& e)
+{
+    e.log();
 }
 
 int main()
