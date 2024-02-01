@@ -19,6 +19,12 @@ struct options
 
 const options& get_global_options() noexcept;
 void set_global_options(const nlohmann::json& j);
+
+struct write_options
+{
+    bool sync_write = false;
+};
+
 }
 
 NLOHMANN_JSON_NAMESPACE_BEGIN
