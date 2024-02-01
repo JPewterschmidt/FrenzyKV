@@ -10,6 +10,7 @@ namespace frenzykv
     class write_batch
     {
     public:
+        constexpr write_batch() noexcept = default;
         write_batch(const_bspan key, const_bspan value) { write(key, value); }
         void    write(const_bspan key, const_bspan value);
         void    write(write_batch other);

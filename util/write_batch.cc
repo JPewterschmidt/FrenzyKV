@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <ranges>
 #include <iterator>
+#include <utility>
 
 namespace frenzykv
 {
@@ -73,7 +74,7 @@ size_t write_batch::serialize_to_array(bspan buffer) const
 size_t write_batch::serialize_to_array(bspan buffer)
 {
     compact();
-    return const_cast<const write_batch*>(this)->serialize_to_array(buffer);
+    return ::std::as_const(*this).serialize_to_array(buffer);
 }
 
 } // namespace frenzykv
