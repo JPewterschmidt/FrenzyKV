@@ -1,6 +1,5 @@
 syntax = "proto3";
 
-
 message entry_pbrep
 {
     bytes key = 1;

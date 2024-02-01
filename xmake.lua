@@ -62,7 +62,8 @@ target("FrenzyKV")
     )
     add_files(
         "util/*.cc", 
-        "io/*.cc"
+        "io/*.cc", 
+        "db/*.cc"
     )
     add_files("proto/*.proto", { proto_public = false })
 

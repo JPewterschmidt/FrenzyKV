@@ -5,7 +5,7 @@
 #include <string_view>
 #include "entry_pbrep.pb.h"
 #include "frenzykv/frenzykv.h"
-#include "frenzykv/write_batch.h"
+#include "db/version.h"
 
 namespace frenzykv
 {
@@ -37,9 +37,28 @@ namespace frenzykv
         size_t  serialize_to_array(bspan buffer) const;
 
     private:
+        // TODO Friend to some internal class.
+
+        // Every single writing operation should have a sequence number, 
+        // at least to the higher layers. 
+        // Though, those higher layers should can get the sequence number range, 
+        // Because this `write_batch` batch those writing operations into a single atomic write.
+        // It's not that important to the MVCC or other components 
+        // the specific seq number of each writing in a `write_batch`
+
+        /*! \brief Set the sequence number of the first operation of this batch.
+         *  \param num the sequence number.
+         *  You SHOULD set the sequence number before serialization.
+         */
+        void set_first_sequence_num(sequence_number_t num) { m_seqnumber = num; }
+        sequence_number_t first_sequence_num() const noexcept { return m_seqnumber; }
+        sequence_number_t last_sequence_num() const noexcept { return m_seqnumber + count() - 1; }
+
+    private:
         auto stl_style_remove(const_bspan key);
         
     private:
+        sequence_number_t m_seqnumber{};
         ::std::vector<entry_pbrep> m_entries;
     };
 } // namespace frenzykv
