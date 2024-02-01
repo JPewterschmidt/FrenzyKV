@@ -25,7 +25,7 @@ public:
                      mode_t create_mode = 
                         S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     iouring_writable(toolpex::unique_posix_fd fd, options opt = get_global_options()) noexcept;
-    virtual ~iouring_writable() noexcept override;
+
     const ::std::filesystem::path path() const noexcept { return m_path; }
     virtual koios::task<> close() override;
 
@@ -34,8 +34,9 @@ public:
     virtual koios::task<> flush() override;
 
     koios::task<size_t> append(::std::span<const char> buffer);
-    ::std::span<::std::byte> writable_span() noexcept override;
-    koios::task<> commit(size_t len) noexcept override;
+    virtual ::std::span<::std::byte> writable_span() noexcept override;
+    virtual koios::task<> commit(size_t len) noexcept override;
+    virtual outbuf_adapter* streambuf() noexcept override { return &m_streambuf; }
 
 private:
     koios::task<> sync_impl();
@@ -49,7 +50,8 @@ private:
 private:
     options m_options;
     ::std::filesystem::path m_path;
-    detials::buffer<> m_buffer;
+    buffer<> m_buffer;
+    outbuf_adapter m_streambuf;
 };
 
 } // namespace frenzykv

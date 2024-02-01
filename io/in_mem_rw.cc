@@ -7,7 +7,7 @@
 namespace frenzykv
 {
 
-detials::buffer<>&
+buffer<>&
 in_mem_rw::
 next_writable_buffer()
 {
