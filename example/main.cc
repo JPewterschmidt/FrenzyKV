@@ -7,6 +7,7 @@
 #include "frenzykv/iouring_writable.h"
 #include "frenzykv/iouring_readable.h"
 #include "koios/iouring_awaitables.h"
+#include "frenzykv/write_batch.h"
 
 #include "entry_pbrep.pb.h"
 
@@ -17,11 +18,20 @@ using namespace ::std::string_view_literals;
 task<> ostest()
 try
 {
-    entry_pbrep obj;
-    obj.set_key("xxx", 1);
-    obj.set_value("y", 1);
-    ::std::cout << obj.DebugString() << ::std::endl;
-    ::std::cout << obj.ByteSizeLong() << ::std::endl;
+    write_batch batch;
+    batch.write("xxx", "123");
+    batch.write("xxx", "123");
+    batch.write("xxx", "345");
+    batch.write("xxx", "345");
+    batch.write("xxx", "345");
+    batch.write("xxx", "345");
+
+    write_batch batch2 = batch;
+    batch2.write("yyy", "123");
+    batch2.write("yyy", "123");
+    batch2.write("yyy", "123");
+    batch2.write("yyy", "123");
+    batch2.remove_from_db("yyy");
     
     co_return;
 }

@@ -16,6 +16,12 @@ void write_batch::write(const_bspan key, const_bspan value)
     m_entries.push_back(::std::move(entry));
 }
 
+void write_batch::write(::std::string_view k, ::std::string_view v)
+{
+    ::std::span<const char> ks{k}, vs{v};
+    write(as_bytes(ks), as_bytes(vs));
+}
+
 void write_batch::write(write_batch other)
 {
     auto& other_ety = other.m_entries;
@@ -57,6 +63,12 @@ void write_batch::remove_from_db(const_bspan key)
     }
 }
 
+void write_batch::remove_from_db(::std::string_view key)
+{
+    ::std::span<const char> ks{ key };
+    remove_from_db(as_bytes(ks));
+}
+
 size_t write_batch::serialize_to_array(bspan buffer) const
 {
     const size_t result = serialized_size();
@@ -69,12 +81,6 @@ size_t write_batch::serialize_to_array(bspan buffer) const
             return 0;
     }
     return result;
-}
-
-size_t write_batch::serialize_to_array(bspan buffer)
-{
-    compact();
-    return ::std::as_const(*this).serialize_to_array(buffer);
 }
 
 } // namespace frenzykv

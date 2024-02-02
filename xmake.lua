@@ -11,7 +11,8 @@ add_requires(
     "benchmark", 
     "botan", 
     "nlohmann_json", 
-    "protobuf-cpp"
+    "protobuf-cpp", 
+    "spdlog"
 )
 
 includes(
@@ -19,7 +20,6 @@ includes(
 )
 
 add_includedirs(
-    "include", 
     "koios/toolpex/include", 
     "koios/include",
     { public = true }
@@ -49,19 +49,20 @@ target("FrenzyKV")
         "gflags", 
         "concurrentqueue", 
         "botan", 
-        "nlohmann_json"
+        "nlohmann_json", 
+        "spdlog"
     )
     add_packages("protobuf-cpp")
     add_rules("protobuf.cpp")
     set_warnings("all", "error")
     add_cxflags("-Wconversion", { force = true })
     add_syslinks(
-        "spdlog", 
         "uring"
     )
     add_files(
         "util/*.cc", 
-        "io/*.cc"
+        "io/*.cc", 
+        "db/*.cc"
     )
     add_files("proto/*.proto", { proto_public = false })
 
@@ -96,11 +97,13 @@ target("FrenzyKV")
 --    add_cxflags("-Wconversion", { force = true })
 --    add_deps("FrenzyKV", "koios")
 --    add_files( "example/*.cc")
---    add_syslinks("spdlog")
 --    set_policy("build.warning", true)
 --    add_packages(
 --        "fmt", "gflags", 
 --        "concurrentqueue", 
 --        "botan",
---        "nlohmann_json"
+--        "nlohmann_json", 
+--        "spdlog"
 --    )
+    
+
