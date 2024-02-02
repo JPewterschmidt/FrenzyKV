@@ -25,6 +25,9 @@ public:
         batch.remove_from_db(key);
         return write(::std::move(batch), opt);
     }
+
+private:
+    
 };
 
 } // namespace frenzykv

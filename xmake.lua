@@ -20,7 +20,6 @@ includes(
 )
 
 add_includedirs(
-    "include", 
     "koios/toolpex/include", 
     "koios/include",
     { public = true }
