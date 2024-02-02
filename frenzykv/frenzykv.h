@@ -4,6 +4,8 @@
 #include <span>
 #include <cstddef>
 
+#include "entry_pbrep.pb.h"
+
 namespace frenzykv
 {
     using bspan = ::std::span<::std::byte>;
