@@ -3,6 +3,11 @@
 namespace frenzykv
 {
 
+db_impl::db_impl(::std::string dbname, const options& opt)
+    : m_dbname{ ::std::move(dbname) }, m_opt{ &opt }
+{
+}
+
 koios::task<size_t> 
 db_impl::write(write_batch batch) 
 {

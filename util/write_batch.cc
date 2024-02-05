@@ -51,14 +51,13 @@ void write_batch::remove_from_db(const_bspan key)
     auto iter = stl_style_remove(key);
     if (::std::ranges::distance(iter, m_entries.end()) > 0)
     {
-        iter->set_remove_flag(true);
+        iter->clear_value();
         m_entries.erase(::std::next(iter), m_entries.end());
     }
     else 
     {
         entry_pbrep entry;
         entry.set_key(key.data(), key.size());
-        entry.set_remove_flag(true);
         m_entries.push_back(::std::move(entry));
     }
 }

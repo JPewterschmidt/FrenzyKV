@@ -19,6 +19,7 @@ struct options
 
 const options& get_global_options() noexcept;
 void set_global_options(const nlohmann::json& j);
+void set_global_options(const ::std::filesystem::path& filepath);
 
 struct write_options
 {
