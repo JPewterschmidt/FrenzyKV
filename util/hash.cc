@@ -10,7 +10,7 @@ namespace frenzykv
 
 ::std::size_t 
 std_bin_hash::
-hash(::std::span<const ::std::byte> buffer) noexcept
+operator()(::std::span<const ::std::byte> buffer) const noexcept
 {
     ::std::string_view contents{ 
         reinterpret_cast<const char*>(buffer.data()), 
@@ -21,14 +21,14 @@ hash(::std::span<const ::std::byte> buffer) noexcept
 
 ::std::size_t 
 std_bin_hash::
-hash(::std::span<const ::std::byte> buffer, ::std::size_t hints) noexcept
+operator()(::std::span<const ::std::byte> buffer, ::std::size_t hints) const noexcept
 {
     return this->hash(buffer);
 }
 
 ::std::size_t 
 murmur_bin_hash::
-hash(::std::span<const ::std::byte> buffer) noexcept
+operator()(::std::span<const ::std::byte> buffer) const noexcept
 {
     return hash(buffer, 0);
 }
@@ -36,7 +36,7 @@ hash(::std::span<const ::std::byte> buffer) noexcept
 ::std::size_t murmur_hash3_32bits(
     const void* key, 
     ::std::size_t len, 
-    ::std::size_t seed = 0) 
+    ::std::size_t seed = 0) noexcept
 {
     constexpr ::std::size_t m = 0x5bd1e995;
     constexpr int r = 24;
@@ -82,7 +82,7 @@ hash(::std::span<const ::std::byte> buffer) noexcept
 
 ::std::size_t 
 murmur_bin_hash::
-hash(::std::span<const ::std::byte> buffer, ::std::size_t hints) noexcept
+operator()(::std::span<const ::std::byte> buffer, ::std::size_t hints) const noexcept
 {
     return murmur_hash3_32bits(buffer.data(), buffer.size(), hints);
 }

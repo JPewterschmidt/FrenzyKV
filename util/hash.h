@@ -13,32 +13,32 @@ namespace frenzykv
 class binary_hash_interface
 {
 public:
-    virtual ::std::size_t hash(::std::span<const ::std::byte> buffer) noexcept = 0;
-    virtual ::std::size_t hash(::std::span<const ::std::byte> buffer, ::std::size_t hints) noexcept = 0;
+    virtual ::std::size_t operator()(::std::span<const ::std::byte> buffer) const noexcept = 0;
+    virtual ::std::size_t operator()(::std::span<const ::std::byte> buffer, ::std::size_t hints) const noexcept = 0;
 
-    ::std::size_t operator()(::std::span<const ::std::byte> buffer) noexcept
-    {
-        return this->hash(buffer);
+    ::std::size_t hash(::std::span<const ::std::byte> buffer) const noexcept 
+    { 
+        return (*this)(buffer); 
     }
 
-    ::std::size_t operator()(::std::span<const ::std::byte> buffer, ::std::size_t hints) noexcept
-    {
-        return this->hash(buffer, hints);
+    ::std::size_t hash(::std::span<const ::std::byte> buffer, ::std::size_t hints) const noexcept 
+    { 
+        return (*this)(buffer, hints); 
     }
 };
 
 class std_bin_hash final : public binary_hash_interface
 {
 public:
-    ::std::size_t hash(::std::span<const ::std::byte> buffer) noexcept override;
-    ::std::size_t hash(::std::span<const ::std::byte> buffer, ::std::size_t hints) noexcept override;
+    ::std::size_t operator()(::std::span<const ::std::byte> buffer) const noexcept override;
+    ::std::size_t operator()(::std::span<const ::std::byte> buffer, ::std::size_t hints) const noexcept override;
 };
 
 class murmur_bin_hash final : public binary_hash_interface
 {
 public:
-    ::std::size_t hash(::std::span<const ::std::byte> buffer) noexcept override;
-    ::std::size_t hash(::std::span<const ::std::byte> buffer, ::std::size_t hints) noexcept override;
+    ::std::size_t operator()(::std::span<const ::std::byte> buffer) const noexcept override;
+    ::std::size_t operator()(::std::span<const ::std::byte> buffer, ::std::size_t hints) const noexcept override;
 };
 
 } // namespace frenzykv
