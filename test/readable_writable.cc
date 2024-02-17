@@ -4,7 +4,6 @@
 #include "frenzykv/in_mem_rw.h"
 #include "frenzykv/iouring_writable.h"
 #include "koios/iouring_awaitables.h"
-#include "koios/iouring_unlink_aw.h"
 
 #include <fstream>
 
@@ -18,7 +17,7 @@ namespace
     ::std::string filename = "testfile.txt";
     iouring_writable w{filename};
     
-    task<bool> env_setup()
+    emitter_task<bool> env_setup()
     {
         seq_writable& w = r;
         const auto str = "123456789abcdefghijk"sv;
@@ -32,7 +31,7 @@ namespace
         co_return str.size() * 6 == count;
     }
 
-    task<bool> testbody_in_mem_rw()
+    emitter_task<bool> testbody_in_mem_rw()
     {
         ::std::array<char, 5> buffer{};
         ::std::span sp{ buffer.begin(), buffer.end() };
@@ -46,7 +45,7 @@ namespace
         co_return ::std::memcmp(buffer.data(), "bcdef", 5) == 0 && partial_result;
     }
 
-    task<bool> testbody_posix()
+    emitter_task<bool> testbody_posix()
     {
         seq_writable& ref = w;
         ::std::string test_txt = "1234567890abcdefg\n";
