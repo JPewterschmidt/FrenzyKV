@@ -44,7 +44,7 @@ TEST(write_batch, remove)
 
     entry_pbrep example_entry, entry_from_buffer;
     example_entry.set_key(k.data(), k.size());
-    example_entry.set_remove_flag(true);
+    example_entry.clear_value();
 
     entry_from_buffer.ParseFromArray(buffer.data(), buffer.size());
     ASSERT_TRUE(google::protobuf::util::MessageDifferencer::Equals(entry_from_buffer, example_entry));

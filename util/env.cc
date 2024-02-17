@@ -7,7 +7,6 @@
 #include "frenzykv/iouring_writable.h"
 
 #include "koios/iouring_awaitables.h"
-#include "koios/iouring_rename_aw.h"
 #include "koios/this_task.h"
 
 using namespace koios;

@@ -12,13 +12,13 @@ namespace
 {
     static constexpr ::std::string g_file_name = "testflock.txt";
 
-    task<toolpex::unique_posix_fd> create_file()
+    emitter_task<toolpex::unique_posix_fd> create_file()
     {
         toolpex::errret_thrower et;
         co_return et << ::creat(g_file_name.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     }
 
-    task<> delete_file()
+    emitter_task<> delete_file()
     {
         co_await uring::unlink(g_file_name);
     }

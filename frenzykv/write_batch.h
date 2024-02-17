@@ -35,6 +35,10 @@ namespace frenzykv
 
         /*! \brief  Serialize all the kv pair into bytes form. */
         size_t  serialize_to_array(bspan buffer) const;
+        auto begin()       noexcept { return m_entries.begin(); }
+        auto end()         noexcept { return m_entries.end();   }
+        auto begin() const noexcept { return m_entries.begin(); }
+        auto end()   const noexcept { return m_entries.end();   }
 
     private:
         // TODO Friend to some internal class.

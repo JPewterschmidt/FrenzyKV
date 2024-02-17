@@ -3,9 +3,5 @@ syntax = "proto3";
 message entry_pbrep
 {
     bytes key = 1;
-    oneof value_or_flag_pbrep
-    {
-        bytes value = 2;
-        bool remove_flag = 3;
-    };
+    optional bytes value = 2;
 };
