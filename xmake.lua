@@ -64,13 +64,12 @@ target("FrenzyKV")
         "io/*.cc", 
         "db/*.cc"
     )
-    add_files("proto/*.proto", { proto_public = false })
+    add_files("proto/*.proto", { proto_public = true })
 
 --target("FrenzyKV-test")
 --    set_kind("binary")
 --    add_packages("protobuf-cpp")
 --    add_rules("protobuf.cpp")
---    add_files("proto/*.proto", { proto_public = false })
 --    add_packages("concurrentqueue")
 --    add_cxflags("-Wconversion", { force = true })
 --    add_deps("FrenzyKV", "koios")
