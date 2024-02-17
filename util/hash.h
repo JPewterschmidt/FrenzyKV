@@ -25,6 +25,26 @@ public:
     { 
         return (*this)(buffer, hints); 
     }
+
+    ::std::size_t hash(::std::span<const char> buffer) const noexcept 
+    { 
+        return this->hash(::std::as_bytes(buffer)); 
+    }
+
+    ::std::size_t hash(::std::span<const char> buffer, ::std::size_t hints) const noexcept 
+    { 
+        return this->hash(::std::as_bytes(buffer), hints); 
+    }
+
+    ::std::size_t operator()(::std::span<const char> buffer) const noexcept
+    {
+        return (*this)(::std::as_bytes(buffer));
+    }
+
+    ::std::size_t operator()(::std::span<const char> buffer, ::std::size_t hints) const noexcept
+    {
+        return (*this)(::std::as_bytes(buffer), hints);
+    }
 };
 
 class std_bin_hash final : public binary_hash_interface

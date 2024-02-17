@@ -47,8 +47,8 @@ operator()(::std::span<const ::std::byte> buffer) const noexcept
     ::std::size_t h = seed ^ len;
 
     while (data + 4 <= end) {
-        ::std::size_t k;
-        std::memcpy(&k, data, sizeof(::std::size_t));
+        ::std::size_t k{};
+        std::memcpy(&k, data, ::std::min(sizeof(::std::size_t), len));
         data += 4;
 
         k *= m;
