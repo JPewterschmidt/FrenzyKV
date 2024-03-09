@@ -32,6 +32,8 @@ try
     batch2.write("yyy", "123");
     batch2.write("yyy", "123");
     batch2.remove_from_db("yyy");
+
+    ::std::cout << batch2.to_string_debug() << ::std::endl;
     
     co_return;
 }

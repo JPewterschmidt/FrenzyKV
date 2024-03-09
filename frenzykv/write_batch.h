@@ -2,6 +2,7 @@
 #define FRENZYKV_WRITE_BATCH_H
 
 #include <deque>
+#include <string>
 #include <string_view>
 #include "entry_pbrep.pb.h"
 #include "frenzykv/frenzykv.h"
@@ -39,6 +40,9 @@ namespace frenzykv
         auto end()         noexcept { return m_entries.end();   }
         auto begin() const noexcept { return m_entries.begin(); }
         auto end()   const noexcept { return m_entries.end();   }
+
+        ::std::string to_string_debug() const;
+        ::std::string to_string_log() const;
 
     private:
         // TODO Friend to some internal class.

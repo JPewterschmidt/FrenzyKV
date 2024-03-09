@@ -20,6 +20,7 @@ public:
 private:
     ::std::string m_dbname;
     const options* m_opt;   
+    
 };
 
 } // namespace frenzykv
