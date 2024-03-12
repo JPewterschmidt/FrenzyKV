@@ -11,7 +11,7 @@ db_impl::db_impl(::std::string dbname, const options& opt)
 koios::task<size_t> 
 db_impl::write(write_batch batch) 
 {
-       
+          
     co_return {};
 }
 

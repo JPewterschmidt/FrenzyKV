@@ -43,6 +43,7 @@ try
         .new_with(stdout_debug_record_writer{});
 
     co_await writer.write(batch2);
+    co_await writer.write(batch);
     
     co_return;
 }
