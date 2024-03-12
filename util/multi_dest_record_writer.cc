@@ -1,4 +1,4 @@
-#include "util/record_writer.h"
+#include "util/multi_dest_record_writer.h"
 
 namespace frenzykv
 {

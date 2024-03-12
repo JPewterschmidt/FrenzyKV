@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "util/record_writer.h"
+#include "util/multi_dest_record_writer.h"
 #include "util/stdout_debug_record_writer.h"
 
 using namespace koios;

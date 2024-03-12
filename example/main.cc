@@ -7,7 +7,7 @@
 #include "frenzykv/iouring_writable.h"
 #include "frenzykv/iouring_readable.h"
 
-#include "util/record_writer.h"
+#include "util/multi_dest_record_writer.h"
 #include "util/stdout_debug_record_writer.h"
 
 #include "koios/iouring_awaitables.h"
