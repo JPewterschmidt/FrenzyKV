@@ -3,19 +3,13 @@
 
 #include "frenzykv/concepts.h"
 #include "frenzykv/write_batch.h"
+#include "util/nop_record_writer.h"
 #include "util/record_writer_wrapper.h"
 #include "koios/task.h"
 #include <tuple>
 
 namespace frenzykv
 {
-
-class nop_record_writer
-{
-public:
-    constexpr nop_record_writer() noexcept = default;
-    constexpr ::std::suspend_never write([[maybe_unused]] const write_batch&) const noexcept { return {}; }
-};
 
 template<typename WritersTuple = ::std::tuple<nop_record_writer>>
 class multi_dest_record_writer
@@ -49,32 +43,6 @@ public:
 
 private:
     WritersTuple m_writers{};   
-};
-
-class stdout_debug_record_writer
-{
-public:
-    class awaitable
-    {
-    public:
-        awaitable(const write_batch& b, size_t num = 0) noexcept : m_batch{ &b }, m_num{ num } {}
-        constexpr bool await_ready() const noexcept { return true; }
-        constexpr void await_suspend(::std::coroutine_handle<>) const noexcept {}
-        void await_resume() const noexcept;
-
-    private:
-        const write_batch* m_batch{};
-        size_t m_num{};
-    };
-
-public:
-    stdout_debug_record_writer() noexcept;
-    stdout_debug_record_writer(stdout_debug_record_writer&&) noexcept = default;
-    awaitable write(const write_batch& batch) { return { batch, m_number }; }
-
-private:
-    size_t m_number{};
-    static size_t s_number;
 };
 
 } // namespace frenzykv
