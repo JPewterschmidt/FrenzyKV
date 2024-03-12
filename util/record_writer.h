@@ -3,6 +3,7 @@
 
 #include "frenzykv/concepts.h"
 #include "frenzykv/write_batch.h"
+#include "koios/task.h"
 #include <tuple>
 #include <memory>
 
@@ -18,7 +19,7 @@ public:
     {
         new (m_storage.get()) Writer(::std::forward<Writer>(w));
         m_write_p = +[](::std::byte* obj, const write_batch& batch) {
-            reinterpret_cast<Writer*>(obj)->write(batch);
+            return reinterpret_cast<Writer*>(obj)->write(batch);
         };
         m_dtor_p = +[](::std::byte* obj) noexcept {
             reinterpret_cast<Writer*>(obj)->~Writer();
@@ -49,9 +50,10 @@ public:
 
     ~record_writer_wrapper() noexcept { clear(); }
 
-    void write(const write_batch& batch)
+    auto write(const write_batch& batch)
     {
-        if (m_storage) m_write_p(m_storage.get(), batch);
+        assert(m_storage);
+        return m_write_p(m_storage.get(), batch);
     }
 
 private:
@@ -62,7 +64,7 @@ private:
 
 private:
     ::std::unique_ptr<::std::byte[]> m_storage;
-    void (*m_write_p)(::std::byte*, const write_batch&);
+    koios::task<> (*m_write_p)(::std::byte*, const write_batch&);
     void (*m_dtor_p)(::std::byte*);
 };
 
@@ -70,7 +72,7 @@ class nop_record_writer
 {
 public:
     constexpr nop_record_writer() noexcept = default;
-    constexpr void write([[maybe_unused]] const write_batch&) const noexcept { }
+    constexpr ::std::suspend_never write([[maybe_unused]] const write_batch&) const noexcept { return {}; }
 };
 
 template<typename WritersTuple = ::std::tuple<nop_record_writer>>
@@ -96,10 +98,10 @@ public:
         return multi_dest_record_writer<::std::remove_reference_t<decltype(t)>>{ ::std::move(t) };
     }
 
-    void write(const write_batch& batch)
+    koios::task<> write(const write_batch& batch)
     {
-        ::std::apply([&batch](auto&& ... writer_ptrs) {
-            (writer_ptrs.write(batch), ...);
+        co_await ::std::apply([&batch](auto&& ... writer_ptrs) -> koios::task<> {
+            (co_await writer_ptrs.write(batch), ...);
         }, m_writers);
     }
 
@@ -110,9 +112,23 @@ private:
 class stdout_debug_record_writer
 {
 public:
+    class awaitable
+    {
+    public:
+        awaitable(const write_batch& b, size_t num = 0) noexcept : m_batch{ &b }, m_num{ num } {}
+        constexpr bool await_ready() const noexcept { return true; }
+        constexpr void await_suspend(::std::coroutine_handle<>) const noexcept {}
+        void await_resume() const noexcept;
+
+    private:
+        const write_batch* m_batch{};
+        size_t m_num{};
+    };
+
+public:
     stdout_debug_record_writer() noexcept;
     stdout_debug_record_writer(stdout_debug_record_writer&&) noexcept = default;
-    void write(const write_batch& batch);
+    awaitable write(const write_batch& batch) { return { batch, m_number }; }
 
 private:
     size_t m_number{};
