@@ -1,5 +1,6 @@
 #include "frenzykv/write_batch.h"
 #include "util/proto_parse_from_inner_buffer.h"
+#include "toolpex/functional.h"
 #include <algorithm>
 #include <ranges>
 #include <iterator>
@@ -80,6 +81,34 @@ size_t write_batch::serialize_to_array(bspan buffer) const
             return 0;
     }
     return result;
+}
+
+::std::string write_batch::to_string_debug() const 
+{
+    return this->to_string_log();   
+}
+
+::std::string write_batch::to_string_log() const 
+{
+    using namespace ::std::string_literals;
+
+    const auto entry_str = [this]{ 
+        ::std::string result;
+        if (count()) 
+        {
+            const auto& entry = *begin();
+            result = entry.DebugString();
+            ::std::ranges::replace(result, '\n', ',');
+        }
+        return result;
+    }();
+    
+    return toolpex::lazy_string_concater{}  
+        + "write_batch: ["
+        +   "count = "              + count()
+        + ", serialized_size = "    + serialized_size()
+        + ", first_entry = ("       + entry_str + ")"
+        + " ]";
 }
 
 } // namespace frenzykv

@@ -6,6 +6,9 @@
 #include "frenzykv/in_mem_rw.h"
 #include "frenzykv/iouring_writable.h"
 #include "frenzykv/iouring_readable.h"
+
+#include "util/record_writer.h"
+
 #include "koios/iouring_awaitables.h"
 #include "frenzykv/write_batch.h"
 
@@ -32,6 +35,14 @@ try
     batch2.write("yyy", "123");
     batch2.write("yyy", "123");
     batch2.remove_from_db("yyy");
+
+    
+    record_writer_wrapper writer = multi_dest_record_writer{}
+        .new_with(stdout_debug_record_writer{})
+        .new_with(stdout_debug_record_writer{})
+        .new_with(stdout_debug_record_writer{});
+
+    co_await writer.write(batch2);
     
     co_return;
 }

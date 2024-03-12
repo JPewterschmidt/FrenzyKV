@@ -17,7 +17,7 @@ namespace
     ::std::string filename = "testfile.txt";
     iouring_writable w{filename};
     
-    emitter_task<bool> env_setup()
+    eager_task<bool> env_setup()
     {
         seq_writable& w = r;
         const auto str = "123456789abcdefghijk"sv;
@@ -31,7 +31,7 @@ namespace
         co_return str.size() * 6 == count;
     }
 
-    emitter_task<bool> testbody_in_mem_rw()
+    eager_task<bool> testbody_in_mem_rw()
     {
         ::std::array<char, 5> buffer{};
         ::std::span sp{ buffer.begin(), buffer.end() };
@@ -45,7 +45,7 @@ namespace
         co_return ::std::memcmp(buffer.data(), "bcdef", 5) == 0 && partial_result;
     }
 
-    emitter_task<bool> testbody_posix()
+    eager_task<bool> testbody_posix()
     {
         seq_writable& ref = w;
         ::std::string test_txt = "1234567890abcdefg\n";
