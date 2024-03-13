@@ -6,7 +6,7 @@
 namespace frenzykv
 {
 
-enum logging_level : ::std::size_t
+enum class logging_level : ::std::size_t
 {
     LOG_DEBUG = 0, 
     LOG_INFO = 1, 
