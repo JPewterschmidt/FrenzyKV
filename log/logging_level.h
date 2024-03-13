@@ -2,18 +2,23 @@
 #define FRENZYKV_LOGGING_LEVEL_H
 
 #include <cstddef>
+#include <string>
+#include <string_view>
 
 namespace frenzykv
 {
 
 enum class logging_level : ::std::size_t
 {
-    LOG_DEBUG = 0, 
-    LOG_INFO = 1, 
-    LOG_ERROR = 2, 
-    LOG_ALERT = 3, 
-    LOG_FATAL = 4,
+    DEBUG = 0, 
+    INFO  = 1, 
+    ERROR = 2, 
+    ALERT = 3, 
+    FATAL = 4,
 };
+
+::std::string_view to_string(logging_level l) noexcept;
+logging_level to_logging_level(::std::string_view lstr);
 
 } // namespace frenzykv
 

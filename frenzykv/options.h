@@ -21,7 +21,7 @@ struct options
     bool buffered_read = true;
     ::std::filesystem::path root_path = "./";
     ::std::filesystem::path log_path = "frenzy-prewrite-log";
-    logging_level log_level = logging_level::LOG_DEBUG;
+    logging_level log_level = logging_level::DEBUG;
     env* environment = env::default_env();
     // XXX remember to update those serializer code below after you add something above.
 };

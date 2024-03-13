@@ -17,7 +17,8 @@ class logger
 {
 public:
     logger(const options& opt, ::std::string filename)
-        : m_opt{ &opt }, m_filename{ ::std::move(filename) }
+        : m_opt{ &opt }, m_filename{ ::std::move(filename) }, 
+          m_level{ m_opt->log_level }
     {
     }
 
@@ -34,7 +35,7 @@ public:
         co_await m_log_file->append(b.to_string_log());
     }
 
-    static constexpr logging_level level() noexcept { return Level; }
+    logging_level level() const noexcept { return m_level; }
     
 private:
     const options* m_opt;
@@ -48,10 +49,21 @@ template<logging_level Level>
 class logging_record_writer
 {
 public:
-    template<typename PLevel>
-    logging_record_writer(logger<PLevel> 
+    logging_record_writer(logger& parent) noexcept
+        : m_parent{ &parent }
+    {
+    }
+
+    koios::task<> write(const write_batch& batch)
+    {
+        if (level() >= m_parent->level())
+            co_await m_parent->write(batch);
+    }
+
+    static constexpr logging_level level() noexcept { return Level; }
 
 private:
+    logger* m_parent{};
 };
 
 
