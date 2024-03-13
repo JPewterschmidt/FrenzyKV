@@ -9,6 +9,10 @@
 #include "koios/iouring_awaitables.h"
 #include "koios/this_task.h"
 
+#include <unistd.h>
+#include <cerrno>
+#include <system_error>
+
 using namespace koios;
 
 namespace frenzykv
@@ -78,11 +82,29 @@ public:
     {
         co_await this_task::sleep_until(tp);
     }
+
+    ::std::filesystem::path 
+    current_directory() const override
+    {
+        return ::std::filesystem::current_path();
+    }
+
+    ::std::error_code 
+    change_current_directroy(const ::std::filesystem::path& p) override
+    {
+        ::std::error_code result{};
+        ::std::filesystem::current_path(p, result);
+        return result;
+    }
 };
 
 env* env::default_env()
 {
-    static posix_uring_env result{};
+    static auto result = []{ 
+        posix_uring_env env;
+        env.change_current_directroy(get_global_options().root_path);
+        return env;
+    }();
     return &result;
 }
 

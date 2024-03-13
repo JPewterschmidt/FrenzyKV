@@ -5,6 +5,7 @@
 #include <memory>
 #include <cstdint>
 #include <chrono>
+#include <system_error>
 
 #include "toolpex/move_only.h"
 
@@ -20,6 +21,8 @@ class env : public toolpex::move_only
 {
 public:
     env() = default;
+    env(env&&) noexcept = default;
+    env& operator = (env&&) noexcept = default;
     virtual ~env() noexcept {}
     virtual koios::task<::std::unique_ptr<seq_readable>>    get_seq_readable(const ::std::filesystem::path& p) = 0;
     virtual koios::task<::std::unique_ptr<random_readable>> get_ramdom_readable(const ::std::filesystem::path& p) = 0;
@@ -30,7 +33,8 @@ public:
     virtual koios::task<> rename_file(const ::std::filesystem::path& p, const ::std::filesystem::path& newname) = 0;
     virtual koios::task<> sleep_for(::std::chrono::milliseconds ms) = 0;
     virtual koios::task<> sleep_until(::std::chrono::system_clock::time_point tp) = 0;
-    // TODO filelock
+    virtual ::std::filesystem::path current_directory() const = 0;
+    virtual ::std::error_code change_current_directroy(const ::std::filesystem::path& p) = 0;
 
     static env* default_env();
 };
