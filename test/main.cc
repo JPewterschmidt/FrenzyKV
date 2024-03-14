@@ -1,4 +1,3 @@
-#include "fmt/core.h"
 #include "gtest/gtest.h"
 #include "koios/task_scheduler_concept.h"
 #include "koios/runtime.h"

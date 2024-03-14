@@ -4,7 +4,6 @@ add_rules(
 )
 
 add_requires(
-    "fmt", 
     "gflags", 
     "gtest", 
     "concurrentqueue master",
@@ -45,7 +44,6 @@ end
 target("FrenzyKV")
     set_kind("shared")
     add_packages(
-        "fmt", 
         "gflags", 
         "concurrentqueue", 
         "botan", 
@@ -76,7 +74,7 @@ target("FrenzyKV-test")
     set_warnings("all", "error")
     add_files( "test/*.cc")
     add_packages(
-        "gtest", "fmt", "spdlog",
+        "gtest", "spdlog",
         "botan",
         "nlohmann_json"
     )
@@ -98,7 +96,7 @@ target("FrenzyKV-example")
     add_files( "example/*.cc")
     set_policy("build.warning", true)
     add_packages(
-        "fmt", "gflags", 
+        "gflags", 
         "concurrentqueue", 
         "botan",
         "nlohmann_json", 
