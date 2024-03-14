@@ -24,9 +24,9 @@ public:
     env(env&&) noexcept = default;
     env& operator = (env&&) noexcept = default;
     virtual ~env() noexcept {}
-    virtual koios::task<::std::unique_ptr<seq_readable>>    get_seq_readable(const ::std::filesystem::path& p) = 0;
-    virtual koios::task<::std::unique_ptr<random_readable>> get_ramdom_readable(const ::std::filesystem::path& p) = 0;
-    virtual koios::task<::std::unique_ptr<seq_writable>>    get_seq_writable(const ::std::filesystem::path& p) = 0;
+    virtual ::std::unique_ptr<seq_readable>    get_seq_readable(const ::std::filesystem::path& p) = 0;
+    virtual ::std::unique_ptr<random_readable> get_ramdom_readable(const ::std::filesystem::path& p) = 0;
+    virtual ::std::unique_ptr<seq_writable>    get_seq_writable(const ::std::filesystem::path& p) = 0;
     virtual koios::task<> delete_file(const ::std::filesystem::path& p) = 0;
     virtual koios::task<> delete_dir(const ::std::filesystem::path& p) = 0;
     virtual koios::task<> move_file(const ::std::filesystem::path& from, const ::std::filesystem::path& to) = 0;

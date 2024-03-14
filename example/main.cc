@@ -14,6 +14,7 @@
 #include "frenzykv/write_batch.h"
 
 #include "entry_pbrep.pb.h"
+#include "db/db_impl.h"
 
 using namespace koios;
 using namespace frenzykv;
@@ -37,14 +38,8 @@ try
     batch2.write("yyy", "123");
     batch2.remove_from_db("yyy");
 
-    
-    record_writer_wrapper writer = multi_dest_record_writer{}
-        .new_with(stdout_debug_record_writer{})
-        .new_with(stdout_debug_record_writer{})
-        .new_with(stdout_debug_record_writer{});
-
-    co_await writer.write(batch2);
-    co_await writer.write(batch);
+    db_impl db{ "wilson-test", get_global_options() };
+    co_await db.write(batch2);
     
     co_return;
 }

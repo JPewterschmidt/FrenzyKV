@@ -17,6 +17,7 @@ namespace frenzykv
         XXX(FATAL);
 #undef XXX
     }
+    return "Unknow logging_level";
 }
 
 logging_level to_logging_level(::std::string_view lstr)

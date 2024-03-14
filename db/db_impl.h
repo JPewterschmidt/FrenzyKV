@@ -4,6 +4,7 @@
 #include "frenzykv/db.h"
 #include "frenzykv/options.h"
 #include "util/record_writer_wrapper.h"
+#include "log/logger.h"
 
 namespace frenzykv
 {
@@ -21,6 +22,7 @@ public:
 private:
     ::std::string m_dbname;
     const options* m_opt;   
+    logger m_log;
     record_writer_wrapper m_writers;
 };
 
