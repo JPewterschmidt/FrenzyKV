@@ -21,22 +21,22 @@ namespace frenzykv
 class posix_uring_env : public env
 {
 public:
-    koios::task<::std::unique_ptr<seq_readable>> 
+    ::std::unique_ptr<seq_readable>
     get_seq_readable(const ::std::filesystem::path& p) override
 	{
-        co_return ::std::make_unique<iouring_readable>(p);
+        return ::std::make_unique<iouring_readable>(p);
 	}
 
-    koios::task<::std::unique_ptr<random_readable>> 
+    ::std::unique_ptr<random_readable>
     get_ramdom_readable(const ::std::filesystem::path& p) override
 	{
-        co_return ::std::make_unique<iouring_readable>(p);
+        return ::std::make_unique<iouring_readable>(p);
 	}
 
-    koios::task<::std::unique_ptr<seq_writable>> 
+    ::std::unique_ptr<seq_writable>
     get_seq_writable(const ::std::filesystem::path& p) override
 	{
-        co_return ::std::make_unique<iouring_writable>(p);
+        return ::std::make_unique<iouring_writable>(p);
 	}
 
     koios::task<>

@@ -7,6 +7,7 @@
 #include "frenzykv/options.h"
 #include "frenzykv/write_batch.h"
 #include "koios/task.h"
+#include "koios/this_task.h"
 
 #include "log/logging_level.h"
 
@@ -17,23 +18,18 @@ class logger
 {
 public:
     logger(const options& opt, ::std::string filename)
-        : m_opt{ &opt }, m_filename{ ::std::move(filename) }, 
+        : m_opt{ &opt }, 
+          m_filename{ ::std::move(filename) }, 
+          m_filepath{ m_opt->root_path / m_filename }, 
+          m_log_file{ m_opt->environment->get_seq_writable(m_filepath) }, 
           m_level{ m_opt->log_level }
     {
     }
 
-    ::std::string to_string() const
-    {
-        return ::std::format("logger: name = {}, path = {}", 
-            filename(), filepath().string());
-    }
-
+    ::std::string to_string() const;
     ::std::string_view filename() const noexcept { return m_filename; }
     ::std::filesystem::path filepath() const { return m_filepath; }
-    koios::task<> write(const write_batch& b)
-    {
-        co_await m_log_file->append(b.to_string_log());
-    }
+    koios::task<> write(const write_batch& b);
 
     logging_level level() const noexcept { return m_level; }
     
@@ -65,7 +61,6 @@ public:
 private:
     logger* m_parent{};
 };
-
 
 } // namespace frenzykv
 
