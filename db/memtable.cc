@@ -23,18 +23,19 @@ koios::task<> memtable::insert(write_batch&& b)
 }
 
 koios::task<> memtable::
-insert_impl(entry_pbrep b)
+insert_impl(entry_pbrep&& b)
 {
     ::std::string* v = b.mutable_value();
-    m_list[b.key()] = ::std::move(*v);
+    ::std::string* k = b.mutable_key();
+    m_list.insert(::std::move(*k), ::std::move(*v));
     co_return;
 }
 
 koios::task<> memtable::
-insert(entry_pbrep entry)
+insert_impl(const entry_pbrep& b)
 {
-    auto lk = co_await m_list_mutex.acquire();
-    co_await insert(::std::move(entry));
+    m_list[b.key()] = b.value();
+    co_return;
 }
 
 koios::task<entry_pbrep> memtable::
@@ -46,6 +47,7 @@ get(const ::std::string& key) const noexcept
         entry_pbrep result{};
         result.set_key(key);
         result.set_value(iter->second);
+        co_return result;
     }
     co_return {};
 }

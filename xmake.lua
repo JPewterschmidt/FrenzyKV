@@ -11,7 +11,8 @@ add_requires(
     "botan", 
     "nlohmann_json", 
     "protobuf-cpp", 
-    "spdlog"
+    "spdlog", 
+    "jemalloc"
 )
 
 includes(
@@ -32,6 +33,7 @@ add_includedirs(
 set_languages("c++23", "c17")
 set_policy("build.warning", true)
 set_policy("build.optimization.lto", false)
+add_packages("jeamalloc")
 
 if not is_mode("release") then
     add_cxxflags(
