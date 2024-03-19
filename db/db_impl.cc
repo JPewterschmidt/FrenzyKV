@@ -20,7 +20,7 @@ koios::task<size_t>
 db_impl::write(write_batch batch) 
 {
     co_await m_writers.write(batch);
-    co_return {};
+    co_return batch.count();
 }
 
 koios::task<::std::optional<entry_pbrep>> 
