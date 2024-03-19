@@ -5,6 +5,7 @@
 #include "frenzykv/write_batch.h"
 #include "koios/coroutine_mutex.h"
 #include "entry_pbrep.pb.h"
+#include "frenzykv/statistics.h"
 
 namespace frenzykv
 {
@@ -12,7 +13,12 @@ namespace frenzykv
 class memtable
 {
 public:
-    memtable(size_t approx_size_bound = 65536)
+    memtable()
+        : m_list(toolpex::skip_list_suggested_max_level(global_statistics().approx_data_scale().result()))
+    {
+    }
+
+    memtable(size_t approx_size_bound)
         : m_list(toolpex::skip_list_suggested_max_level(approx_size_bound))
     {
     }
