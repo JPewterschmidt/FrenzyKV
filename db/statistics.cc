@@ -1,8 +1,20 @@
 #include "frenzykv/statistics.h"
 #include <algorithm>
+#include <utility>
 
 namespace frenzykv 
 {
+
+static statistics& global_statistics_impl() noexcept
+{
+    static statistics result{};
+    return result;
+}
+
+const statistics& global_statistics() noexcept
+{
+    return ::std::as_const(global_statistics_impl());
+}
 
 koios::task<size_t> 
 statistics::

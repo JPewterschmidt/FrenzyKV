@@ -27,6 +27,8 @@ private:
     mutable koios::shared_mutex m_mutex;
 };
 
+const statistics& global_statistics() noexcept;
+
 } // namespace frenzykv
 
 #endif
