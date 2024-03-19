@@ -11,9 +11,9 @@ static statistics& global_statistics_impl() noexcept
     return result;
 }
 
-const statistics& global_statistics() noexcept
+statistics& global_statistics() noexcept
 {
-    return ::std::as_const(global_statistics_impl());
+    return (global_statistics_impl());
 }
 
 koios::task<size_t> 
