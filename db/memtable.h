@@ -21,7 +21,7 @@ private:
     koios::task<> insert_impl(entry_pbrep entry);
     
 private:
-    toolpex::skip_list<::std::string, ::std::string, 16> m_list;
+    toolpex::skip_list<::std::string, ::std::string> m_list{16};
     mutable koios::mutex m_list_mutex;
 };
 
