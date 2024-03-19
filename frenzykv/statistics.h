@@ -18,7 +18,7 @@ public:
     friend class statistics_updater;
     koios::task<size_t> approx_data_scale() const noexcept;
     koios::task<system_health> system_health_state() const noexcept;
-    koios::task<size_t> data_scale_baseline() const noexcept { co_return 2 << 16; }   
+    constexpr size_t data_scale_baseline() const noexcept { return 2 << 16; }   
 
 private:
     size_t m_data_scale{};

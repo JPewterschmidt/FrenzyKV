@@ -20,9 +20,9 @@ koios::task<size_t>
 statistics::
 approx_data_scale() const noexcept
 {
-    const size_t bl = co_await data_scale_baseline();
+    const size_t bl = data_scale_baseline();
     auto lk = co_await m_mutex.acquire_shared();
-    co_return ::std::min(bl, m_data_scale);
+    co_return ::std::max(bl, m_data_scale);
 }
 
 koios::task<system_health> 
