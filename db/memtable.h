@@ -3,9 +3,10 @@
 
 #include "toolpex/skip_list.h"
 #include "frenzykv/write_batch.h"
+#include "frenzykv/statistics.h"
+#include "frenzykv/options.h"
 #include "koios/coroutine_mutex.h"
 #include "entry_pbrep.pb.h"
-#include "frenzykv/statistics.h"
 
 namespace frenzykv
 {
@@ -13,8 +14,9 @@ namespace frenzykv
 class memtable
 {
 public:
-    memtable()
-        : m_list(toolpex::skip_list_suggested_max_level(global_statistics().approx_data_scale().result()))
+    memtable(const options& opt)
+        : m_opt{ &opt },
+          m_list(toolpex::skip_list_suggested_max_level(opt.memtable_size_bound))
     {
     }
 
@@ -40,6 +42,7 @@ private:
     koios::task<> insert_impl(const entry_pbrep& entry);
     
 private:
+    const options* m_opt{};
     toolpex::skip_list<::std::string, ::std::string> m_list;
     mutable koios::mutex m_list_mutex;
 };
