@@ -21,18 +21,22 @@ public:
     {
     }
 
+    // TODO doc
     template<typename Batch>
     koios::task<::std::error_code> insert(Batch&& b)
     {
         if (co_await m_mem->full())
-            co_await memtable_transfer();
+        {
+            auto ec = co_await memtable_transfer();
+            if (ec) co_return ec; // TODO 
+        }
         co_return co_await m_mem->insert(::std::forward<Batch>(b));
     }
     
     koios::task<entry_pbrep> get(const ::std::string& key);
 
 private:
-    koios::task<> memtable_transfer();
+    koios::task<::std::error_code> memtable_transfer();
 
 private:
     const options* m_opt;

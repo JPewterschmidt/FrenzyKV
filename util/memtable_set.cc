@@ -1,19 +1,20 @@
 #include "util/memtable_set.h"
 #include "db/memtable.h"
 #include "frenzykv/statistics.h"
+#include <system_error>
 #include <memory>
 
 namespace frenzykv
 {
 
-koios::task<> 
+koios::task<::std::error_code> 
 memtable_set::
 memtable_transfer()
 {
     auto lk = co_await m_transfer_mutex.acquire();
     m_imm_mem = ::std::make_unique<imm_memtable>(::std::move(*m_mem));
     m_mem = ::std::make_unique<memtable>(co_await global_statistics().approx_hot_data_scale());
-    co_return;
+    co_return {};
 }
 
 koios::task<entry_pbrep> 
