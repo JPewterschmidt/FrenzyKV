@@ -55,6 +55,8 @@ public:
 
     koios::task<entry_pbrep> get(const ::std::string& key) const noexcept;
     koios::task<size_t> count() const;
+    koios::task<bool> full() const;
+    koios::task<size_t> bound() const;
 
 private:
     koios::task<::std::error_code> insert_impl(entry_pbrep&& entry);

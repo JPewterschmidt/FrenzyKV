@@ -16,19 +16,17 @@ class memtable_set
 {
 public:
     memtable_set(const options& opt) noexcept
-        : m_opt{ &opt }
+        : m_opt{ &opt }, 
+          m_mem{ ::std::make_unique<memtable>(opt.memtable_size_bound) }
     {
     }
 
     template<typename Batch>
     koios::task<::std::error_code> insert(Batch&& b)
     {
-        auto ec = co_await m_mem->insert(::std::forward<Batch>(b));
-        if (ec == make_frzkv_out_of_range())
-        {
+        if (co_await m_mem->full())
             co_await memtable_transfer();
-        }
-        co_return ec;
+        co_return co_await m_mem->insert(::std::forward<Batch>(b));
     }
     
     koios::task<entry_pbrep> get(const ::std::string& key);
@@ -37,10 +35,10 @@ private:
     koios::task<> memtable_transfer();
 
 private:
+    const options* m_opt;
     ::std::unique_ptr<memtable> m_mem;
     ::std::unique_ptr<imm_memtable> m_imm_mem;
     mutable koios::mutex m_transfer_mutex;
-    const options* m_opt;
 };
 
 } // namespace frenzykv
