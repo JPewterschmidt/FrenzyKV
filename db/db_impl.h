@@ -1,11 +1,15 @@
 #ifndef FRENZYKV_DB_IMPL_H
 #define FRENZYKV_DB_IMPL_H
 
+#include <system_error>
+#include <memory>
 #include "frenzykv/db.h"
 #include "frenzykv/options.h"
 #include "db/memtable.h"
 #include "util/record_writer_wrapper.h"
+#include "util/memtable_set.h"
 #include "log/logger.h"
+#include "koios/coroutine_mutex.h"
 
 namespace frenzykv
 {
@@ -24,7 +28,7 @@ private:
     ::std::string m_dbname;
     const options* m_opt;   
     logger m_log;
-    memtable m_mem;
+    memtable_set m_memset;
     record_writer_wrapper m_writers;
 };
 
