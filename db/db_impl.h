@@ -25,11 +25,13 @@ public:
     get(const_bspan key, ::std::error_code& ec_out) noexcept override;
 
 private:
+    koios::task<::std::error_code> flush();
+
+private:
     ::std::string m_dbname;
     const options* m_opt;   
     logger m_log;
     memtable_set m_memset;
-    record_writer_wrapper m_writers;
 };
 
 } // namespace frenzykv

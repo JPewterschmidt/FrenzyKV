@@ -12,7 +12,8 @@ namespace frenzykv
 void write_batch::write(const_bspan key, const_bspan value)
 {
     entry_pbrep entry;
-    entry.set_key(key.data(), key.size());
+    entry.mutable_key()->set_user_key(key.data(), key.size());
+    entry.mutable_key()->set_seq_number(0);
     entry.set_value(value.data(), value.size());
     m_entries.push_back(::std::move(entry));
 }
@@ -41,8 +42,9 @@ auto write_batch::stl_style_remove(const_bspan key)
 {
     return ::std::remove_if(m_entries.begin(), m_entries.end(), [key](auto&& i) { 
         const auto* predk = key.data();
-        const auto* iterk = i.key().c_str();
-        const size_t sz = ::std::min(i.key().size(), key.size());
+        const auto& seqk = i.key();
+        const auto* iterk = seqk.user_key().c_str();
+        const size_t sz = ::std::min(seqk.user_key().size(), key.size());
         return ::std::memcmp(predk, iterk, sz) == 0;
     });
 }
@@ -58,7 +60,8 @@ void write_batch::remove_from_db(const_bspan key)
     else 
     {
         entry_pbrep entry;
-        entry.set_key(key.data(), key.size());
+        entry.mutable_key()->set_user_key(key.data(), key.size());
+        entry.mutable_key()->set_seq_number(0);
         m_entries.push_back(::std::move(entry));
     }
 }
