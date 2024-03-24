@@ -9,6 +9,7 @@
 #include "koios/coroutine_shared_mutex.h"
 #include "entry_pbrep.pb.h"
 #include "util/key_cmp.h"
+#include "util/key_eq.h"
 
 namespace frenzykv
 {
@@ -65,7 +66,7 @@ private:
     
 private:
     const options* m_opt{};
-    toolpex::skip_list<seq_key, ::std::string, seq_key_less> m_list;
+    toolpex::skip_list<seq_key, ::std::string, seq_key_less, seq_key_equal_to> m_list;
     size_t m_bound{};
     mutable koios::shared_mutex m_list_mutex;
 };

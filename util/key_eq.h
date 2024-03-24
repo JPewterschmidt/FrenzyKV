@@ -11,8 +11,7 @@ class seq_key_equal_to
 public:
     bool operator()(const seq_key& lhs, const seq_key& rhs) const noexcept
     {
-        return google::protobuf::util::MessageDifferencer
-            ::Equals(entry_from_buffer, example_entry);
+        return google::protobuf::util::MessageDifferencer::Equals(lhs, rhs);
     }
 };
     
