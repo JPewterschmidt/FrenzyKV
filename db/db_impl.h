@@ -25,6 +25,9 @@ public:
     get(const_bspan key, ::std::error_code& ec_out) noexcept override;
 
 private:
+    koios::task<::std::error_code> flush();
+
+private:
     ::std::string m_dbname;
     const options* m_opt;   
     logger m_log;

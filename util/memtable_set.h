@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <utility>
+#include <system_error>
 #include "db/memtable.h"
 #include "koios/task.h"
 #include "koios/coroutine_shared_mutex.h"

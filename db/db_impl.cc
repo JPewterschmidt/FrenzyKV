@@ -23,13 +23,27 @@ db_impl::db_impl(::std::string dbname, const options& opt)
 koios::task<size_t> 
 db_impl::write(write_batch batch) 
 {
+    co_await m_writers.write(batch);
     co_await m_memset.insert(::std::move(batch));
+    if (co_await m_memset.full())
+    {
+        co_await flush();
+    }
+    
     co_return batch.count();
 }
 
 koios::task<::std::optional<entry_pbrep>> 
 db_impl::get(const_bspan key, ::std::error_code& ec_out) noexcept
 {
+    co_return {};
+}
+
+koios::task<::std::error_code> 
+db_impl::flush()
+{
+    
+
     co_return {};
 }
 

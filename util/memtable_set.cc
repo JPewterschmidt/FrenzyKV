@@ -1,8 +1,6 @@
 #include "util/memtable_set.h"
 #include "db/memtable.h"
 #include "frenzykv/statistics.h"
-#include <system_error>
-#include <memory>
 
 namespace frenzykv
 {
