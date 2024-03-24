@@ -28,4 +28,10 @@ get(const ::std::string& key)
     co_return result;
 }
 
+koios::task<bool> memtable_set::full() const
+{
+    auto lk = co_await m_transfer_mutex.acquire_shared();
+    co_return m_imm_mem && co_await m_mem->full();
+}
+
 } // namespace frenzykv
