@@ -16,7 +16,9 @@ TEST(write_batch, basic)
     ::std::array<::std::byte, 100> buffer{};
     b.serialize_to_array(buffer);
     entry_pbrep example_entry, entry_from_buffer;
-    example_entry.set_key(k.data(), k.size());
+
+    example_entry.mutable_key()->set_seq_number(0);
+    example_entry.mutable_key()->set_user_key(k.data(), k.size());
     example_entry.set_value(v.data(), v.size());
 
     entry_from_buffer.ParseFromArray(buffer.data(), buffer.size());
@@ -43,7 +45,9 @@ TEST(write_batch, remove)
     b.serialize_to_array(buffer);
 
     entry_pbrep example_entry, entry_from_buffer;
-    example_entry.set_key(k.data(), k.size());
+
+    example_entry.mutable_key()->set_seq_number(0);
+    example_entry.mutable_key()->set_user_key(k.data(), k.size());
     example_entry.clear_value();
 
     entry_from_buffer.ParseFromArray(buffer.data(), buffer.size());

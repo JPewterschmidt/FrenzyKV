@@ -1,7 +1,15 @@
 syntax = "proto3";
 
+package frenzykv;
+
+message seq_key
+{
+    uint64 seq_number = 1;
+    bytes user_key = 2;
+};
+
 message entry_pbrep
 {
-    bytes key = 1;
+    seq_key key = 1;
     optional bytes value = 2;
 };

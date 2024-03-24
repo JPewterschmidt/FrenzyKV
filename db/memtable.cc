@@ -28,7 +28,7 @@ koios::task<::std::error_code> memtable::
 insert_impl(entry_pbrep&& b)
 {
     ::std::string* v = b.mutable_value();
-    ::std::string* k = b.mutable_key();
+    ::std::string* k = b.mutable_key()->mutable_user_key();
     m_list.insert(::std::move(*k), ::std::move(*v));
     co_return {};
 }
@@ -36,7 +36,7 @@ insert_impl(entry_pbrep&& b)
 koios::task<::std::error_code> memtable::
 insert_impl(const entry_pbrep& b)
 {
-    m_list[b.key()] = b.value();
+    m_list[b.key().user_key()] = b.value();
     co_return {};
 }
 
@@ -47,7 +47,8 @@ get(const ::std::string& key) const noexcept
     if (auto iter = m_list.find(key); iter != m_list.end())
     {
         entry_pbrep result{};
-        result.set_key(key);
+        result.mutable_key()->set_user_key(key);
+        // TODO set the seq number 
         result.set_value(iter->second);
         co_return result;
     }
