@@ -10,7 +10,7 @@ namespace frenzykv
 class seq_key_less
 {
 public:
-    bool operator<()(const seq_key& lhs, const seq_key& rhs) const noexcept
+    bool operator()(const seq_key& lhs, const seq_key& rhs) const noexcept
     {
         ::std::string lhs_str, rhs_str;
         lhs.SerializeToString(&lhs_str);
