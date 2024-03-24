@@ -32,7 +32,6 @@ private:
     const options* m_opt;   
     logger m_log;
     memtable_set m_memset;
-    record_writer_wrapper m_writers;
 };
 
 } // namespace frenzykv
