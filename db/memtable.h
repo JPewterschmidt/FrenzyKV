@@ -8,7 +8,7 @@
 #include "frenzykv/options.h"
 #include "koios/coroutine_shared_mutex.h"
 #include "entry_pbrep.pb.h"
-#include "proto/key_cmp.h"
+#include "util/key_cmp.h"
 
 namespace frenzykv
 {
@@ -54,7 +54,7 @@ public:
         co_await insert_impl(::std::forward<Entry>(entry));
     }
 
-    koios::task<entry_pbrep> get(const ::std::string& key) const noexcept;
+    koios::task<entry_pbrep> get(const seq_key& key) const noexcept;
     koios::task<size_t> count() const;
     koios::task<bool> full() const;
     koios::task<size_t> bound() const;
@@ -78,7 +78,7 @@ public:
     {
     }
 
-    koios::task<entry_pbrep> get(const ::std::string& key);
+    koios::task<entry_pbrep> get(const seq_key& key);
 
 private:
     memtable m_mem;

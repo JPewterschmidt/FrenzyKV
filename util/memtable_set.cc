@@ -18,7 +18,7 @@ memtable_transfer()
 
 koios::task<entry_pbrep> 
 memtable_set::
-get(const ::std::string& key)
+get(const seq_key& key)
 {
     auto result = co_await m_mem->get(key);
     if (result.IsInitialized())

@@ -27,28 +27,25 @@ koios::task<::std::error_code> memtable::insert(write_batch&& b)
 koios::task<::std::error_code> memtable::
 insert_impl(entry_pbrep&& b)
 {
-    ::std::string* v = b.mutable_value();
-    ::std::string* k = b.mutable_key()->mutable_user_key();
-    m_list.insert(::std::move(*k), ::std::move(*v));
+    m_list.insert(b.key(), ::std::move(*b.mutable_value()));
     co_return {};
 }
 
 koios::task<::std::error_code> memtable::
 insert_impl(const entry_pbrep& b)
 {
-    m_list[b.key().user_key()] = b.value();
+    m_list[b.key()] = b.value();
     co_return {};
 }
 
 koios::task<entry_pbrep> memtable::
-get(const ::std::string& key) const noexcept
+get(const seq_key& key) const noexcept
 {
     auto lk = co_await m_list_mutex.acquire_shared();
     if (auto iter = m_list.find(key); iter != m_list.end())
     {
         entry_pbrep result{};
-        result.mutable_key()->set_user_key(key);
-        // TODO set the seq number 
+        *result.mutable_key() = key;
         result.set_value(iter->second);
         co_return result;
     }
@@ -75,7 +72,7 @@ koios::task<bool> memtable::full() const
 
 koios::task<entry_pbrep> 
 imm_memtable::
-get(const ::std::string& key)
+get(const seq_key& key)
 {
     co_return co_await m_mem.get(key);
 }
