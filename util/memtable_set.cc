@@ -12,6 +12,7 @@ memtable_set::
 memtable_transfer()
 {
     auto lk = co_await m_transfer_mutex.acquire();
+    if (m_imm_mem) co_return make_frzkv_out_of_range();
     m_imm_mem = ::std::make_unique<imm_memtable>(::std::move(*m_mem));
     m_mem = ::std::make_unique<memtable>(co_await global_statistics().approx_hot_data_scale());
     co_return {};
@@ -32,6 +33,14 @@ koios::task<bool> memtable_set::full() const
 {
     auto lk = co_await m_transfer_mutex.acquire_shared();
     co_return m_imm_mem && co_await m_mem->full();
+}
+
+koios::task<::std::unique_ptr<imm_memtable>>
+memtable_set::
+get_imm_memtable()
+{
+    auto lk = co_await m_transfer_mutex.acquire();
+    co_return ::std::move(m_imm_mem);
 }
 
 } // namespace frenzykv

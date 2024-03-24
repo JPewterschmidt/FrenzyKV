@@ -43,6 +43,7 @@ public:
     
     koios::task<entry_pbrep> get(const ::std::string& key);
     koios::task<bool> full() const;
+    koios::task<::std::unique_ptr<imm_memtable>> get_imm_memtable();
 
 private:
     koios::task<::std::error_code> memtable_transfer();
