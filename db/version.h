@@ -27,7 +27,7 @@ public:
 class version_hub
 {
 public:
-    version_hub(options opt = get_global_options());
+    version_hub(const options& opt = get_global_options());
 
     void commit(version_record newver)
     {
@@ -42,6 +42,7 @@ public:
     }
 
 private:
+    const options* m_opt;
     const ::std::unique_ptr<abstract_versions> m_pimpl;
 };
 
