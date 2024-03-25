@@ -16,7 +16,6 @@ db_impl::db_impl(::std::string dbname, const options& opt)
       m_log{ (m_opt.environment = m_env.get(), m_opt), "0001-test.frzkvlog" }, 
       m_memset{ m_opt }
 {
-    m_opt.environment = m_env.get();
 }
 
 koios::task<size_t> 
