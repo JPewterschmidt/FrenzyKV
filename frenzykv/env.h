@@ -13,6 +13,7 @@
 
 #include "frenzykv/writable.h"
 #include "frenzykv/readable.h"
+#include "frenzykv/options.h"
 
 namespace frenzykv
 {
@@ -36,7 +37,7 @@ public:
     virtual ::std::filesystem::path current_directory() const = 0;
     virtual ::std::error_code change_current_directroy(const ::std::filesystem::path& p) = 0;
 
-    static env* default_env();
+    static ::std::unique_ptr<env> make_default_env(const options& opt);
 };
 
 class env_exception : public koios::exception

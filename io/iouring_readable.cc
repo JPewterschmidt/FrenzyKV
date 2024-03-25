@@ -9,9 +9,9 @@ using namespace koios;
 namespace frenzykv
 {
 
-iouring_readable::iouring_readable(const ::std::filesystem::path& p, options opt)
+iouring_readable::iouring_readable(const ::std::filesystem::path& p, const options& opt)
     : posix_base{ toolpex::errret_thrower{} << ::open(p.c_str(), O_RDONLY | O_CLOEXEC) }, 
-      m_opt{ ::std::move(opt) }
+      m_opt{ &opt }
 {
 }
 

@@ -27,21 +27,14 @@ public:
 class version_hub
 {
 public:
-    version_hub(options opt = get_global_options());
+    version_hub(const options& opt);
 
-    void commit(version_record newver)
-    {
-        assert(m_pimpl);
-        m_pimpl->commit(::std::move(newver));
-    }
-
-    version_record current() const
-    {
-        assert(m_pimpl);
-        return m_pimpl->current();
-    }
+    void commit(version_record newver);
+    version_record current() const;
+    sequence_number_t last_sequence_number() const;
 
 private:
+    const options* m_opt;
     const ::std::unique_ptr<abstract_versions> m_pimpl;
 };
 

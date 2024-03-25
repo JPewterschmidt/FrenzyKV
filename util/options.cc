@@ -1,20 +1,28 @@
 #include "frenzykv/options.h"
 #include "toolpex/exceptions.h"
 #include <fstream>
+#include <utility>
+#include <memory>
 #include "koios/exceptions.h"
 
 namespace frenzykv
 {
-    static options g_opt;
+    static ::std::unique_ptr<nlohmann::json> g_data;
 
-    const options& get_global_options() noexcept
+    options get_global_options(env* e) noexcept
     {
-        return g_opt;
+        if (g_data) 
+        {
+            auto result = g_data->get<options>();
+            result.environment = e;
+            return result;
+        }
+        return { .environment = e };
     }
 
-    void set_global_options(const nlohmann::json& j)
+    void set_global_options(nlohmann::json& j)
     {
-        g_opt = j.get<options>();
+        g_data = ::std::make_unique<nlohmann::json>(::std::move(j));
     }
 
     void set_global_options(const ::std::filesystem::path& filepath)

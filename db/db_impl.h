@@ -29,7 +29,8 @@ private:
 
 private:
     ::std::string m_dbname;
-    const options* m_opt;   
+    options m_opt;   
+    ::std::unique_ptr<env> m_env;
     logger m_log;
     memtable_set m_memset;
 };

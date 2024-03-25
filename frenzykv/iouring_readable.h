@@ -17,12 +17,12 @@ class iouring_readable : public posix_base, public random_readable
 {
 public:
     iouring_readable(const ::std::filesystem::path& p, 
-                     options opt = get_global_options());
+                     const options& opt);
 
     iouring_readable(toolpex::unique_posix_fd fd, 
-                     options opt = get_global_options())
+                     const options& opt)
         : posix_base{ ::std::move(fd) }, 
-          m_opt{ ::std::move(opt) }
+          m_opt{ &opt }
     {
     }
 
@@ -37,7 +37,7 @@ public:
     constexpr bool is_buffering() const noexcept override { return false; }
 
 private:
-    options m_opt;
+    const options* m_opt;
     seq_readable_context m_fdctx;
 };
 

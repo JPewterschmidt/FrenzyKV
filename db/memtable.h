@@ -41,7 +41,8 @@ public:
     }
 
     memtable(size_t approx_size_bound)
-        : m_list(toolpex::skip_list_suggested_max_level(approx_size_bound))
+        : m_list(toolpex::skip_list_suggested_max_level(approx_size_bound)), 
+          m_bound{ approx_size_bound }
     {
     }
 

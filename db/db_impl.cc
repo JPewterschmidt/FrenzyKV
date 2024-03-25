@@ -10,10 +10,13 @@ namespace frenzykv
 {
 
 db_impl::db_impl(::std::string dbname, const options& opt)
-    : m_dbname{ ::std::move(dbname) }, m_opt{ &opt }, 
-      m_log{ *m_opt, "0001-test.frzkvlog" }, 
-      m_memset{ *m_opt }
+    : m_dbname{ ::std::move(dbname) }, 
+      m_opt{ opt }, 
+      m_env{ env::make_default_env(m_opt) }, 
+      m_log{ (m_opt.environment = m_env.get(), m_opt), "0001-test.frzkvlog" }, 
+      m_memset{ m_opt }
 {
+    m_opt.environment = m_env.get();
 }
 
 koios::task<size_t> 

@@ -1,5 +1,6 @@
 #include "db/memtable.h"
 #include <utility>
+#include <cassert>
 
 namespace frenzykv
 {
@@ -61,12 +62,14 @@ koios::task<size_t> memtable::count() const
 koios::task<size_t> memtable::bound() const
 {
     auto lk = co_await m_list_mutex.acquire_shared();
+    assert(m_bound);
     co_return m_bound;
 }
 
 koios::task<bool> memtable::full() const
 {
     auto lk = co_await m_list_mutex.acquire_shared();
+    assert(m_bound);
     co_return m_list.size() == m_bound;
 }
 
