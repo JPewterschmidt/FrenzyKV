@@ -7,11 +7,13 @@
 
 #include "nlohmann/json.hpp"
 
-#include "frenzykv/env.h"
 #include "log/logging_level.h"
 
 namespace frenzykv
 {
+
+class env;
+
 struct options
 {
     size_t disk_block_bytes = 4096;
@@ -23,11 +25,12 @@ struct options
     ::std::filesystem::path root_path = "./";
     ::std::filesystem::path log_path = "frenzy-prewrite-log";
     logging_level log_level = logging_level::DEBUG;
-    env* environment = env::default_env();
+    env* environment{};
+
     // XXX remember to update those serializer code below after you add something above.
 };
 
-const options& get_global_options() noexcept;
+options get_global_options(env* e = nullptr) noexcept;
 void set_global_options(const nlohmann::json& j);
 void set_global_options(const ::std::filesystem::path& filepath);
 

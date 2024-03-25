@@ -20,23 +20,28 @@ namespace frenzykv
 
 class posix_uring_env : public env
 {
+private:
+    const options* m_opt;
+
 public:
+    posix_uring_env(const options& opt) noexcept : m_opt{ &opt } {}
+
     ::std::unique_ptr<seq_readable>
     get_seq_readable(const ::std::filesystem::path& p) override
 	{
-        return ::std::make_unique<iouring_readable>(p);
+        return ::std::make_unique<iouring_readable>(p, *m_opt);
 	}
 
     ::std::unique_ptr<random_readable>
     get_ramdom_readable(const ::std::filesystem::path& p) override
 	{
-        return ::std::make_unique<iouring_readable>(p);
+        return ::std::make_unique<iouring_readable>(p, *m_opt);
 	}
 
     ::std::unique_ptr<seq_writable>
     get_seq_writable(const ::std::filesystem::path& p) override
 	{
-        return ::std::make_unique<iouring_writable>(p);
+        return ::std::make_unique<iouring_writable>(p, *m_opt);
 	}
 
     koios::task<>
@@ -98,14 +103,14 @@ public:
     }
 };
 
-env* env::default_env()
+::std::unique_ptr<env> env::make_default_env(const options& opt)
 {
-    static auto result = []{ 
-        posix_uring_env env;
-        env.change_current_directroy(get_global_options().root_path);
+    static auto result = [&]{ 
+        posix_uring_env env(opt);
+        env.change_current_directroy(opt.root_path);
         return env;
     }();
-    return &result;
+    return ::std::make_unique<posix_uring_env>(::std::move(result));
 }
 
 }

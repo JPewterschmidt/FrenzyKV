@@ -6,6 +6,7 @@
 #include <filesystem>
 #include "frenzykv/options.h"
 #include "frenzykv/write_batch.h"
+#include "frenzykv/env.h"
 #include "koios/task.h"
 #include "koios/this_task.h"
 
