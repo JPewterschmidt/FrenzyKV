@@ -35,10 +35,10 @@ static auto get_data_diffuk_diffsn()
     key1.set_seq_number(100);
     key2.set_user_key("12345");
     key2.set_seq_number(99);
-    key3.set_user_key("abc");
-    key3.set_seq_number(99999999999);
-    key4.set_user_key("def");
-    key4.set_seq_number(100000000);
+    key3.set_user_key("def");
+    key3.set_seq_number(100000000);
+    key4.set_user_key("abcd");
+    key4.set_seq_number(99999999999);
 
     return ::std::tuple{ 
         ::std::move(key1), 
