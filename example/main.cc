@@ -15,6 +15,7 @@
 
 #include "entry_pbrep.pb.h"
 #include "db/db_impl.h"
+#include "util/key_cmp.h"
 
 using namespace koios;
 using namespace frenzykv;
@@ -23,24 +24,30 @@ using namespace ::std::string_view_literals;
 task<> ostest()
 try
 {
-    write_batch batch;
-    batch.write("xxx", "123");
-    batch.write("xxx", "123");
-    batch.write("xxx", "345");
-    batch.write("xxx", "345");
-    batch.write("xxx", "345");
-    batch.write("xxx", "345");
+    seq_key key1, key2, key3, key4;
+    ::std::string key1_str, key2_str, key3_str, key4_str;
 
-    write_batch batch2 = batch;
-    batch2.write("yyy", "123");
-    batch2.write("yyy", "123");
-    batch2.write("yyy", "123");
-    batch2.write("yyy", "123");
-    batch2.remove_from_db("yyy");
+    key1.set_user_key("xxxxxxxxx");
+    key1.set_seq_number(0);
 
-    db_impl db{ "wilson-test", get_global_options() };
-    co_await db.write(batch2);
-    
+    key2.set_user_key("xxxxxxxxx");
+    key2.set_seq_number(1);
+
+    key3.set_user_key("xxxxxxxxx");
+    key3.set_seq_number(10000000);
+
+    key4.set_user_key("xxxxxxxxx");
+    key4.set_seq_number(100000000);
+
+    key1.SerializeToString(&key1_str);
+    key2.SerializeToString(&key2_str);
+    key3.SerializeToString(&key3_str);
+    key4.SerializeToString(&key4_str);
+
+    ::std::cout << ::std::less{}(key1_str, key2_str) << ::std::endl;
+    ::std::cout << ::std::less{}(key1_str, key3_str) << ::std::endl;
+    ::std::cout << ::std::less{}(key3_str, key4_str) << ::std::endl;
+
     co_return;
 }
 catch (const koios::exception& e)
