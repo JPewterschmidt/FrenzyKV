@@ -7,7 +7,7 @@
 namespace frenzykv
 {
 
-class seq_key_less
+class serialized_seq_key_less
 {
 public:
     bool operator()(const seq_key& lhs, const seq_key& rhs) const noexcept
@@ -16,6 +16,23 @@ public:
         lhs.SerializeToString(&lhs_str);
         rhs.SerializeToString(&rhs_str);
         return ::std::less<::std::string>{}(lhs_str, rhs_str);
+    }
+};
+
+class seq_key_less
+{
+public:
+    bool operator()(const seq_key& lhs, const seq_key& rhs) const noexcept
+    {
+        const auto& lk = lhs.user_key();
+        const auto& rk = rhs.user_key();
+        const uint64_t ls = lhs.seq_number();
+        const uint64_t rs = rhs.seq_number();
+
+        // Simulate lexicgraphical order
+        if (lk < rk) return true;
+        else if (lk == rk) return ls < rs;
+        return false;
     }
 };
 

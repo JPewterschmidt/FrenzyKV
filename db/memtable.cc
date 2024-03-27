@@ -43,10 +43,11 @@ koios::task<entry_pbrep> memtable::
 get(const seq_key& key) const noexcept
 {
     auto lk = co_await m_list_mutex.acquire_shared();
-    if (auto iter = m_list.find(key); iter != m_list.end())
+    if (auto iter = m_list.find_bigger_equal(key); iter != m_list.end())
     {
         entry_pbrep result{};
         *result.mutable_key() = key;
+        // TODO
         result.set_value(iter->second);
         co_return result;
     }
