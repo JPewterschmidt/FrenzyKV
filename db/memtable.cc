@@ -28,6 +28,7 @@ koios::task<::std::error_code> memtable::insert(write_batch&& b)
 koios::task<::std::error_code> memtable::
 insert_impl(entry_pbrep&& b)
 {
+    m_size_bytes += b.ByteSizeLong();
     m_list.insert(b.key(), ::std::move(*b.mutable_value()));
     co_return {};
 }
@@ -35,6 +36,7 @@ insert_impl(entry_pbrep&& b)
 koios::task<::std::error_code> memtable::
 insert_impl(const entry_pbrep& b)
 {
+    m_size_bytes += b.ByteSizeLong();
     m_list[b.key()] = b.value();
     co_return {};
 }
@@ -72,6 +74,12 @@ koios::task<bool> memtable::full() const
     auto lk = co_await m_list_mutex.acquire_shared();
     assert(m_bound);
     co_return m_list.size() == m_bound;
+}
+
+koios::task<size_t> memtable::size_bytes() const
+{
+    auto lk = co_await m_list_mutex.acquire_shared();
+    co_return m_size_bytes;
 }
 
 koios::task<entry_pbrep> 

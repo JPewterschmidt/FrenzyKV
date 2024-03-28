@@ -3,6 +3,7 @@
 
 #include <system_error>
 #include <memory>
+#include <stop_token>
 #include "frenzykv/db.h"
 #include "frenzykv/options.h"
 #include "db/memtable.h"
@@ -18,6 +19,7 @@ class db_impl : public db_interface
 {
 public:
     db_impl(::std::string dbname, const options& opt);
+    ~db_impl() noexcept;
 
     koios::task<size_t> write(write_batch batch) override;
 
@@ -25,9 +27,7 @@ public:
     get(const_bspan key, ::std::error_code& ec_out) noexcept override;
 
 private:
-    koios::task<::std::error_code> flush();
-
-private:
+    ::std::stop_source m_stp_src;
     ::std::string m_dbname;
     options m_opt;   
     ::std::unique_ptr<env> m_env;

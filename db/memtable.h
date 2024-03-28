@@ -60,6 +60,7 @@ public:
     koios::task<size_t> count() const;
     koios::task<bool> full() const;
     koios::task<size_t> bound() const;
+    koios::task<size_t> size_bytes() const;
 
 private:
     koios::task<::std::error_code> insert_impl(entry_pbrep&& entry);
@@ -69,6 +70,7 @@ private:
     const options* m_opt{};
     toolpex::skip_list<seq_key, ::std::string, seq_key_less, seq_key_equal_to> m_list;
     size_t m_bound{};
+    size_t m_size_bytes;
     mutable koios::shared_mutex m_list_mutex;
 };
 
