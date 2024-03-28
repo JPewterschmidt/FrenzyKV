@@ -49,13 +49,6 @@ public:
     koios::task<::std::error_code> insert(const write_batch& b);
     koios::task<::std::error_code> insert(write_batch&& b);
 
-    template<typename Entry>
-    koios::task<::std::error_code> insert(Entry&& entry)
-    {
-        auto lk = co_await m_list_mutex.acquire();
-        co_await insert_impl(::std::forward<Entry>(entry));
-    }
-
     koios::task<entry_pbrep> get(const seq_key& key) const noexcept;
     koios::task<size_t> count() const;
     koios::task<bool> full() const;
@@ -70,7 +63,7 @@ private:
     const options* m_opt{};
     toolpex::skip_list<seq_key, ::std::string, seq_key_less, seq_key_equal_to> m_list;
     size_t m_bound{};
-    size_t m_size_bytes;
+    size_t m_size_bytes{};
     mutable koios::shared_mutex m_list_mutex;
 };
 

@@ -48,8 +48,7 @@ get(const seq_key& key) const noexcept
     if (auto iter = m_list.find_bigger_equal(key); iter != m_list.end())
     {
         entry_pbrep result{};
-        *result.mutable_key() = key;
-        // TODO
+        *result.mutable_key() = iter->first;
         result.set_value(iter->second);
         co_return result;
     }
