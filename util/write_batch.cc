@@ -13,7 +13,7 @@ void write_batch::write(const_bspan key, const_bspan value)
 {
     entry_pbrep entry;
     entry.mutable_key()->set_user_key(key.data(), key.size());
-    entry.mutable_key()->set_seq_number(0);
+    entry.mutable_key()->set_seq_number(first_sequence_num() + m_entries.size());
     entry.set_value(value.data(), value.size());
     m_entries.push_back(::std::move(entry));
 }
@@ -61,7 +61,7 @@ void write_batch::remove_from_db(const_bspan key)
     {
         entry_pbrep entry;
         entry.mutable_key()->set_user_key(key.data(), key.size());
-        entry.mutable_key()->set_seq_number(0);
+        entry.mutable_key()->set_seq_number(first_sequence_num() + m_entries.size());
         m_entries.push_back(::std::move(entry));
     }
 }
@@ -112,6 +112,20 @@ size_t write_batch::serialize_to_array(bspan buffer) const
         + ", serialized_size = "    + serialized_size()
         + ", first_entry = ("       + entry_str + ")"
         + " ]";
+}
+
+void write_batch::set_first_sequence_num(sequence_number_t num) 
+{ 
+    m_seqnumber = num; 
+    if (!empty()) repropogate_sequence_num();
+}
+
+void write_batch::repropogate_sequence_num()
+{
+    for (size_t i{}; i < count(); ++i)
+    {
+        m_entries[i].mutable_key()->set_seq_number(first_sequence_num() + i);
+    }
 }
 
 } // namespace frenzykv

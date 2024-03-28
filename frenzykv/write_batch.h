@@ -44,6 +44,12 @@ namespace frenzykv
         ::std::string to_string_debug() const;
         ::std::string to_string_log() const;
 
+        /*! \brief Set the sequence number of the first operation of this batch.
+         *  \param num the sequence number.
+         *  You SHOULD set the sequence number before serialization.
+         */
+        void set_first_sequence_num(sequence_number_t num);
+
     private:
         // TODO Friend to some internal class.
 
@@ -54,13 +60,9 @@ namespace frenzykv
         // It's not that important to the MVCC or other components 
         // the specific seq number of each writing in a `write_batch`
 
-        /*! \brief Set the sequence number of the first operation of this batch.
-         *  \param num the sequence number.
-         *  You SHOULD set the sequence number before serialization.
-         */
-        void set_first_sequence_num(sequence_number_t num) { m_seqnumber = num; }
         sequence_number_t first_sequence_num() const noexcept { return m_seqnumber; }
         sequence_number_t last_sequence_num() const noexcept { return m_seqnumber + count() - 1; }
+        void repropogate_sequence_num();
 
     private:
         auto stl_style_remove(const_bspan key);
