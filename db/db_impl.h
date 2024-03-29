@@ -7,6 +7,7 @@
 #include "frenzykv/db.h"
 #include "frenzykv/options.h"
 #include "db/memtable.h"
+#include "db/version.h"
 #include "util/record_writer_wrapper.h"
 #include "util/memtable_set.h"
 #include "log/logger.h"
