@@ -19,6 +19,7 @@ enum status_t : int
     FRZ_KVDB_UNKNOW,
     FRZ_KVDB_OUT_OF_RANGE,
     FRZ_KVDB_EXCEPTION_CATCHED,
+    FRZ_KVDB_SERIZLIZATION_ERR,
 };
 
 ::std::error_code make_frzkv_ok() noexcept;

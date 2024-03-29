@@ -33,6 +33,8 @@ public:
     koios::task<> write(const write_batch& b);
 
     logging_level level() const noexcept { return m_level; }
+
+    koios::task<> may_flush(bool force = false) noexcept;
     
 private:
     const options* m_opt;

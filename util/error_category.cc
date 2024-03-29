@@ -27,6 +27,7 @@ namespace
             case status_t::FRZ_KVDB_IO_ERROR:         return "frenzykv: IO Error";
             case status_t::FRZ_KVDB_OUT_OF_RANGE:     return "frenzykv: Out of Range";
             case status_t::FRZ_KVDB_EXCEPTION_CATCHED:return "frenzykv: Exception Catched";
+            case status_t::FRZ_KVDB_SERIZLIZATION_ERR:return "frenzykv: Serialization error";
             default: 
             case status_t::FRZ_KVDB_UNKNOW:  return "frenzykv: Unknown Status";
         }
