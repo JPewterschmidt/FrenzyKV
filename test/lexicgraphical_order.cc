@@ -11,13 +11,17 @@ static auto get_data_sameuk_diffsn()
     seq_key key1, key2, key3, key4;
 
     key1.set_user_key("xxxxxxxxx");
-    key1.set_seq_number(0);
+    key1.set_seq_number(15);
     key2.set_user_key("xxxxxxxxx");
-    key2.set_seq_number(1);
+    key2.set_seq_number(16);
+
+    // Since protobuf serializes multi-bytes integer in a manner which called 'varints'
+    // we need make sure the lexicgraphical order are satisfied with this manner.
     key3.set_user_key("xxxxxxxxx");
-    key3.set_seq_number(10000000);
+    key3.set_seq_number(128+15); // 1000 1111
     key4.set_user_key("xxxxxxxxx");
-    key4.set_seq_number(99999999);
+    key4.set_seq_number(128+16); // 1001 0000
+                                 // Thus key3 < key4 is considerable.
 
     return ::std::tuple{ 
         ::std::move(key1), 
@@ -32,9 +36,9 @@ static auto get_data_diffuk_diffsn()
     seq_key key1, key2, key3, key4;
 
     key1.set_user_key("123");
-    key1.set_seq_number(100);
+    key1.set_seq_number(16);
     key2.set_user_key("12345");
-    key2.set_seq_number(99);
+    key2.set_seq_number(8);
     key3.set_user_key("def");
     key3.set_seq_number(100000000);
     key4.set_user_key("abcd");
