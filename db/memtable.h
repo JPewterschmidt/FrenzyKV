@@ -76,6 +76,10 @@ public:
     }
 
     koios::task<entry_pbrep> get(const seq_key& key);
+    koios::task<size_t> size_bytes() const noexcept
+    {
+        co_return co_await m_mem.size_bytes();
+    }
 
 private:
     memtable m_mem;

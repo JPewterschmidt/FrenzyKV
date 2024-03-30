@@ -36,7 +36,7 @@ public:
     {
         if (co_await m_mem->full())
         {
-            auto ec = co_await memtable_transfer();
+            auto ec = co_await memtable_transform();
             if (ec) co_return ec; 
         }
         co_return co_await m_mem->insert(::std::forward<Batch>(b));
@@ -45,15 +45,14 @@ public:
     koios::task<entry_pbrep> get(const seq_key& key);
     koios::task<bool> full() const;
     koios::task<::std::unique_ptr<imm_memtable>> get_imm_memtable();
-
-private:
-    koios::task<::std::error_code> memtable_transfer();
+    koios::task<::std::error_code> memtable_transform();
+    koios::task<::std::pair<size_t, size_t>> size_bytes();
 
 private:
     const options* m_opt;
     ::std::unique_ptr<memtable> m_mem;
     ::std::unique_ptr<imm_memtable> m_imm_mem;
-    mutable koios::shared_mutex m_transfer_mutex;
+    mutable koios::shared_mutex m_transform_mutex;
 };
 
 } // namespace frenzykv

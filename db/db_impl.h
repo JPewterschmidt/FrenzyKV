@@ -12,6 +12,7 @@
 #include "util/memtable_set.h"
 #include "log/logger.h"
 #include "koios/coroutine_mutex.h"
+#include "frenzykv/statistics.h"
 
 namespace frenzykv
 {
@@ -28,9 +29,13 @@ public:
     get(const_bspan key, ::std::error_code& ec_out) noexcept override;
 
 private:
+    koios::task<> may_prepare_space(const write_batch& b);
+
+private:
     ::std::stop_source m_stp_src;
     ::std::string m_dbname;
     options m_opt;   
+    statistics m_stat;
     ::std::unique_ptr<env> m_env;
     logger m_log;
     memtable_set m_memset;
