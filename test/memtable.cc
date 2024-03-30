@@ -10,7 +10,7 @@ koios::task<bool> init_ok(memtable& m)
 {
     co_return {
            co_await m.count() == 0
-        && co_await m.bound() != 0
+        && co_await m.bound_size_bytes() != 0
         && co_await m.full() == false
         && co_await m.size_bytes() == 0
     };
