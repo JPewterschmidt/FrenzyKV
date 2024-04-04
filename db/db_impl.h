@@ -35,6 +35,7 @@ private:
     ::std::stop_source m_stp_src;
     ::std::string m_dbname;
     options m_opt;   
+    version_hub m_version;
     statistics m_stat;
     ::std::unique_ptr<env> m_env;
     logger m_log;

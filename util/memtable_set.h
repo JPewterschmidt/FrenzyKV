@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <utility>
+#include <optional>
 #include <system_error>
 #include "db/memtable.h"
 #include "koios/task.h"
@@ -44,7 +45,7 @@ public:
         co_return co_await m_mem->insert(::std::forward<Batch>(b));
     }
     
-    koios::task<entry_pbrep> get(const seq_key& key);
+    koios::task<::std::optional<entry_pbrep>> get(const seq_key& key);
     koios::task<bool> full() const;
     koios::task<::std::unique_ptr<imm_memtable>> get_imm_memtable();
     koios::task<::std::error_code> memtable_transform();

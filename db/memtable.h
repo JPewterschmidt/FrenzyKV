@@ -2,6 +2,7 @@
 #define FRENZYKV_MEMTABLE_H
 
 #include <system_error>
+#include <optional>
 #include "toolpex/skip_list.h"
 #include "frenzykv/write_batch.h"
 #include "frenzykv/statistics.h"
@@ -49,7 +50,7 @@ public:
     koios::task<::std::error_code> insert(const write_batch& b);
     koios::task<::std::error_code> insert(write_batch&& b);
 
-    koios::task<entry_pbrep> get(const seq_key& key) const noexcept;
+    koios::task<::std::optional<entry_pbrep>> get(const seq_key& key) const noexcept;
     koios::task<size_t> count() const;
     koios::task<bool> full() const;
     koios::task<size_t> bound_size_bytes() const;
@@ -75,7 +76,7 @@ public:
     {
     }
 
-    koios::task<entry_pbrep> get(const seq_key& key);
+    koios::task<::std::optional<entry_pbrep>> get(const seq_key& key);
     koios::task<size_t> size_bytes() const noexcept
     {
         co_return co_await m_mem.size_bytes();

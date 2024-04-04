@@ -44,7 +44,9 @@ koios::task<bool> get_test(memtable& m)
     seq_key k;
     k.set_user_key("abc1");
     k.set_seq_number(99);
-    auto kv = co_await m.get(k);
+    auto kv_opt = co_await m.get(k);
+    if (!kv_opt) co_return false;
+    const auto& kv = kv_opt.value();
     co_return kv.key().seq_number() == 100 && kv.value().size() == 0;
 }
 

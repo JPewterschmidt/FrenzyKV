@@ -10,9 +10,18 @@
 namespace frenzykv
 {
 
+static seq_key make_seq_key(const_bspan user_key, sequence_number_t seq)
+{
+    seq_key result{};
+    result.set_user_key(/*static_cast<const char*>*/(user_key.data()), user_key.size());
+    result.set_seq_number(seq);
+    return result;
+}
+
 db_impl::db_impl(::std::string dbname, const options& opt)
     : m_dbname{ ::std::move(dbname) }, 
       m_opt{ opt }, 
+      m_version{ m_opt },
       m_env{ env::make_default_env(m_opt) }, 
       m_log{ (m_opt.environment = m_env.get(), m_opt), "0001-test.frzkvlog" }, 
       m_memset{ m_opt }
@@ -44,6 +53,11 @@ db_impl::write(write_batch batch)
 koios::task<::std::optional<entry_pbrep>> 
 db_impl::get(const_bspan key, ::std::error_code& ec_out) noexcept
 {
+    sequence_number_t seq = co_await m_version.last_sequence_number();
+    const seq_key skey = make_seq_key(key, seq);
+    auto result_opt = co_await m_memset.get(skey);
+    if (result_opt) co_return result_opt;
+
     co_return {};
 }
 
