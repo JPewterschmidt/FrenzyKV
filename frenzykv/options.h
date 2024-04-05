@@ -26,10 +26,6 @@ struct options
     ::std::filesystem::path root_path = "./";
     ::std::filesystem::path log_path = "frenzy-prewrite-log";
     logging_level log_level = logging_level::DEBUG;
-
-    // Need not serializer
-    env* environment{};
-    statistics* stat{};   
 };
 
 options get_global_options(env* e = nullptr) noexcept;
