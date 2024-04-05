@@ -7,11 +7,12 @@
 #include "frenzykv/frenzykv.h"
 #include "frenzykv/kvdb_deps.h"
 #include "db/memtable.h"
+#include "util/concepts.h"
 
 namespace frenzykv
 {
 
-template<typename PersisImpl>
+template<persistent_concept PersisImpl>
 class persistent
 {
 public:
