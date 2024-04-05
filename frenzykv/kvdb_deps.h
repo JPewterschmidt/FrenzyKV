@@ -39,17 +39,47 @@ namespace frenzykv
 class kvdb_deps
 {
 public:
-    friend class db_manipulater;
+    friend class kvdb_deps_manipulator;
     kvdb_deps();
 
-    const auto option()        const noexcept { return m_opt.load(::std::memory_order_release); }
-    const auto environment()   const noexcept { return m_env.load(::std::memory_order_release); } 
-    const auto stat()          const noexcept { return m_stat.load(::std::memory_order_release); }
+    const auto option()        const noexcept { return m_opt.load(::std::memory_order_relaxed); }
+    const auto environment()   const noexcept { return m_env.load(::std::memory_order_relaxed); } 
+    auto stat()                const noexcept { return m_stat.load(::std::memory_order_relaxed); }
 
 private: // Deps
     ::std::atomic<::std::shared_ptr<options>>     m_opt;
     ::std::atomic<::std::shared_ptr<env>>         m_env;
     ::std::atomic<::std::shared_ptr<statistics>>  m_stat;
+};
+
+class kvdb_deps_manipulator
+{
+public:
+    constexpr kvdb_deps_manipulator(kvdb_deps& deps) noexcept
+        : m_deps{ deps }
+    {
+    }
+
+    ::std::shared_ptr<options>  
+    exchange_option(::std::shared_ptr<options> newopt)
+    {
+        return m_deps.m_opt.exchange(
+            ::std::move(newopt), 
+            ::std::memory_order_relaxed
+        );
+    }
+
+    ::std::shared_ptr<env>      
+    exchange_environment(::std::shared_ptr<env> newenv)
+    {
+        return m_deps.m_env.exchange(
+            ::std::move(newenv), 
+            ::std::memory_order_relaxed
+        );
+    }
+
+private:
+    kvdb_deps& m_deps;
 };
 
 } // namespace frenzykv
