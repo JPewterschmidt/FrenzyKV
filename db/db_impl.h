@@ -29,13 +29,13 @@ public:
 
 private:
     koios::task<> may_prepare_space(const write_batch& b);
+    koios::task<seq_key> make_query_key(const_bspan userkey);
 
 private:
     ::std::stop_source m_stp_src;
     ::std::string m_dbname;
     kvdb_deps m_deps;
     version_hub m_version;
-    statistics m_stat;
     logger m_log;
     memtable_set m_memset;
 };
