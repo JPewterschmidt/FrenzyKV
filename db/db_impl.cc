@@ -10,14 +10,6 @@
 namespace frenzykv
 {
 
-static seq_key make_seq_key(const_bspan user_key, sequence_number_t seq)
-{
-    seq_key result{};
-    result.set_user_key(/*static_cast<const char*>*/(user_key.data()), user_key.size());
-    result.set_seq_number(seq);
-    return result;
-}
-
 db_impl::db_impl(::std::string dbname, const options& opt)
     : m_dbname{ ::std::move(dbname) }, 
       m_deps{ opt },
@@ -40,7 +32,7 @@ db_impl::write(write_batch batch)
     co_await may_prepare_space(batch);
     co_await m_log.write(batch);
     co_await m_memset.insert(::std::move(batch));
-    auto [total_count, _] = co_await m_stat.increase_hot_data_scale(batch.count(), serialized_size);
+    auto [total_count, _] = co_await m_deps.stat()->increase_hot_data_scale(batch.count(), serialized_size);
     (void)_;
 
     co_return total_count;
@@ -49,12 +41,19 @@ db_impl::write(write_batch batch)
 koios::task<::std::optional<entry_pbrep>> 
 db_impl::get(const_bspan key, ::std::error_code& ec_out) noexcept
 {
-    sequence_number_t seq = co_await m_version.last_sequence_number();
-    const seq_key skey = make_seq_key(key, seq);
+    const seq_key skey = co_await this->make_query_key(key);
     auto result_opt = co_await m_memset.get(skey);
     if (result_opt) co_return result_opt;
 
     co_return {};
+}
+
+koios::task<seq_key> db_impl::make_query_key(const_bspan userkey)
+{
+    seq_key result{};
+    result.set_user_key(userkey.data(), userkey.size());
+    result.set_seq_number(co_await m_version.last_sequence_number());
+    co_return result;
 }
 
 koios::task<> 
@@ -65,7 +64,7 @@ may_prepare_space(const write_batch& b)
     const size_t page_size = m_deps.opt()->memory_page_bytes;
     const size_t page_size_80percent = static_cast<size_t>(static_cast<double>(page_size) * 0.8);
     
-    if (const auto future_sz = co_await m_stat.approx_hot_data_size_bytes() + serialized_size;
+    if (const auto future_sz = co_await m_deps.stat()->approx_hot_data_size_bytes() + serialized_size;
         future_sz > m_deps.opt()->memory_page_bytes)
     {
         // TODO
