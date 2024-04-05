@@ -5,17 +5,6 @@
 namespace frenzykv 
 {
 
-static statistics& global_statistics_impl() noexcept
-{
-    static statistics result{};
-    return result;
-}
-
-statistics& global_statistics() noexcept
-{
-    return (global_statistics_impl());
-}
-
 koios::task<size_t> 
 statistics::
 approx_hot_data_scale() const noexcept
