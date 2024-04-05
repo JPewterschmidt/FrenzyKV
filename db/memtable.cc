@@ -41,7 +41,7 @@ insert_impl(const entry_pbrep& b)
     co_return {};
 }
 
-koios::task<entry_pbrep> memtable::
+koios::task<::std::optional<entry_pbrep>> memtable::
 get(const seq_key& key) const noexcept
 {
     auto lk = co_await m_list_mutex.acquire_shared();
@@ -61,18 +61,18 @@ koios::task<size_t> memtable::count() const
     co_return m_list.size();
 }
 
-koios::task<size_t> memtable::bound() const
+koios::task<size_t> memtable::bound_size_bytes() const
 {
     auto lk = co_await m_list_mutex.acquire_shared();
-    assert(m_bound);
-    co_return m_bound;
+    assert(m_bound_size_bytes);
+    co_return m_bound_size_bytes;
 }
 
 koios::task<bool> memtable::full() const
 {
     auto lk = co_await m_list_mutex.acquire_shared();
-    assert(m_bound);
-    co_return m_list.size() == m_bound;
+    assert(m_bound_size_bytes);
+    co_return m_list.size() == m_bound_size_bytes;
 }
 
 koios::task<size_t> memtable::size_bytes() const
@@ -81,7 +81,7 @@ koios::task<size_t> memtable::size_bytes() const
     co_return m_size_bytes;
 }
 
-koios::task<entry_pbrep> 
+koios::task<::std::optional<entry_pbrep>> 
 imm_memtable::
 get(const seq_key& key)
 {

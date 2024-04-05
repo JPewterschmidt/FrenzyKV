@@ -20,7 +20,6 @@ struct options
     // XXX remember to update those serializer code below after you add something above.
     size_t disk_block_bytes = 4096;
     size_t memory_page_bytes = 4096;
-    size_t memtable_size_bound = 32768;
     bool need_buffered_write = true;
     bool sync_write = false;
     bool buffered_read = true;
@@ -57,7 +56,6 @@ struct adl_serializer<frenzykv::options>
             { "sync_write", opt.sync_write }, 
             { "buffered_read", opt.buffered_read }, 
             { "root_path", opt.root_path }, 
-            { "memtable_size_bound", opt.memtable_size_bound }, 
             { "log", {
                 { "path", opt.log_path }, 
                 { "level", opt.log_level }, 
@@ -73,7 +71,6 @@ struct adl_serializer<frenzykv::options>
         j.at("need_buffered_write").get_to(opt.need_buffered_write);
         j.at("sync_write").get_to(opt.sync_write);
         j.at("buffered_read").get_to(opt.buffered_read);
-        j.at("memtable_size_bound").get_to(opt.memtable_size_bound);
         j.at("root_path").get_to(opt.root_path);
         temp.clear();
         j.at("log").at("path").get_to(temp);
