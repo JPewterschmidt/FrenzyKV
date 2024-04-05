@@ -28,7 +28,7 @@ struct options
     logging_level log_level = logging_level::DEBUG;
 };
 
-options get_global_options(env* e = nullptr) noexcept;
+options get_global_options() noexcept;
 void set_global_options(const nlohmann::json& j);
 void set_global_options(const ::std::filesystem::path& filepath);
 

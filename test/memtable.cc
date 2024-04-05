@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 #include "db/memtable.h"
+#include "frenzykv/kvdb_deps.h"
 
 using namespace frenzykv;
 
@@ -54,7 +55,8 @@ koios::task<bool> get_test(memtable& m)
 
 TEST(memtable, basic)
 {
-    memtable m{ get_global_options() };
+    kvdb_deps deps{};
+    memtable m{ deps };
     ASSERT_TRUE(init_ok(m).result());
     ASSERT_TRUE(insert_test(m).result());
     ASSERT_TRUE(get_test(m).result());

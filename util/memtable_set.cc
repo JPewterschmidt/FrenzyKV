@@ -12,7 +12,7 @@ memtable_transform()
     auto lk = co_await m_transform_mutex.acquire();
     if (m_imm_mem) co_return make_frzkv_out_of_range();
     m_imm_mem = ::std::make_unique<imm_memtable>(::std::move(*m_mem));
-    m_mem = ::std::make_unique<memtable>(co_await m_opt->stat->approx_hot_data_scale());
+    m_mem = ::std::make_unique<memtable>(*m_deps);
     co_return {};
 }
 

@@ -19,12 +19,17 @@ public:
     friend class statistics_updater;
 
     /*! \brief A couroutine which reports some useful infomation.
-     *  \return the hot data scale (the number of KV pair in main memory) */
+     *  \return The hot data scale (the number of KV pair in main memory)
+     *          at least equals to the return value of `hot_data_scale_baseline()`
+     *
+     *  \see `hot_data_scale_baseline()`
+     */
     koios::task<size_t> approx_hot_data_scale() const noexcept;
 
     /*! \brief A couroutine which reports some useful infomation.
-     *  \return the hot data size 
-     *          (the number of size in bytes all the KV in the main memory occupied) 
+     *  \return the actual hot data size 
+     *          (the number of size in bytes all the KV in the main memory occupied).
+     *          at least 0.
      */
     koios::task<size_t> approx_hot_data_size_bytes() const noexcept;
     koios::task<system_health> system_health_state() const noexcept;

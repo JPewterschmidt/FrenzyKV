@@ -20,15 +20,11 @@ static seq_key make_seq_key(const_bspan user_key, sequence_number_t seq)
 
 db_impl::db_impl(::std::string dbname, const options& opt)
     : m_dbname{ ::std::move(dbname) }, 
-      m_opt{ opt }, 
-      m_version{ m_opt },
-      m_env{ env::make_default_env(m_opt) }, 
-      m_log{ (m_opt.environment = m_env.get(), m_opt), "0001-test.frzkvlog" }, 
-      m_memset{ m_opt }
+      m_deps{ opt },
+      m_version{ m_deps },
+      m_log{ m_deps, "0001-test.frzkvlog" }, 
+      m_memset{ m_deps }
 {
-    m_opt.stat = &m_stat;
-    assert(m_opt.environment);
-    assert(m_opt.stat);
 }
 
 db_impl::~db_impl() noexcept
@@ -66,11 +62,11 @@ db_impl::
 may_prepare_space(const write_batch& b)
 {
     const size_t serialized_size = b.serialized_size();
-    const size_t page_size = m_opt.memory_page_bytes;
+    const size_t page_size = m_deps.opt()->memory_page_bytes;
     const size_t page_size_80percent = static_cast<size_t>(static_cast<double>(page_size) * 0.8);
     
     if (const auto future_sz = co_await m_stat.approx_hot_data_size_bytes() + serialized_size;
-        future_sz > m_opt.memory_page_bytes)
+        future_sz > m_deps.opt()->memory_page_bytes)
     {
         // TODO
     }

@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <chrono>
-#include "frenzykv/options.h"
+#include "frenzykv/kvdb_deps.h"
 #include "toolpex/move_only.h"
 
 namespace frenzykv
@@ -31,13 +31,13 @@ default_instance(::std::string filename = "");
 class version_hub : public toolpex::move_only
 {
 public:
-    version_hub(const options& opt);
+    version_hub(const kvdb_deps& deps);
 
     koios::task<>                   set_last_sequence_number(sequence_number_t newver);
     koios::task<sequence_number_t>  last_sequence_number() const;
 
 private:
-    const options* m_opt;
+    const kvdb_deps* m_deps{};
     ::std::unique_ptr<abstract_versions> m_pimpl = version_detials::default_instance();
 };
 

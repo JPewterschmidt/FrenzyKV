@@ -61,10 +61,8 @@ koios::eager_task<> clean()
 
 TEST(logger, basic)
 {
-    auto opt = get_global_options();
-    auto e = env::make_default_env(opt);
-    opt.environment = e.get();
-    logger l(opt, "pre_write_test.txt");
+    kvdb_deps deps;
+    logger l(deps, "pre_write_test.txt");
     ASSERT_TRUE(write(l).result());
     ASSERT_TRUE(read().result());
 

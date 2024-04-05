@@ -41,14 +41,15 @@ class kvdb_deps
 public:
     friend class kvdb_deps_manipulator;
     kvdb_deps();
+    kvdb_deps(options opt);
 
-    const auto option()        const noexcept { return m_opt.load(::std::memory_order_relaxed); }
-    const auto environment()   const noexcept { return m_env.load(::std::memory_order_relaxed); } 
-    auto stat()                const noexcept { return m_stat.load(::std::memory_order_relaxed); }
+    const auto opt() const noexcept { return m_opt.load(::std::memory_order_relaxed); }
+    const auto env() const noexcept { return m_env.load(::std::memory_order_relaxed); } 
+    auto stat()      const noexcept { return m_stat.load(::std::memory_order_relaxed); }
 
 private: // Deps
     ::std::atomic<::std::shared_ptr<options>>     m_opt;
-    ::std::atomic<::std::shared_ptr<env>>         m_env;
+    ::std::atomic<::std::shared_ptr<frenzykv::env>>         m_env;
     ::std::atomic<::std::shared_ptr<statistics>>  m_stat;
 };
 

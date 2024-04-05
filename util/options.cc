@@ -9,15 +9,13 @@ namespace frenzykv
 {
     static ::std::unique_ptr<nlohmann::json> g_data;
 
-    options get_global_options(env* e) noexcept
+    options get_global_options() noexcept
     {
         if (g_data) 
         {
-            auto result = g_data->get<options>();
-            result.environment = e;
-            return result;
+            return g_data->get<options>();
         }
-        return { .environment = e };
+        return {};
     }
 
     void set_global_options(nlohmann::json& j)

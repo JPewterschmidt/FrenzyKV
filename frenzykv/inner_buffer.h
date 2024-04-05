@@ -6,7 +6,7 @@
 #include <span>
 #include <utility>
 
-#include "frenzykv/options.h"
+#include "frenzykv/kvdb_deps.h"
 
 namespace frenzykv
 {
@@ -36,8 +36,8 @@ public:
 #endif
     }
 
-    buffer(const options& opt = get_global_options())
-        : buffer{ opt.memory_page_bytes }
+    buffer(const kvdb_deps& deps)
+        : buffer{ deps.opt()->memory_page_bytes }
     {
     }
 
