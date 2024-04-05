@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 #include <filesystem>
-#include "frenzykv/options.h"
+#include "frenzykv/kvdb_deps.h"
 #include "frenzykv/write_batch.h"
 #include "frenzykv/env.h"
 #include "koios/task.h"
@@ -18,12 +18,12 @@ namespace frenzykv
 class logger
 {
 public:
-    logger(const options& opt, ::std::string filename)
-        : m_opt{ &opt }, 
+    logger(const kvdb_deps& deps, ::std::string filename)
+        : m_deps{ &deps }, 
           m_filename{ ::std::move(filename) }, 
-          m_filepath{ m_opt->root_path / m_filename }, 
-          m_log_file{ m_opt->environment->get_seq_writable(m_filepath) }, 
-          m_level{ m_opt->log_level }
+          m_filepath{ m_deps->opt()->root_path / m_filename }, 
+          m_log_file{ m_deps->env()->get_seq_writable(m_filepath) }, 
+          m_level{ m_deps->opt()->log_level }
     {
     }
 
@@ -37,7 +37,7 @@ public:
     koios::task<> may_flush(bool force = false) noexcept;
     
 private:
-    const options* m_opt;
+    const kvdb_deps* m_deps{};
     ::std::string m_filename;
     ::std::filesystem::path m_filepath;
     ::std::unique_ptr<seq_writable> m_log_file;

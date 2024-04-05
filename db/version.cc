@@ -38,11 +38,12 @@ default_instance(::std::string filename)
 namespace frenzykv
 {
 
-version_hub::version_hub(const options& opt)
-    : m_opt{ &opt }, 
+version_hub::version_hub(const kvdb_deps& deps)
+    : m_deps{ &deps }, 
       m_pimpl{ version_detials::default_instance() }
 {
     assert(m_pimpl != nullptr);
+    assert(m_deps != nullptr);
 }
 
 koios::task<> 

@@ -2,6 +2,7 @@
 #define FRENZYKV_MEMTABLE_SET_H
 
 #include <memory>
+#include <cassert>
 #include <utility>
 #include <optional>
 #include <system_error>
@@ -9,7 +10,7 @@
 #include "koios/task.h"
 #include "koios/coroutine_shared_mutex.h"
 #include "frenzykv/error_category.h"
-#include "frenzykv/options.h"
+#include "frenzykv/kvdb_deps.h"
 
 namespace frenzykv
 {
@@ -17,10 +18,11 @@ namespace frenzykv
 class memtable_set
 {
 public:
-    memtable_set(const options& opt) noexcept
-        : m_opt{ &opt }, 
-          m_mem{ ::std::make_unique<memtable>(opt.memory_page_bytes) }
+    memtable_set(const kvdb_deps& deps) noexcept
+        : m_deps{ &deps }, 
+          m_mem{ ::std::make_unique<memtable>(*m_deps) }
     {
+        assert(m_deps);
     }
 
     /*! \brief  Insert a new write_batch into the memtable
@@ -56,7 +58,7 @@ private:
     koios::task<bool> could_fit_in_mem(const write_batch& b, auto& unilk);
 
 private:
-    const options* m_opt;
+    const kvdb_deps* m_deps{};
     ::std::unique_ptr<memtable> m_mem;
     ::std::unique_ptr<imm_memtable> m_imm_mem;
     mutable koios::shared_mutex m_transform_mutex;

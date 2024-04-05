@@ -4,7 +4,7 @@
 #include <filesystem>
 
 #include "frenzykv/readable.h"
-#include "frenzykv/options.h"
+#include "frenzykv/kvdb_deps.h"
 #include "frenzykv/posix_base.h"
 #include "frenzykv/inner_buffer.h"
 
@@ -17,12 +17,12 @@ class iouring_readable : public posix_base, public random_readable
 {
 public:
     iouring_readable(const ::std::filesystem::path& p, 
-                     const options& opt);
+                     const kvdb_deps& deps);
 
     iouring_readable(toolpex::unique_posix_fd fd, 
-                     const options& opt)
+                     const kvdb_deps& deps)
         : posix_base{ ::std::move(fd) }, 
-          m_opt{ &opt }
+          m_deps{ &deps }
     {
     }
 
@@ -37,7 +37,7 @@ public:
     constexpr bool is_buffering() const noexcept override { return false; }
 
 private:
-    const options* m_opt;
+    const kvdb_deps* m_deps;
     seq_readable_context m_fdctx;
 };
 

@@ -23,9 +23,9 @@ open_helper(const auto& opts, const ::std::string& pathstr, mode_t create_mode)
 }
 
 iouring_writable::
-iouring_writable(::std::filesystem::path path, options opt, mode_t create_mode)
-    : posix_base{ open_helper(opt, path, create_mode) }, 
-      m_options{ ::std::move(opt) }, 
+iouring_writable(::std::filesystem::path path, const kvdb_deps& deps, mode_t create_mode)
+    : posix_base{ open_helper(*deps.opt(), path, create_mode) }, 
+      m_deps{ &deps }, 
       m_path{ ::std::move(path) }, 
       m_buffer{ buffer_size_nbytes() }, 
       m_streambuf{ m_buffer }
@@ -33,9 +33,9 @@ iouring_writable(::std::filesystem::path path, options opt, mode_t create_mode)
 }
 
 iouring_writable::
-iouring_writable(toolpex::unique_posix_fd fd, options opt) noexcept
+iouring_writable(toolpex::unique_posix_fd fd, const kvdb_deps& deps) noexcept
     : posix_base{ ::std::move(fd) },
-      m_options{ ::std::move(opt) }, 
+      m_deps{ &deps }, 
       m_buffer{ buffer_size_nbytes() }, 
       m_streambuf{ m_buffer }
 {
@@ -98,12 +98,12 @@ append(::std::span<const char> buffer)
 
 bool iouring_writable::need_buffered() const noexcept
 {
-    return m_options.need_buffered_write;
+    return m_deps->opt()->need_buffered_write;
 }
 
 size_t iouring_writable::buffer_size_nbytes() const noexcept
 {
-    return need_buffered() ? m_options.disk_block_bytes : 0;
+    return need_buffered() ? m_deps->opt()->disk_block_bytes : 0;
 }
 
 koios::task<>

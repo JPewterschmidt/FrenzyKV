@@ -3,10 +3,10 @@
 
 #include <system_error>
 #include <optional>
+#include <utility>
 #include "toolpex/skip_list.h"
 #include "frenzykv/write_batch.h"
-#include "frenzykv/statistics.h"
-#include "frenzykv/options.h"
+#include "frenzykv/kvdb_deps.h"
 #include "koios/coroutine_shared_mutex.h"
 #include "entry_pbrep.pb.h"
 #include "util/key_cmp.h"
@@ -18,33 +18,29 @@ namespace frenzykv
 class memtable
 {
 public:
-    memtable(const options& opt)
-        : m_opt{ &opt },
-          m_list(toolpex::skip_list_suggested_max_level(opt.stat->hot_data_scale_baseline())), 
-          m_bound_size_bytes{ opt.memory_page_bytes }
+    memtable(const kvdb_deps& deps)
+        : m_deps{ &deps },
+          m_list(toolpex::skip_list_suggested_max_level(m_deps->stat()->hot_data_scale_baseline())), 
+          m_bound_size_bytes{ m_deps->opt()->memory_page_bytes }
     {
+        assert(m_deps);
     }
 
     memtable(memtable&& other) noexcept
-        : m_opt{ other.m_opt }, 
+        : m_deps { ::std::exchange(other.m_deps, nullptr) }, 
           m_list{ ::std::move(other.m_list) }, 
           m_bound_size_bytes{ other.m_bound_size_bytes }
     {
+        assert(m_deps);
     }
 
     memtable& operator=(memtable&& other) noexcept
     {
-        m_opt = other.m_opt;
+        m_deps = ::std::exchange(other.m_deps, nullptr);
         m_list = ::std::move(other.m_list);
         m_bound_size_bytes = ::std::exchange(other.m_bound_size_bytes, 0);
 
         return *this;
-    }
-
-    memtable(size_t approx_size_bound)
-        : m_list(toolpex::skip_list_suggested_max_level(approx_size_bound)), 
-          m_bound_size_bytes{ approx_size_bound }
-    {
     }
 
     koios::task<::std::error_code> insert(const write_batch& b);
@@ -61,7 +57,7 @@ private:
     koios::task<::std::error_code> insert_impl(const entry_pbrep& entry);
     
 private:
-    const options* m_opt{};
+    const kvdb_deps* m_deps{};
     toolpex::skip_list<seq_key, ::std::string, seq_key_less, seq_key_equal_to> m_list;
     size_t m_bound_size_bytes{};
     size_t m_size_bytes{};

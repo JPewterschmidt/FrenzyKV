@@ -2,6 +2,7 @@
 #include "frenzykv/readable.h"
 #include "frenzykv/writable.h"
 #include "frenzykv/in_mem_rw.h"
+#include "frenzykv/kvdb_deps.h"
 #include "frenzykv/iouring_writable.h"
 #include "koios/iouring_awaitables.h"
 
@@ -15,7 +16,8 @@ namespace
 {
     in_mem_rw r{3};
     ::std::string filename = "testfile.txt";
-    iouring_writable w{filename};
+    kvdb_deps deps;
+    iouring_writable w{filename, deps};
     
     eager_task<bool> env_setup()
     {

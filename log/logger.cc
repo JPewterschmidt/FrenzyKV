@@ -40,8 +40,8 @@ koios::task<> logger::write(const write_batch& b)
 koios::task<> logger::may_flush(bool force) noexcept
 {
     // If the data scale is not that big, just flush easy to debug.
-    if (const auto* s = m_opt->stat; 
-        force || !s || (s && co_await s->approx_hot_data_scale() < 100))
+    if (const auto s = m_deps->stat(); 
+        force || !s || (s && co_await s->approx_hot_data_scale() <= s->hot_data_scale_baseline()))
     {
         co_await m_log_file->flush();
     }
