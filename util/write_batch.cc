@@ -1,5 +1,5 @@
 #include "frenzykv/write_batch.h"
-#include "util/proto_parse_from_inner_buffer.h"
+#include "frenzykv/util/proto_parse_from_inner_buffer.h"
 #include "toolpex/functional.h"
 #include <algorithm>
 #include <ranges>

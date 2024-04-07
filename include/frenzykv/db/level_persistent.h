@@ -2,6 +2,7 @@
 #define FRENZYKV_LEVEL_PERSISTENT_H
 
 #include <optional>
+#include "koios/task.h"
 #include "entry_pbrep.pb.h"
 #include "frenzykv/kvdb_deps.h"
 
@@ -25,6 +26,9 @@ public:
     {
         co_return;                     
     }
+
+    koios::task<> level_transformation();
+    koios::task<> do_GC();
 
 private:
     const kvdb_deps* m_deps{};

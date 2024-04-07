@@ -3,8 +3,8 @@
 
 #include "frenzykv/concepts.h"
 #include "frenzykv/write_batch.h"
-#include "util/nop_record_writer.h"
-#include "util/record_writer_wrapper.h"
+#include "frenzykv/util/nop_record_writer.h"
+#include "frenzykv/util/record_writer_wrapper.h"
 #include "koios/task.h"
 #include <tuple>
 

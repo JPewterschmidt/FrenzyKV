@@ -9,8 +9,8 @@
 #include "frenzykv/kvdb_deps.h"
 #include "koios/coroutine_shared_mutex.h"
 #include "entry_pbrep.pb.h"
-#include "util/key_cmp.h"
-#include "util/key_eq.h"
+#include "frenzykv/util/key_cmp.h"
+#include "frenzykv/util/key_eq.h"
 
 namespace frenzykv
 {
