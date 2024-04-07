@@ -71,7 +71,7 @@ public:
     void unlock() noexcept 
     { 
         if (!m_hold || !m_fd) return;
-        int ret = ::flock(*m_fd, LOCK_UN | LOCK_NB); 
+        [[maybe_unused]] int ret = ::flock(*m_fd, LOCK_UN | LOCK_NB); 
         assert(ret == 0);
         m_hold = false; 
         notify_hub();
