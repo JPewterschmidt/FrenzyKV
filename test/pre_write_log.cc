@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "log/logger.h"
+#include "frenzykv/log/logger.h"
 #include "frenzykv/write_batch.h"
 #include "frenzykv/env.h"
 #include "koios/iouring_awaitables.h"

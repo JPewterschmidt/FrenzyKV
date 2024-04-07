@@ -1,5 +1,5 @@
-#include "util/memtable_set.h"
-#include "db/memtable.h"
+#include "frenzykv/util/memtable_set.h"
+#include "frenzykv/db/memtable.h"
 #include "frenzykv/statistics.h"
 
 namespace frenzykv

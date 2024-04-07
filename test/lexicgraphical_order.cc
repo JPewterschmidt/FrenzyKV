@@ -2,7 +2,7 @@
 #include "entry_pbrep.pb.h"
 #include <string>
 #include <functional>
-#include "util/key_cmp.h"
+#include "frenzykv/util/key_cmp.h"
 
 using namespace frenzykv;
 

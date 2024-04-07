@@ -26,8 +26,8 @@ add_includedirs(
 )
 
 add_includedirs(
-    ".",
-    { public = false }
+    "./include",
+    { public = true }
 )
 
 set_languages("c++23", "c17")

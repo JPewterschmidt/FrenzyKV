@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
-#include "util/hash.h"
-#include "util/comp.h"
+#include "frenzykv/util/hash.h"
+#include "frenzykv/util/comp.h"
 #include <string>
 
 using namespace frenzykv;

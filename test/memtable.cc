@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "db/memtable.h"
+#include "frenzykv/db/memtable.h"
 #include "frenzykv/kvdb_deps.h"
 
 using namespace frenzykv;
