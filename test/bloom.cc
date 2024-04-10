@@ -59,7 +59,7 @@ public:
     
     bool matches(const_bspan s)
     {
-        if (m_keys.empty())
+        if (!m_keys.empty())
             build();
         return m_policy->may_match(s, m_filter);
     }
@@ -89,4 +89,16 @@ TEST_F(bloom_test, empty_filter)
 {
     ASSERT_TRUE(!this->matches("fuck you"));
     ASSERT_TRUE(!this->matches("final project"));
+}
+
+TEST_F(bloom_test, small_filter)
+{
+    reset();
+    add("fuck");
+    add("you");
+    build();
+    ASSERT_TRUE(matches("fuck"));
+    ASSERT_TRUE(matches("you"));
+    ASSERT_TRUE(!matches("love"));
+    ASSERT_TRUE(!matches("some others"));
 }

@@ -59,7 +59,7 @@ public:
         const size_t delta = (h >> 33) | (h << 31);
         for (size_t i{}; i < rep_k; ++i)
         {
-            const size_t bitpos = h & bits;
+            const size_t bitpos = h % bits;
             if ((bloom_filter_rep[bitpos / 8] & (1 << (bitpos % 8))) == 0)
                 return false;
             h += delta;
