@@ -38,6 +38,16 @@ public:
     }
 
     void add(::std::string_view s) { m_keys.emplace_back(s); }
+
+    void add(const_bspan key) 
+    { 
+        ::std::string_view str{ 
+            reinterpret_cast<const char*>(key.data()), 
+            key.size() 
+        };
+        m_keys.emplace_back(str); 
+    }
+
     void build()
     {
         namespace rv = ::std::ranges::views;
@@ -101,4 +111,44 @@ TEST_F(bloom_test, small_filter)
     ASSERT_TRUE(matches("you"));
     ASSERT_TRUE(!matches("love"));
     ASSERT_TRUE(!matches("some others"));
+}
+
+TEST_F(bloom_test, var_length_filter)
+{
+    ::std::array<::std::byte, sizeof(int)> buffer{};
+    int mediocre_filters{};
+    int good_filters{};
+
+    auto next_len = [](int length){ 
+        /**/ if (length < 10)   length += 1;
+        else if (length < 100)  length += 10; 
+        else if (length < 1000) length += 100; 
+        else                    length += 1000;
+        return length;
+    };
+        
+    for (int length{}; length < 10000; length = next_len(length))
+    {
+        reset();
+        for (int i{}; i < length; ++i)
+        {
+            add(make_dummy_key(i, buffer));
+        }
+        build();
+
+        ASSERT_LE(filter_size(), static_cast<size_t>(length* 10 / 8) + 40) << length;
+
+        for (int i{}; i < length; ++i)
+        {
+            ASSERT_TRUE(matches(make_dummy_key(i, buffer)))
+                << "length " << length << "; key" << i;
+        }
+
+        double rate = false_positive_rate();
+        ASSERT_LE(rate, 0.02);
+        if (rate > 0.0125)
+            ++mediocre_filters;
+        else ++good_filters;
+        ASSERT_LE(mediocre_filters, good_filters / 5);
+    }
 }
