@@ -7,6 +7,11 @@ namespace frenzykv
 namespace
 {
 
+auto get_delta(::std::integral auto h)
+{
+    return (h >> 33) | (h << 31);
+}
+
 template<typename HashFunc = murmur_bin_hash>
 class bloom_filter : public filter_policy
 {
@@ -16,7 +21,7 @@ public:
           m_k{ static_cast<size_t>((double)m_num_key_bits * 0.69314/*ln2*/) }
     {
         if (m_k < 1)    m_k = 1;
-        if (m_k > 30)   m_k = 30;
+        if (m_k > 60)   m_k = 60;
     }
 
     constexpr ::std::string_view name() const noexcept override { return "frenzykv bloom filter"; }
@@ -36,7 +41,7 @@ public:
         for (const auto& key : keys)
         {
             size_t h = hash(key);
-            const size_t delta = (h >> 33) | (h << 31);
+            const size_t delta = get_delta(h);
             for (size_t i{}; i < k(); ++i)
             {
                 const size_t bitpos = h % bits;
@@ -56,7 +61,7 @@ public:
         const size_t rep_k = static_cast<size_t>(bloom_filter_rep[filter_len - 1]);
         if (rep_k > 30) return true;
         size_t h = hash(key);
-        const size_t delta = (h >> 33) | (h << 31);
+        const size_t delta = get_delta(h);
         for (size_t i{}; i < rep_k; ++i)
         {
             const size_t bitpos = h % bits;
