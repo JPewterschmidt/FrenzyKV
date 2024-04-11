@@ -19,17 +19,6 @@ includes(
     "koios"
 )
 
-add_includedirs(
-    "koios/toolpex/include", 
-    "koios/include",
-    { public = true }
-)
-
-add_includedirs(
-    "./include",
-    { public = true }
-)
-
 set_languages("c++23", "c17")
 set_policy("build.warning", true)
 set_policy("build.optimization.lto", false)
@@ -56,6 +45,7 @@ target("FrenzyKV")
     add_rules("protobuf.cpp")
     set_warnings("all", "error")
     add_cxflags("-Wconversion", { force = true })
+    add_deps("koios", "toolpex")
     add_syslinks(
         "uring"
     )
@@ -66,44 +56,8 @@ target("FrenzyKV")
         "log/*.cc"
     )
     add_files("proto/*.proto", { proto_public = true })
-
---target("FrenzyKV-test")
---    set_kind("binary")
---    add_packages("protobuf-cpp")
---    add_rules("protobuf.cpp")
---    add_packages("concurrentqueue")
---    add_cxflags("-Wconversion", { force = true })
---    add_deps("FrenzyKV", "koios")
---    set_warnings("all", "error")
---    add_files( "test/*.cc")
---    add_packages(
---        "gtest", "spdlog",
---        "botan",
---        "nlohmann_json"
---    )
---    after_build(function (target)
---        os.exec(target:targetfile())
---        print("xmake: unittest complete.")
---    end)
---    on_run(function (target)
---        --nothing
---    end)
---    
---target("FrenzyKV-example")
---    set_kind("binary")
---    add_packages("protobuf-cpp", { public = false })
---    add_rules("protobuf.cpp")
---    add_files("proto/*.proto", { proto_public = false })
---    add_cxflags("-Wconversion", { force = true })
---    add_deps("FrenzyKV", "koios")
---    add_files( "example/*.cc")
---    set_policy("build.warning", true)
---    add_packages(
---        "gflags", 
---        "concurrentqueue", 
---        "botan",
---        "nlohmann_json", 
---        "spdlog"
---    )
-    
+    add_includedirs(
+        "./include",
+        { public = true }
+    )
 
