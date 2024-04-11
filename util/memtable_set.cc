@@ -53,15 +53,6 @@ size_bytes()
 
 koios::task<bool> 
 memtable_set::
-could_fit_in_mem(const write_batch& b, [[maybe_unused]] auto& unilk)
-{
-    const size_t b_sz = b.serialized_size();
-    const size_t mem_sz = co_await m_mem->size_bytes();
-    co_return b_sz + mem_sz < co_await m_mem->bound_size_bytes();
-}
-
-koios::task<bool> 
-memtable_set::
 could_fit_in(const write_batch& b)
 {
     auto lk = co_await m_transform_mutex.acquire_shared();

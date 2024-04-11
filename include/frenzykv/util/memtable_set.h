@@ -55,7 +55,12 @@ public:
     koios::task<bool> could_fit_in(const write_batch& b);
 
 private:
-    koios::task<bool> could_fit_in_mem(const write_batch& b, auto& unilk);
+    koios::task<bool> could_fit_in_mem(const write_batch& b, [[maybe_unused]] auto& lk)
+    {
+        const size_t b_sz = b.serialized_size();
+        const size_t mem_sz = co_await m_mem->size_bytes();
+        co_return b_sz + mem_sz < co_await m_mem->bound_size_bytes();
+    }
 
 private:
     const kvdb_deps* m_deps{};

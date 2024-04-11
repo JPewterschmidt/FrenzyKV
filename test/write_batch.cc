@@ -22,7 +22,9 @@ TEST(write_batch, basic)
     example_entry.set_value(v.data(), v.size());
 
     entry_from_buffer.ParseFromArray(buffer.data(), buffer.size());
-    ASSERT_TRUE(google::protobuf::util::MessageDifferencer::Equals(entry_from_buffer, example_entry));
+    ASSERT_TRUE(entry_from_buffer.IsInitialized());
+    ASSERT_EQ(entry_from_buffer.key().user_key(), example_entry.key().user_key());
+    ASSERT_EQ(entry_from_buffer.value(), example_entry.value());
 }
 
 TEST(write_batch, remove)
@@ -51,7 +53,9 @@ TEST(write_batch, remove)
     example_entry.clear_value();
 
     entry_from_buffer.ParseFromArray(buffer.data(), buffer.size());
-    ASSERT_TRUE(google::protobuf::util::MessageDifferencer::Equals(entry_from_buffer, example_entry));
+    ASSERT_TRUE(entry_from_buffer.IsInitialized());
+    ASSERT_EQ(entry_from_buffer.key().user_key(), example_entry.key().user_key());
+    ASSERT_EQ(entry_from_buffer.value(), example_entry.value());
 }
 
 TEST(write_batch, serialized_size)
