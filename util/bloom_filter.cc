@@ -9,7 +9,7 @@ namespace
 
 auto get_delta(::std::integral auto h)
 {
-    return (h >> 33) | (h << 31);
+    return (h >> 21) | (h << 19);
 }
 
 template<typename HashFunc = murmur_bin_hash>

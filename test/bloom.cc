@@ -146,9 +146,11 @@ TEST_F(bloom_test, var_length_filter)
 
         double rate = false_positive_rate();
         ASSERT_LE(rate, 0.02);
+        // TODO It's can not pass this test, the hash function probably has problem
+        // we need a murmurhash that returns a 64bits result
         if (rate > 0.0125)
             ++mediocre_filters;
         else ++good_filters;
-        ASSERT_LE(mediocre_filters, good_filters / 5);
+        ASSERT_LE(mediocre_filters, good_filters / 5) << "good filters: " << good_filters;
     }
 }
