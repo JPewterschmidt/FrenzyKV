@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 #include "frenzykv/write_batch.h"
+#include "frenzykv/util/entry_extent.h"
 #include "google/protobuf/util/message_differencer.h"
 
 using namespace frenzykv;
@@ -16,15 +17,12 @@ TEST(write_batch, basic)
     ::std::array<::std::byte, 100> buffer{};
     b.serialize_to_array(buffer);
     entry_pbrep example_entry, entry_from_buffer;
-
-    example_entry.mutable_key()->set_seq_number(0);
-    example_entry.mutable_key()->set_user_key(k.data(), k.size());
-    example_entry.set_value(v.data(), v.size());
+    construct_regular_entry(&example_entry, k, 0, v);
 
     entry_from_buffer.ParseFromArray(buffer.data(), buffer.size());
     ASSERT_TRUE(entry_from_buffer.IsInitialized());
     ASSERT_EQ(entry_from_buffer.key().user_key(), example_entry.key().user_key());
-    ASSERT_EQ(entry_from_buffer.value(), example_entry.value());
+    ASSERT_EQ(entry_from_buffer.value().value(), example_entry.value().value());
 }
 
 TEST(write_batch, remove)
@@ -47,15 +45,12 @@ TEST(write_batch, remove)
     b.serialize_to_array(buffer);
 
     entry_pbrep example_entry, entry_from_buffer;
-
-    example_entry.mutable_key()->set_seq_number(0);
-    example_entry.mutable_key()->set_user_key(k.data(), k.size());
-    example_entry.clear_value();
+    construct_deleting_entry(&example_entry, k, 0);
 
     entry_from_buffer.ParseFromArray(buffer.data(), buffer.size());
     ASSERT_TRUE(entry_from_buffer.IsInitialized());
     ASSERT_EQ(entry_from_buffer.key().user_key(), example_entry.key().user_key());
-    ASSERT_EQ(entry_from_buffer.value(), example_entry.value());
+    ASSERT_EQ(entry_from_buffer.value().value(), example_entry.value().value());
 }
 
 TEST(write_batch, serialized_size)

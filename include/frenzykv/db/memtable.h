@@ -70,7 +70,7 @@ private:
 
     friend class imm_memtable;
     toolpex::skip_list<
-        seq_key, ::std::string, 
+        seq_key, user_value, 
         seq_key_less, seq_key_equal_to> 
     m_list;
 
@@ -100,7 +100,7 @@ public:
 
 private:
     toolpex::skip_list<
-        seq_key, ::std::string, 
+        seq_key, user_value, 
         seq_key_less, seq_key_equal_to> 
     m_list;
     const size_t m_size_bytes{};
