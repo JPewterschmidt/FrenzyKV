@@ -57,7 +57,7 @@ koios::task<sequence_number_t>
 version_hub::
 last_sequence_number() const 
 { 
-    co_return co_await m_pimpl->last_sequence_number(); 
+    return m_pimpl->last_sequence_number(); 
 }
 
 } // namespace frenzykv
