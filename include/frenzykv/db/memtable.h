@@ -52,13 +52,28 @@ public:
     koios::task<size_t> bound_size_bytes() const;
     koios::task<size_t> size_bytes() const;
 
+    const auto& storage() const noexcept { return m_list; }
+    const kvdb_deps& deps() const noexcept { return *m_deps; }
+
 private:
-    koios::task<::std::error_code> insert_impl(entry_pbrep&& entry);
-    koios::task<::std::error_code> insert_impl(const entry_pbrep& entry);
+    ::std::error_code insert_impl(entry_pbrep&& entry);
+    ::std::error_code insert_impl(const entry_pbrep& entry);
+    void delete_impl(const entry_pbrep& entry) noexcept
+    {
+        return delete_impl(entry.key());
+    }
+
+    void delete_impl(const seq_key& key);
     
 private:
     const kvdb_deps* m_deps{};
-    toolpex::skip_list<seq_key, ::std::string, seq_key_less, seq_key_equal_to> m_list;
+
+    friend class imm_memtable;
+    toolpex::skip_list<
+        seq_key, ::std::string, 
+        seq_key_less, seq_key_equal_to> 
+    m_list;
+
     size_t m_bound_size_bytes{};
     size_t m_size_bytes{};
     mutable koios::shared_mutex m_list_mutex;
@@ -68,18 +83,27 @@ class imm_memtable
 {
 public:
     imm_memtable(memtable&& m) noexcept
-        : m_mem{ ::std::move(m) }
+        : m_list{ ::std::move(m.m_list) }, 
+          m_size_bytes{ m.m_size_bytes }
     {
     }
 
-    koios::task<::std::optional<entry_pbrep>> get(const seq_key& key);
+    imm_memtable(imm_memtable&&) noexcept = default;
+
+    koios::task<::std::optional<entry_pbrep>> get(const seq_key& key) const noexcept;
     koios::task<size_t> size_bytes() const noexcept
     {
-        co_return co_await m_mem.size_bytes();
+        co_return m_size_bytes;
     }
 
+    const auto& storage() const noexcept { return m_list; }
+
 private:
-    memtable m_mem;
+    toolpex::skip_list<
+        seq_key, ::std::string, 
+        seq_key_less, seq_key_equal_to> 
+    m_list;
+    const size_t m_size_bytes{};
 };
 
 } // namespace frenzykv

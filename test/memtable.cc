@@ -34,10 +34,14 @@ koios::task<bool> insert_test(memtable& m)
     write_batch b2;
     b2.write("abc1", ::std::string());
     b2.set_first_sequence_num(100);
+    
+    const size_t bcount = b.count(), b2count = b2.count();
+    const size_t bss = b.serialized_size(), b2ss = b2.serialized_size();
+
     co_await m.insert(b);
     co_await m.insert(::std::move(b2));
-    co_return co_await m.count() == b.count() + b2.count()
-        && co_await m.size_bytes() == b.serialized_size() + b2.serialized_size();
+    co_return co_await m.count() == bcount + b2count 
+        && co_await m.size_bytes() == bss + b2ss;
 }
 
 koios::task<bool> get_test(memtable& m)
