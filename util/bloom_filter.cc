@@ -9,10 +9,11 @@ namespace
 
 auto get_delta(::std::integral auto h)
 {
-    return (h >> 21) | (h << 19);
+    return (h >> 33) | (h << 31);
 }
 
-template<typename HashFunc = murmur_bin_hash>
+//template<typename HashFunc = murmur_bin_hash_x64_128_xor_shift_to_64>
+template<typename HashFunc = murmur_bin_hash_x64_128_plus_to_64>
 class bloom_filter : public filter_policy
 {
 public:
@@ -76,7 +77,7 @@ public:
 private:
     size_t hash(const_bspan key) const noexcept
     {
-        return static_cast<size_t>(m_hash(key, 0xbc9f1d34));
+        return static_cast<size_t>(m_hash(key));
     }
 
     size_t k() const noexcept { return m_k; }
