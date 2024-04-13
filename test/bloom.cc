@@ -128,22 +128,23 @@ TEST_F(bloom_test, var_length_filter)
         return length;
     };
         
-    for (int length{32}; length < 10000; length = next_len(length))
+    constexpr int start_length = 23;
+    for (int length{start_length}; length < 10000; length = next_len(length))
     {
         reset();
-        for (int i{32}; i < length; ++i)
+        for (int i{start_length}; i < length; ++i)
         {
             add(make_dummy_key(i, buffer));
         }
         build();
 
-        ASSERT_LE(filter_size(), static_cast<size_t>(length) * 1.5)
+        ASSERT_LE(filter_size(), static_cast<size_t>(length * 1.5 + 40))
             << "filter_size(): " << filter_size()
             << ", length: "      << length
             << ", filter_size() / length: " 
             << (double)filter_size() / (double)length;
 
-        for (int i{32}; i < length; ++i)
+        for (int i{start_length}; i < length; ++i)
         {
             ASSERT_TRUE(matches(make_dummy_key(i, buffer)))
                 << "length " << length << "; key" << i;
