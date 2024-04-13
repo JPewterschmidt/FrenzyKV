@@ -1,3 +1,6 @@
 [submodule "koios"]
 	path = koios
 	url = git@github.com:JPewterschmidt/koios.git
+[submodule "smhasher"]
+	path = smhasher
+	url = https://github.com/aappleby/smhasher

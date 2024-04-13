@@ -1,4 +1,5 @@
 #include "frenzykv/db/memtable.h"
+#include "frenzykv/util/entry_extent.h"
 #include <utility>
 #include <cassert>
 
@@ -8,50 +9,65 @@ namespace frenzykv
 koios::task<::std::error_code> memtable::insert(const write_batch& b)
 {
     auto lk = co_await m_list_mutex.acquire();
+    ::std::error_code result{};
     for (const auto& item : b)
     {
-        co_await insert_impl(item);
+        result = insert_impl(item);
+        if (result) break;
     }
-    co_return {};
+    co_return result;
 }
 
 koios::task<::std::error_code> memtable::insert(write_batch&& b)
 {
     auto lk = co_await m_list_mutex.acquire();
+    ::std::error_code result{};
     for (auto& item : b)
     {
-        co_await insert_impl(::std::move(item));
+        result = insert_impl(::std::move(item));
+        if (result) break;
     }
-    co_return {};
+    co_return result;
 }
 
-koios::task<::std::error_code> memtable::
+::std::error_code memtable::
 insert_impl(entry_pbrep&& b)
 {
     m_size_bytes += b.ByteSizeLong();
-    m_list.insert(b.key(), ::std::move(*b.mutable_value()));
-    co_return {};
+    m_list.insert(::std::move(*b.mutable_key()), ::std::move(*b.mutable_value()));
+    return {};
 }
 
-koios::task<::std::error_code> memtable::
+::std::error_code memtable::
 insert_impl(const entry_pbrep& b)
 {
     m_size_bytes += b.ByteSizeLong();
     m_list[b.key()] = b.value();
-    co_return {};
+    return {};
+}
+
+static 
+::std::optional<entry_pbrep> 
+table_get(auto&& list, const auto& key) noexcept
+{
+    if (auto iter = list.find_bigger_equal(key); 
+        iter != list.end())
+    {
+        entry_pbrep result{};
+        construct_regular_entry(&result, iter->first, iter->second);
+        return result;
+    }
+
+    return {};
 }
 
 koios::task<::std::optional<entry_pbrep>> memtable::
 get(const seq_key& key) const noexcept
 {
     auto lk = co_await m_list_mutex.acquire_shared();
-    if (auto iter = m_list.find_bigger_equal(key); iter != m_list.end())
-    {
-        entry_pbrep result{};
-        *result.mutable_key() = iter->first;
-        result.set_value(iter->second);
-        co_return result;
-    }
+    auto ret = table_get(m_list, key);
+    if (ret && is_entry_regular(*ret)) 
+        co_return ret;
     co_return {};
 }
 
@@ -83,9 +99,9 @@ koios::task<size_t> memtable::size_bytes() const
 
 koios::task<::std::optional<entry_pbrep>> 
 imm_memtable::
-get(const seq_key& key)
+get(const seq_key& key) const noexcept
 {
-    co_return co_await m_mem.get(key);
+    co_return table_get(m_list, key);
 }
 
 } // namespace frenzykv

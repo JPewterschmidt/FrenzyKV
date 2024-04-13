@@ -1,5 +1,5 @@
 #include "frenzykv/write_batch.h"
-#include "frenzykv/util/proto_parse_from_inner_buffer.h"
+#include "frenzykv/util/entry_extent.h"
 #include "toolpex/functional.h"
 #include <algorithm>
 #include <ranges>
@@ -12,9 +12,7 @@ namespace frenzykv
 void write_batch::write(const_bspan key, const_bspan value)
 {
     entry_pbrep entry;
-    entry.mutable_key()->set_user_key(key.data(), key.size());
-    entry.mutable_key()->set_seq_number(first_sequence_num() + m_entries.size());
-    entry.set_value(value.data(), value.size());
+    construct_regular_entry(&entry, key, first_sequence_num() + m_entries.size(), value);
     m_entries.push_back(::std::move(entry));
 }
 
@@ -60,8 +58,7 @@ void write_batch::remove_from_db(const_bspan key)
     else 
     {
         entry_pbrep entry;
-        entry.mutable_key()->set_user_key(key.data(), key.size());
-        entry.mutable_key()->set_seq_number(first_sequence_num() + m_entries.size());
+        construct_deleting_entry(&entry, key, first_sequence_num() + m_entries.size());
         m_entries.push_back(::std::move(entry));
     }
 }
