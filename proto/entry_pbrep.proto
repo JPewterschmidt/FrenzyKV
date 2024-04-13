@@ -8,8 +8,14 @@ message seq_key
     uint64 seq_number = 2;
 };
 
+message user_value
+{
+    bool deleted = 1;
+    optional bytes value = 2;
+};
+
 message entry_pbrep
 {
-    seq_key key = 1;
-    optional bytes value = 2;
+    seq_key     key = 1;
+    user_value  value = 2;
 };

@@ -7,15 +7,7 @@ using namespace frenzykv;
 namespace
 {
 
-koios::task<bool> init_ok(memtable& m)
-{
-    co_return {
-           co_await m.count() == 0
-        && co_await m.bound_size_bytes() != 0
-        && co_await m.full() == false
-        && co_await m.size_bytes() == 0
-    };
-}
+static kvdb_deps g_deps{};
 
 write_batch make_batch()
 {
@@ -28,40 +20,98 @@ write_batch make_batch()
     return result;
 }
 
-koios::task<bool> insert_test(memtable& m)
+class memtable_test : public ::testing::Test
 {
-    auto b = make_batch();
-    write_batch b2;
-    b2.write("abc1", ::std::string());
-    b2.set_first_sequence_num(100);
-    
-    const size_t bcount = b.count(), b2count = b2.count();
-    const size_t bss = b.serialized_size(), b2ss = b2.serialized_size();
+public:
+    memtable_test()
+        : m_mem{ g_deps }
+    {
+    }
 
-    co_await m.insert(b);
-    co_await m.insert(::std::move(b2));
-    co_return co_await m.count() == bcount + b2count 
-        && co_await m.size_bytes() == bss + b2ss;
-}
+    void reset()
+    {
+        m_mem = memtable{ g_deps };
+    }
 
-koios::task<bool> get_test(memtable& m)
-{
-    seq_key k;
-    k.set_user_key("abc1");
-    k.set_seq_number(99);
-    auto kv_opt = co_await m.get(k);
-    if (!kv_opt) co_return false;
-    const auto& kv = kv_opt.value();
-    co_return kv.key().seq_number() == 100 && kv.value().size() == 0;
-}
+    koios::task<bool> init_ok()
+    {
+        co_return {
+               co_await m_mem.count() == 0
+            && co_await m_mem.bound_size_bytes() != 0
+            && co_await m_mem.full() == false
+            && co_await m_mem.size_bytes() == 0
+        };
+    }
+
+    koios::task<bool> insert_test(sequence_number_t seq_number)
+    {
+        auto b = make_batch();
+        write_batch b2;
+        b2.write("abc1", ::std::string());
+        b2.set_first_sequence_num(seq_number);
+        
+        const size_t bcount = b.count(), b2count = b2.count();
+        const size_t bss = b.serialized_size(), b2ss = b2.serialized_size();
+
+        co_await m_mem.insert(b);
+        co_await m_mem.insert(::std::move(b2));
+        co_return co_await m_mem.count() == bcount + b2count 
+            && co_await m_mem.size_bytes() == bss + b2ss;
+    }
+
+    koios::task<bool> get_test(sequence_number_t seq_number)
+    {
+        seq_key k;
+        k.set_user_key("abc1");
+        k.set_seq_number(seq_number);
+        auto result_opt = co_await m_mem.get(k);
+        if (!result_opt) co_return false;
+        const auto& result = result_opt.value();
+        co_return result.key().seq_number() >= seq_number && result.value().size() == 0;
+    }
+
+    koios::task<bool> delete_test()
+    {
+        reset();
+        co_await insert_test(100);
+        write_batch b;
+        b.remove_from_db("abc1");
+        b.set_first_sequence_num(101);
+        co_await m_mem.insert(::std::move(b));
+        seq_key k;
+        k.set_seq_number(99);
+        k.set_user_key("abc1");
+
+        co_return !(co_await m_mem.get(k)).has_value();
+    }
+
+private:
+    memtable m_mem;
+};
 
 } // annoymous namespace 
 
-TEST(memtable, basic)
+TEST_F(memtable_test, init)
 {
-    kvdb_deps deps{};
-    memtable m{ deps };
-    ASSERT_TRUE(init_ok(m).result());
-    ASSERT_TRUE(insert_test(m).result());
-    ASSERT_TRUE(get_test(m).result());
+    reset();
+    ASSERT_TRUE(init_ok().result());
+}
+
+TEST_F(memtable_test, insert)
+{
+    reset();
+    ASSERT_TRUE(insert_test(100).result());
+}
+
+TEST_F(memtable_test, get)
+{
+    reset();
+    (void)insert_test(100).result();
+    ASSERT_TRUE(get_test(99).result());
+}
+
+TEST_F(memtable_test, delete_test)
+{
+    reset();
+    ASSERT_TRUE(delete_test().result());
 }
