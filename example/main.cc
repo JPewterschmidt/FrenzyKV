@@ -14,6 +14,8 @@
 #include "koios/iouring_awaitables.h"
 #include "entry_pbrep.pb.h"
 
+#include "MurmurHash3.h"
+
 using namespace koios;
 using namespace frenzykv;
 using namespace ::std::string_view_literals;
@@ -54,8 +56,11 @@ catch (const koios::exception& e)
 
 int main()
 {
-    koios::runtime_init(4);
-    ostest().result();
-    koios::get_task_scheduler().stop();
-    return koios::runtime_exit();
+    size_t hash_result{};
+    seq_key k;
+    k.set_user_key("xxxxxxxxx");
+    k.set_seq_number(0);
+
+    ::std::array<char, 128> buffer{};
+    k.SerializeToArray(buffer.data(), buffer.size());
 }

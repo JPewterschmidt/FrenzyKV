@@ -54,7 +54,14 @@ public:
     ::std::size_t operator()(::std::span<const ::std::byte> buffer, ::std::size_t hints) const noexcept override;
 };
 
-class murmur_bin_hash final : public binary_hash_interface
+class murmur_bin_hash_x64_128_xor_shift_to_64 final : public binary_hash_interface
+{
+public:
+    ::std::size_t operator()(::std::span<const ::std::byte> buffer) const noexcept override;
+    ::std::size_t operator()(::std::span<const ::std::byte> buffer, ::std::size_t hints) const noexcept override;
+};
+
+class murmur_bin_hash_x64_128_plus_to_64 final : public binary_hash_interface
 {
 public:
     ::std::size_t operator()(::std::span<const ::std::byte> buffer) const noexcept override;

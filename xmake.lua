@@ -18,6 +18,8 @@ includes(
     "koios"
 )
 
+set_arch("x64")
+
 set_languages("c++23", "c17")
 set_policy("build.warning", true)
 set_policy("build.optimization.lto", false)
@@ -41,6 +43,8 @@ target("FrenzyKV")
         "./include",
         { public = true }
     )
+    add_includedirs( "smhasher/src", { public = true })
+    add_files( "smhasher/src/MurmurHash*.cpp")
     add_packages(
         "gflags", 
         "concurrentqueue", 

@@ -51,7 +51,7 @@ private:
 TEST(hash, stateless)
 {
     std_bin_hash h1;
-    murmur_bin_hash h2;
+    murmur_bin_hash_x64_128_xor_shift_to_64 h2;
     ASSERT_TRUE(hash_test_executor(h1).is_state_less());
     ASSERT_TRUE(hash_test_executor(h2).is_state_less());
 }
