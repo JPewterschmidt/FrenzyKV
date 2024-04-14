@@ -59,7 +59,7 @@ koios::eager_task<> clean()
 
 } // annoymous namespace
 
-TEST(logger, basic)
+TEST(pre_write_log, basic)
 {
     kvdb_deps deps;
     logger l(deps, "pre_write_test.txt");
