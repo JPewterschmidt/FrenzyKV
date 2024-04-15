@@ -59,12 +59,13 @@ const_bspan serialized_user_value(const ::std::byte* entry_beg);
  *
  *  \retval pointer_not_equals_to_nullptr the pointer point to the first byte of the next entry in serialized bytes.
  *  \retval nullptr there is no entry could be consumed.
+ *  \param end the sentinal pointer, if the result-ready value are exceeds than `end`, nullptr will be returned.
  */
-inline const ::std::byte* next_serialized_entry(const ::std::byte* entry_beg)
+inline const ::std::byte* next_serialized_entry(const ::std::byte* entry_beg, const ::std::byte* end = nullptr)
 {
-    if (size_t sz = serialized_entry_size(entry_beg); sz == 0)
-        return nullptr;
-    else return entry_beg + sz;
+    const size_t sz = serialized_entry_size(entry_beg);
+    if (sz == 0 || entry_beg + sz >= end) return nullptr;
+    return entry_beg + sz;
 }
 
 class sequenced_key
