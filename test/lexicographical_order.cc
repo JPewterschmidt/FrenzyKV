@@ -35,7 +35,7 @@ static auto get_data_diffuk_diffsn()
     };
 }
 
-TEST(lexicgraphical_order, serialized_sameuk)
+TEST(lexicographical_order, serialized_sameuk)
 {
     auto [key1, key2, key3, key4] = get_data_sameuk_diffsn();
     ::std::string key1_str, key2_str, key3_str, key4_str;
@@ -50,7 +50,7 @@ TEST(lexicgraphical_order, serialized_sameuk)
     ASSERT_TRUE(::std::less<::std::string>{}(key3_str, key4_str));
 }
 
-TEST(lexicgraphical_order, before_serializing_sameuk)
+TEST(lexicographical_order, before_serializing_sameuk)
 {
     auto [key1, key2, key3, key4] = get_data_sameuk_diffsn();
     ASSERT_TRUE(::std::less<frenzykv::sequenced_key>{}(key1, key2));
@@ -58,7 +58,7 @@ TEST(lexicgraphical_order, before_serializing_sameuk)
     ASSERT_TRUE(::std::less<frenzykv::sequenced_key>{}(key3, key4));
 }
 
-TEST(lexicgraphical_order, expect_same_order_sameuk)
+TEST(lexicographical_order, expect_same_order_sameuk)
 {
     auto [key1, key2, key3, key4] = get_data_sameuk_diffsn();
     ::std::string key1_str, key2_str, key3_str, key4_str;
@@ -73,7 +73,7 @@ TEST(lexicgraphical_order, expect_same_order_sameuk)
     ASSERT_EQ(::std::less<frenzykv::sequenced_key>{}(key3, key4), serialized_sequenced_key_less{}(key3_str, key4_str));
 }
 
-TEST(lexicgraphical_order, serialized_diffuk)
+TEST(lexicographical_order, serialized_diffuk)
 {
     auto [key1, key2, key3, key4] = get_data_diffuk_diffsn();
     ::std::string key1_str, key2_str, key3_str, key4_str;
@@ -88,7 +88,7 @@ TEST(lexicgraphical_order, serialized_diffuk)
     ASSERT_TRUE(::std::less<::std::string>{}(key3_str, key4_str));
 }
 
-TEST(lexicgraphical_order, before_serializing_diffuk)
+TEST(lexicographical_order, before_serializing_diffuk)
 {
     auto [key1, key2, key3, key4] = get_data_diffuk_diffsn();
     ASSERT_TRUE(::std::less<frenzykv::sequenced_key>{}(key1, key2));
@@ -96,7 +96,7 @@ TEST(lexicgraphical_order, before_serializing_diffuk)
     ASSERT_TRUE(::std::less<frenzykv::sequenced_key>{}(key3, key4));
 }
 
-TEST(lexicgraphical_order, expect_same_order_diffuk)
+TEST(lexicographical_order, expect_same_order_diffuk)
 {
     auto [key1, key2, key3, key4] = get_data_diffuk_diffsn();
     ::std::string key1_str, key2_str, key3_str, key4_str;
