@@ -46,7 +46,7 @@ public:
             for (size_t i{}; i < k(); ++i)
             {
                 const size_t bitpos = h % bits;
-                arr[bitpos / 8] |= (1 << (bitpos % 8));
+                arr[bitpos / 8] |= static_cast<unsigned char>((1 << (bitpos % 8)));
                 h += delta;
             }
         }

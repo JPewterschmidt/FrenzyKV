@@ -61,11 +61,26 @@ const_bspan serialized_user_value(const ::std::byte* entry_beg);
  *  \retval nullptr there is no entry could be consumed.
  *  \param end the sentinal pointer, if the result-ready value are exceeds than `end`, nullptr will be returned.
  */
-inline const ::std::byte* next_serialized_entry(const ::std::byte* entry_beg, const ::std::byte* end = nullptr)
+inline const ::std::byte* next_serialized_entry_beg(const ::std::byte* entry_beg, const ::std::byte* end = nullptr)
 {
     const size_t sz = serialized_entry_size(entry_beg);
     if (sz == 0 || entry_beg + sz >= end) return nullptr;
     return entry_beg + sz;
+}
+
+inline const_bspan serialized_entry(const ::std::byte* entry_beg)
+{
+    return { entry_beg, serialized_entry_size(entry_beg) };
+}
+
+inline const_bspan serialized_sequenced_key(const_bspan s_entry)
+{
+    return serialized_sequenced_key(s_entry.data());
+}
+
+inline const_bspan serialized_user_value(const_bspan s_entry)
+{
+    return serialized_user_value(s_entry.data());
 }
 
 class sequenced_key
@@ -217,9 +232,9 @@ public:
     {
     }
 
-    kv_entry(const_bspan serialized_entry)
-        : m_key{ serialized_sequenced_key(serialized_entry.data()) }, 
-          m_value{ kv_user_value::parse(serialized_user_value(serialized_entry.data())) }
+    kv_entry(const_bspan s_entry)
+        : m_key{ serialized_sequenced_key(s_entry) }, 
+          m_value{ kv_user_value::parse(serialized_user_value(s_entry)) }
     {
     }
 
