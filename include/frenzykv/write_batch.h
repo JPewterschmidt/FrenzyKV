@@ -29,12 +29,12 @@ namespace frenzykv
         void remove_from_db(::std::string_view key);
 
         /*! \brief  Do the compactation in this write bacth container.
-         *  Usually be called in function non-const version `serialize_to_array()`
+         *  Usually be called in function non-const version `serialize_to()`
          */
         constexpr void compact() noexcept {}
 
         /*! \brief  Serialize all the kv pair into bytes form. */
-        size_t  serialize_to_array(bspan buffer) const;
+        size_t  serialize_to(bspan buffer) const;
         auto begin()       noexcept { return m_entries.begin(); }
         auto end()         noexcept { return m_entries.end();   }
         auto begin() const noexcept { return m_entries.begin(); }

@@ -40,9 +40,32 @@
 namespace frenzykv
 {
 
+// Functions below are usually used when dealing with file IO and deserialization.
+
+/*! \brief  Get the total length of a entry in a serialized memory.
+ *
+ *  This function will noly read the first 4 bytes pointed by the `entry_beg` parameter.
+ *  So make sure there's at least 4 bytes readable start at `entry_beg`.
+ */
 size_t serialized_entry_size(const ::std::byte* entry_beg);
 const_bspan serialized_sequenced_key(const ::std::byte* entry_beg);
 const_bspan serialized_user_value(const ::std::byte* entry_beg);
+
+/*! \brief  Get the pointer point to the first byte of the next entry in serialized bytes.
+ *
+ *  We assume that there are no any gap between any two of entries.
+ *  And after the last entry, there's still more than 4 bytes of memory that filled with 0 indicates the end of file.
+ *  4 continuous zero-filled memory could be deserialized by `serialized_bytes_size()` means 0 length entry.
+ *
+ *  \retval pointer_not_equals_to_nullptr the pointer point to the first byte of the next entry in serialized bytes.
+ *  \retval nullptr there is no entry could be consumed.
+ */
+inline const ::std::byte* next_serialized_entry(const ::std::byte* entry_beg)
+{
+    if (size_t sz = serialized_bytes_size(entry_beg); sz == 0)
+        return nullptr;
+    return entry_beg + sz;
+}
 
 class sequenced_key
 {
@@ -87,7 +110,7 @@ public:
         return sizeof(m_seq) + 2 + m_user_key.size();
     }
 
-    ::std::string to_debug_string() const;
+    ::std::string to_string_debug() const;
 
     bool operator==(const sequenced_key& other) const noexcept
     {
@@ -118,7 +141,7 @@ public:
     bool is_tomb_stone() const noexcept { return !m_user_value; }
     void set(::std::string v) { m_user_value = ::std::make_unique<::std::string>(::std::move(v)); }
     const ::std::string& value() const;
-    ::std::string to_debug_string() const;
+    ::std::string to_string_debug() const;
     size_t size() const noexcept { return m_user_value ? m_user_value->size() : 0; }
 
     bool operator==(const kv_user_value& other) const noexcept
@@ -198,7 +221,7 @@ public:
             + 4 + m_value.size();            // user value length + user value
     }
 
-    ::std::string to_debug_string() const;
+    ::std::string to_string_debug() const;
 
     bool operator==(const kv_entry& other) const noexcept
     {

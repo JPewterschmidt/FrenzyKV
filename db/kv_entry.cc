@@ -42,7 +42,7 @@ serialize_to(::std::span<::std::byte> buffer) const noexcept
     return serialized_sz;
 }
 
-::std::string sequenced_key::to_debug_string() const
+::std::string sequenced_key::to_string_debug() const
 {
     return toolpex::lazy_string_concater{} 
         + "sequence number: [" + sequence_number() 
@@ -112,7 +112,7 @@ kv_user_value::value() const
     return *m_user_value; 
 }
 
-::std::string kv_user_value::to_debug_string() const
+::std::string kv_user_value::to_string_debug() const
 {
     if (is_tomb_stone())
         return "kv_user_value: [tomb stone]";
@@ -120,11 +120,11 @@ kv_user_value::value() const
         + "kv_user_value: [" + value() + "]";
 }
 
-::std::string kv_entry::to_debug_string() const
+::std::string kv_entry::to_string_debug() const
 {
     return toolpex::lazy_string_concater{}
-        + "sequenced_key: [" + m_key.to_debug_string() + "], "
-        + "value: [" + m_value.to_debug_string() + "].";
+        + "sequenced_key: [" + m_key.to_string_debug() + "], "
+        + "value: [" + m_value.to_string_debug() + "].";
 }
 
 size_t serialized_entry_size(const ::std::byte* beg)

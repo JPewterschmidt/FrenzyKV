@@ -14,7 +14,7 @@ TEST(write_batch, basic)
     ASSERT_EQ(b.count(), 1);
 
     ::std::array<::std::byte, 100> buffer{};
-    b.serialize_to_array(buffer);
+    b.serialize_to(buffer);
     kv_entry example_entry(0, as_bytes(k), as_bytes(v)), entry_from_buffer(buffer);
 
     ASSERT_EQ(entry_from_buffer, example_entry);
@@ -37,7 +37,7 @@ TEST(write_batch, remove)
     ASSERT_EQ(b.count(), 1);
 
     ::std::array<::std::byte, 100> buffer{};
-    b.serialize_to_array(buffer);
+    b.serialize_to(buffer);
 
     kv_entry example_entry(0, as_bytes(k)), entry_from_buffer(buffer);
     ASSERT_EQ(entry_from_buffer, example_entry);
@@ -56,7 +56,7 @@ TEST(write_batch, serialized_size)
     b.write(as_bytes(k), as_bytes(v));
     
     ::std::array<::std::byte, 512> buffer{};
-    ASSERT_EQ(b.serialize_to_array(buffer), b.serialized_size());
+    ASSERT_EQ(b.serialize_to(buffer), b.serialized_size());
 }
 
 TEST(write_batch, from_another_batch)

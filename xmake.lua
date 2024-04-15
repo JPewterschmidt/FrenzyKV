@@ -9,7 +9,6 @@ add_requires(
     "concurrentqueue master",
     "benchmark", 
     "nlohmann_json", 
-    "protobuf-cpp", 
     "spdlog", 
     "jemalloc"
 )
@@ -36,9 +35,6 @@ end
 target("FrenzyKV")
     set_kind("shared")
     add_deps("koios", "toolpex")
-    add_packages("protobuf-cpp", { public = true })
-    add_rules("protobuf.cpp", { public = true })
-    add_files("proto/*.proto", { proto_public = true })
     add_includedirs(
         "./include",
         { public = true }
@@ -82,8 +78,6 @@ target("FrenzyKV-test")
 target("FrenzyKV-example")
     set_kind("binary")
     add_deps("FrenzyKV", "koios", "toolpex")
-    add_packages("protobuf-cpp", { public = false })
-    add_rules("protobuf.cpp")
     add_cxflags("-Wconversion", { force = true })
     add_files( "example/*.cc")
     set_policy("build.warning", true)
