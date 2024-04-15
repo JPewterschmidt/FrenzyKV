@@ -94,18 +94,27 @@ public:
     void set_sequence_number(sequence_number_t num) noexcept { m_seq = num; }
     void set_user_key(::std::string v) noexcept { m_user_key = ::std::move(v); }
     const auto& user_key() const noexcept { return m_user_key; }
+
     size_t serialize_to(::std::span<::std::byte> buffer) const noexcept;
     size_t serialize_to(::std::span<char> buffer) const noexcept
     {
         return serialize_to(::std::as_writable_bytes(buffer));
     }
 
-    size_t serialize_to(::std::string& str) const noexcept
+    size_t serialize_to(::std::string& str) const 
     {
+        str.clear();
         str.resize(serialized_bytes_size());
         return serialize_to(::std::span{str});
     }
-    
+
+    ::std::string serialize_as_string() const
+    {
+        ::std::string result(serialized_bytes_size(), 0);
+        serialize_to(::std::span{result});
+        return result;
+    }
+
     size_t serialized_bytes_size() const noexcept
     {
         return sizeof(m_seq) + 2 + m_user_key.size();
@@ -153,6 +162,8 @@ public:
     }
 
     static kv_user_value parse(const_bspan serialized_value);
+    size_t serialized_bytes_size() const noexcept;
+    size_t serialize_to(bspan buffer) const noexcept;
 
 private:
     ::std::unique_ptr<::std::string> m_user_value{};
@@ -216,6 +227,18 @@ public:
         return serialize_to(::std::span{str});
     }
 
+    /*! \brief  Append the serialized bytes to the end of a string.
+     *  \param str The destination string.
+     *  \return The serialized bytes length
+     */
+    size_t serialize_append_to_string(::std::string& str) const
+    {
+        ::std::string appended{};
+        const size_t result = serialize_to(appended);
+        str.append(appended);
+        return result;
+    }
+    
     size_t serialized_bytes_size() const noexcept
     {
         return sizeof(m_key) 
