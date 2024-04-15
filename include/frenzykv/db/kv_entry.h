@@ -211,6 +211,7 @@ public:
 
     size_t serialize_to(::std::string& str) const 
     {
+        str.clear();
         str.resize(serialized_bytes_size());
         return serialize_to(::std::span{str});
     }
