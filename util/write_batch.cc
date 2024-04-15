@@ -62,7 +62,7 @@ void write_batch::remove_from_db(::std::string_view key)
     remove_from_db(as_bytes(ks));
 }
 
-size_t write_batch::serialize_to_array(bspan buffer) const
+size_t write_batch::serialize_to(bspan buffer) const
 {
     const size_t result = serialized_size();
     if (buffer.size() < result)
@@ -94,7 +94,7 @@ size_t write_batch::serialize_to_array(bspan buffer) const
         if (count()) 
         {
             const auto& entry = *begin();
-            result = entry.to_debug_string();
+            result = entry.to_string_debug();
         }
         return result;
     }();

@@ -40,9 +40,33 @@
 namespace frenzykv
 {
 
+// Functions below are usually used when dealing with file IO and deserialization.
+
+/*! \brief  Get the total length of a entry in a serialized memory.
+ *
+ *  This function will noly read the first 4 bytes pointed by the `entry_beg` parameter.
+ *  So make sure there's at least 4 bytes readable start at `entry_beg`.
+ */
 size_t serialized_entry_size(const ::std::byte* entry_beg);
 const_bspan serialized_sequenced_key(const ::std::byte* entry_beg);
 const_bspan serialized_user_value(const ::std::byte* entry_beg);
+
+/*! \brief  Get the pointer point to the first byte of the next entry in serialized bytes.
+ *
+ *  We assume that there are no any gap between any two of entries.
+ *  And after the last entry, there's still more than 4 bytes of memory that filled with 0 indicates the end of file.
+ *  4 continuous zero-filled memory could be deserialized by `serialized_entry_size()` means 0 length entry.
+ *
+ *  \retval pointer_not_equals_to_nullptr the pointer point to the first byte of the next entry in serialized bytes.
+ *  \retval nullptr there is no entry could be consumed.
+ *  \param end the sentinal pointer, if the result-ready value are exceeds than `end`, nullptr will be returned.
+ */
+inline const ::std::byte* next_serialized_entry(const ::std::byte* entry_beg, const ::std::byte* end = nullptr)
+{
+    const size_t sz = serialized_entry_size(entry_beg);
+    if (sz == 0 || entry_beg + sz >= end) return nullptr;
+    return entry_beg + sz;
+}
 
 class sequenced_key
 {
@@ -70,24 +94,33 @@ public:
     void set_sequence_number(sequence_number_t num) noexcept { m_seq = num; }
     void set_user_key(::std::string v) noexcept { m_user_key = ::std::move(v); }
     const auto& user_key() const noexcept { return m_user_key; }
+
     size_t serialize_to(::std::span<::std::byte> buffer) const noexcept;
     size_t serialize_to(::std::span<char> buffer) const noexcept
     {
         return serialize_to(::std::as_writable_bytes(buffer));
     }
 
-    size_t serialize_to(::std::string& str) const noexcept
+    size_t serialize_to(::std::string& str) const 
     {
+        str.clear();
         str.resize(serialized_bytes_size());
         return serialize_to(::std::span{str});
     }
-    
+
+    ::std::string serialize_as_string() const
+    {
+        ::std::string result(serialized_bytes_size(), 0);
+        serialize_to(::std::span{result});
+        return result;
+    }
+
     size_t serialized_bytes_size() const noexcept
     {
         return sizeof(m_seq) + 2 + m_user_key.size();
     }
 
-    ::std::string to_debug_string() const;
+    ::std::string to_string_debug() const;
 
     bool operator==(const sequenced_key& other) const noexcept
     {
@@ -118,7 +151,7 @@ public:
     bool is_tomb_stone() const noexcept { return !m_user_value; }
     void set(::std::string v) { m_user_value = ::std::make_unique<::std::string>(::std::move(v)); }
     const ::std::string& value() const;
-    ::std::string to_debug_string() const;
+    ::std::string to_string_debug() const;
     size_t size() const noexcept { return m_user_value ? m_user_value->size() : 0; }
 
     bool operator==(const kv_user_value& other) const noexcept
@@ -129,6 +162,27 @@ public:
     }
 
     static kv_user_value parse(const_bspan serialized_value);
+    size_t serialized_bytes_size() const noexcept;
+    size_t serialize_to(bspan buffer) const noexcept;
+    size_t serialize_to(::std::span<char> buffer) const noexcept
+    {
+        return serialize_to(::std::as_writable_bytes(buffer));
+    }
+
+    size_t serialize_to(::std::string& dst) const
+    {
+        dst.clear();
+        dst.resize(serialized_bytes_size(), 0);
+        return serialize_to(::std::span{dst});
+    }
+
+    size_t serialize_append_to_string(::std::string& dst) const
+    {
+        ::std::string temp;
+        const size_t result = serialize_to(temp);
+        dst.append(::std::move(temp));
+        return result;
+    }
 
 private:
     ::std::unique_ptr<::std::string> m_user_value{};
@@ -187,10 +241,23 @@ public:
 
     size_t serialize_to(::std::string& str) const 
     {
+        str.clear();
         str.resize(serialized_bytes_size());
         return serialize_to(::std::span{str});
     }
 
+    /*! \brief  Append the serialized bytes to the end of a string.
+     *  \param str The destination string.
+     *  \return The serialized bytes length
+     */
+    size_t serialize_append_to_string(::std::string& str) const
+    {
+        ::std::string appended{};
+        const size_t result = serialize_to(appended);
+        str.append(::std::move(appended));
+        return result;
+    }
+    
     size_t serialized_bytes_size() const noexcept
     {
         return sizeof(m_key) 
@@ -198,7 +265,7 @@ public:
             + 4 + m_value.size();            // user value length + user value
     }
 
-    ::std::string to_debug_string() const;
+    ::std::string to_string_debug() const;
 
     bool operator==(const kv_entry& other) const noexcept
     {

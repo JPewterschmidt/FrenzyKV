@@ -9,7 +9,6 @@ add_requires(
     "concurrentqueue master",
     "benchmark", 
     "nlohmann_json", 
-    "protobuf-cpp", 
     "spdlog", 
     "jemalloc"
 )
@@ -36,9 +35,6 @@ end
 target("FrenzyKV")
     set_kind("shared")
     add_deps("koios", "toolpex")
-    add_packages("protobuf-cpp", { public = true })
-    add_rules("protobuf.cpp", { public = true })
-    add_files("proto/*.proto", { proto_public = true })
     add_includedirs(
         "./include",
         { public = true }

@@ -42,11 +42,33 @@ serialize_to(::std::span<::std::byte> buffer) const noexcept
     return serialized_sz;
 }
 
-::std::string sequenced_key::to_debug_string() const
+::std::string sequenced_key::to_string_debug() const
 {
     return toolpex::lazy_string_concater{} 
         + "sequence number: [" + sequence_number() 
         + "user key: [" + user_key();
+}
+
+size_t kv_user_value::serialized_bytes_size() const noexcept
+{
+    return 4 + (is_tomb_stone() ? 0 : m_user_value->size());
+}
+
+size_t kv_user_value::serialize_to(bspan buffer) const noexcept
+{
+    const size_t result = serialized_bytes_size();
+    if (buffer.size() < serialized_bytes_size())
+        return 0;
+    uint32_t value_len = static_cast<uint32_t>(size());
+    ::std::memcpy(buffer.data(), &value_len, sizeof(value_len));
+    
+    if (value_len)
+    {
+        const auto& value_rep = *m_user_value;
+        ::std::copy(value_rep.begin(), value_rep.end(), 
+                    reinterpret_cast<char*>(buffer.data() + sizeof(value_len)));
+    }
+    return result;
 }
 
 size_t kv_entry::
@@ -63,15 +85,7 @@ serialize_to(::std::span<::std::byte> dst) const noexcept
     m_key.serialize_to(dst.subspan(cursor));
     cursor += m_key.serialized_bytes_size();
     
-    const uint32_t value_len = static_cast<uint32_t>(m_value.size());
-    ::std::memcpy(dst.data() + cursor, &value_len, sizeof(value_len));
-    cursor += sizeof(value_len);
-    
-    if (value_len) 
-    {
-        ::std::copy(m_value.value().begin(), m_value.value().end(), 
-                    reinterpret_cast<char*>(dst.data() + cursor));
-    }
+    m_value.serialize_to(dst.subspan(cursor));
 
     return static_cast<size_t>(total_len);
 }
@@ -112,7 +126,7 @@ kv_user_value::value() const
     return *m_user_value; 
 }
 
-::std::string kv_user_value::to_debug_string() const
+::std::string kv_user_value::to_string_debug() const
 {
     if (is_tomb_stone())
         return "kv_user_value: [tomb stone]";
@@ -120,11 +134,11 @@ kv_user_value::value() const
         + "kv_user_value: [" + value() + "]";
 }
 
-::std::string kv_entry::to_debug_string() const
+::std::string kv_entry::to_string_debug() const
 {
     return toolpex::lazy_string_concater{}
-        + "sequenced_key: [" + m_key.to_debug_string() + "], "
-        + "value: [" + m_value.to_debug_string() + "].";
+        + "sequenced_key: [" + m_key.to_string_debug() + "], "
+        + "value: [" + m_value.to_string_debug() + "].";
 }
 
 size_t serialized_entry_size(const ::std::byte* beg)
