@@ -55,16 +55,16 @@ const_bspan serialized_user_value(const ::std::byte* entry_beg);
  *
  *  We assume that there are no any gap between any two of entries.
  *  And after the last entry, there's still more than 4 bytes of memory that filled with 0 indicates the end of file.
- *  4 continuous zero-filled memory could be deserialized by `serialized_bytes_size()` means 0 length entry.
+ *  4 continuous zero-filled memory could be deserialized by `serialized_entry_size()` means 0 length entry.
  *
  *  \retval pointer_not_equals_to_nullptr the pointer point to the first byte of the next entry in serialized bytes.
  *  \retval nullptr there is no entry could be consumed.
  */
 inline const ::std::byte* next_serialized_entry(const ::std::byte* entry_beg)
 {
-    if (size_t sz = serialized_bytes_size(entry_beg); sz == 0)
+    if (size_t sz = serialized_entry_size(entry_beg); sz == 0)
         return nullptr;
-    return entry_beg + sz;
+    else return entry_beg + sz;
 }
 
 class sequenced_key
