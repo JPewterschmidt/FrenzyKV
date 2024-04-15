@@ -9,10 +9,8 @@
 #include "frenzykv/util/multi_dest_record_writer.h"
 #include "frenzykv/util/stdout_debug_record_writer.h"
 #include "frenzykv/write_batch.h"
-#include "frenzykv/util/key_cmp.h"
 #include "frenzykv/db/db_impl.h"
 #include "koios/iouring_awaitables.h"
-#include "entry_pbrep.pb.h"
 
 #include "MurmurHash3.h"
 

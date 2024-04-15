@@ -61,13 +61,11 @@ public:
 
     koios::task<bool> get_test(sequence_number_t seq_number)
     {
-        seq_key k;
-        k.set_user_key("abc1");
-        k.set_seq_number(seq_number);
+        sequenced_key k(seq_number, "abc1");
         auto result_opt = co_await m_mem.get(k);
         if (!result_opt) co_return false;
         const auto& result = result_opt.value();
-        co_return result.key().seq_number() >= seq_number && result.value().value().size() == 0;
+        co_return result.key().sequence_number() >= seq_number && result.value().value().size() == 0;
     }
 
     koios::task<bool> delete_test()
@@ -78,9 +76,7 @@ public:
         b.remove_from_db("abc1");
         b.set_first_sequence_num(100);
         co_await m_mem.insert(::std::move(b));
-        seq_key k;
-        k.set_seq_number(100);
-        k.set_user_key("abc1");
+        sequenced_key k(100, "abc1");
 
         co_return !(co_await m_mem.get(k)).has_value();
     }

@@ -4,7 +4,6 @@
 #include <utility>
 #include "frenzykv/write_batch.h"
 #include "koios/task_concepts.h"
-#include "entry_pbrep.pb.h"
 
 namespace frenzykv
 {
@@ -12,9 +11,9 @@ namespace frenzykv
 template<typename T>
 concept is_table = requires (T s)
 {
-    { s.get(::std::declval<seq_key>()) } 
+    { s.get(::std::declval<sequenced_key>()) } 
         -> koios::task_callable_with_result_concept<
-               ::std::optional<entry_pbrep>>;
+               ::std::optional<kv_entry>>;
 };
 
 template<typename T>

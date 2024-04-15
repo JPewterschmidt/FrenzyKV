@@ -18,14 +18,14 @@ koios::task<> logger::write(const write_batch& b)
 
     for (const auto& item : b)
     {
-        const size_t item_size = item.ByteSizeLong();
+        const size_t item_size = item.serialized_bytes_size();
         auto writable = m_log_file->writable_span();
         if (writable.size_bytes() < item_size)
         {
             co_await m_log_file->flush();
             writable = m_log_file->writable_span();
         }
-        if (item.SerializeToArray(writable.data(), static_cast<int>(writable.size_bytes())))
+        if (item.serialize_to(writable))
         {
             co_await m_log_file->commit(item_size);
         }

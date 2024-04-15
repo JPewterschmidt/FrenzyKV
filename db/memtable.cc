@@ -1,5 +1,4 @@
 #include "frenzykv/db/memtable.h"
-#include "frenzykv/util/entry_extent.h"
 #include <utility>
 #include <cassert>
 
@@ -31,42 +30,40 @@ koios::task<::std::error_code> memtable::insert(write_batch&& b)
 }
 
 ::std::error_code memtable::
-insert_impl(entry_pbrep&& b)
+insert_impl(kv_entry&& b)
 {
-    m_size_bytes += b.ByteSizeLong();
-    m_list.insert(::std::move(*b.mutable_key()), ::std::move(*b.mutable_value()));
+    m_size_bytes += b.serialized_bytes_size();
+    m_list.insert(::std::move(b.mutable_key()), ::std::move(b.mutable_value()));
     return {};
 }
 
 ::std::error_code memtable::
-insert_impl(const entry_pbrep& b)
+insert_impl(const kv_entry& b)
 {
-    m_size_bytes += b.ByteSizeLong();
+    m_size_bytes += b.serialized_bytes_size();
     m_list[b.key()] = b.value();
     return {};
 }
 
 static 
-::std::optional<entry_pbrep> 
+::std::optional<kv_entry> 
 table_get(auto&& list, const auto& key) noexcept
 {
+    ::std::optional<kv_entry> result{};
     if (auto iter = list.find_bigger_equal(key); 
         iter != list.end())
     {
-        entry_pbrep result{};
-        construct_regular_entry(&result, iter->first, iter->second);
-        return result;
+        result.emplace(iter->first, iter->second);
     }
-
-    return {};
+    return result;
 }
 
-koios::task<::std::optional<entry_pbrep>> memtable::
-get(const seq_key& key) const noexcept
+koios::task<::std::optional<kv_entry>> memtable::
+get(const sequenced_key& key) const noexcept
 {
     auto lk = co_await m_list_mutex.acquire_shared();
     auto ret = table_get(m_list, key);
-    if (ret && is_entry_regular(*ret)) 
+    if (ret && !ret->is_tomb_stone()) 
         co_return ret;
     co_return {};
 }
@@ -97,9 +94,9 @@ koios::task<size_t> memtable::size_bytes() const
     co_return m_size_bytes;
 }
 
-koios::task<::std::optional<entry_pbrep>> 
+koios::task<::std::optional<kv_entry>> 
 imm_memtable::
-get(const seq_key& key) const noexcept
+get(const sequenced_key& key) const noexcept
 {
     co_return table_get(m_list, key);
 }

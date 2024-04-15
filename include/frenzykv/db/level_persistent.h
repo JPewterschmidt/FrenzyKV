@@ -3,7 +3,6 @@
 
 #include <optional>
 #include "koios/task.h"
-#include "entry_pbrep.pb.h"
 #include "frenzykv/kvdb_deps.h"
 
 namespace frenzykv
@@ -17,7 +16,7 @@ public:
     {
     }
 
-    koios::task<::std::optional<entry_pbrep>> get(const seq_key& key)
+    koios::task<::std::optional<kv_entry>> get(const sequenced_key& key)
     {
         co_return {};
     }

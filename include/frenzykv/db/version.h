@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <chrono>
-#include "frenzykv/typs.h"
+#include "frenzykv/types.h"
 #include "frenzykv/kvdb_deps.h"
 #include "toolpex/move_only.h"
 

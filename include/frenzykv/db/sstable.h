@@ -6,7 +6,7 @@
 #include "koios/task.h"
 #include "frenzykv/readable.h"
 #include "frenzykv/write_batch.h"
-#include "entry_pbrep.pb.h"
+#include "frenzykv/db/kv_entry.h"
 
 namespace frenzykv
 {
@@ -15,8 +15,8 @@ class sstable_interface
 {
 public: 
     virtual 
-    koios::task<::std::optional<entry_pbrep>> 
-    get(const seq_key& key) const = 0;
+    koios::task<::std::optional<kv_entry>> 
+    get(const sequenced_key& key) const = 0;
 
     virtual 
     koios::task<bool> 
