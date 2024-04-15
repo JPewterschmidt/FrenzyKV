@@ -16,9 +16,9 @@ memtable_transform()
     co_return {};
 }
 
-koios::task<::std::optional<entry_pbrep>> 
+koios::task<::std::optional<kv_entry>> 
 memtable_set::
-get(const seq_key& key)
+get(const sequenced_key& key)
 {
     auto result = co_await m_mem->get(key);
     if (result)

@@ -24,7 +24,7 @@ public:
         return write(::std::move(b));
     }
 
-    virtual koios::task<::std::optional<entry_pbrep>> get(const_bspan key)
+    virtual koios::task<::std::optional<kv_entry>> get(const_bspan key)
     {
         ::std::error_code ec{};
         auto ret = co_await get(key, ec);
@@ -32,7 +32,7 @@ public:
         co_return ret;
     }
 
-    virtual koios::task<::std::optional<entry_pbrep>> 
+    virtual koios::task<::std::optional<kv_entry>> 
     get(const_bspan key, ::std::error_code& ec_out) noexcept = 0;
 };
 

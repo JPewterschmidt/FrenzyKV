@@ -4,9 +4,8 @@
 #include <deque>
 #include <string>
 #include <string_view>
-#include "entry_pbrep.pb.h"
 #include "frenzykv/frenzykv.h"
-#include "db/version.h"
+#include "frenzykv/db/kv_entry.h"
 
 namespace frenzykv
 {
@@ -61,7 +60,7 @@ namespace frenzykv
         // the specific seq number of each writing in a `write_batch`
 
         sequence_number_t first_sequence_num() const noexcept { return m_seqnumber; }
-        sequence_number_t last_sequence_num() const noexcept { return m_seqnumber + count() - 1; }
+        sequence_number_t last_sequence_num() const noexcept { return static_cast<sequence_number_t>(m_seqnumber + count() - 1); }
         void repropogate_sequence_num();
 
     private:
@@ -69,7 +68,7 @@ namespace frenzykv
         
     private:
         sequence_number_t m_seqnumber{};
-        ::std::vector<entry_pbrep> m_entries;
+        ::std::vector<kv_entry> m_entries;
     };
 } // namespace frenzykv
 

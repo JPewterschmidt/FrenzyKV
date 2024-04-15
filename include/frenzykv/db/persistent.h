@@ -3,7 +3,6 @@
 
 #include <cassert>
 #include <memory>
-#include "entry_pbrep.pb.h"
 #include "frenzykv/frenzykv.h"
 #include "frenzykv/kvdb_deps.h"
 #include "db/memtable.h"
@@ -23,8 +22,8 @@ public:
     }
 
     /*! \brief  Search KV from the persistent storage.
-     *  \return Return a awaitable object which result type is `::std::optional<entry_pbrep>`
-     *          Probabely `koios::task<::std::optional<entry_pbrep>>`, 
+     *  \return Return a awaitable object which result type is `::std::optional<kv_entry>`
+     *          Probabely `koios::task<::std::optional<kv_entry>>`, 
      *          based on the template parameter `PersisImpl` 
      *          of the class this member function belongs to.
      *
@@ -34,7 +33,7 @@ public:
      *
      *  \see `persistent` 
      */
-    auto get(const seq_key& k) const
+    auto get(const sequenced_key& k) const
     {
         return m_pimpl->get(k);
     }

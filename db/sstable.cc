@@ -15,8 +15,8 @@ public:
     }
 
     virtual 
-    koios::task<::std::optional<entry_pbrep>> 
-    get(const seq_key& key) const
+    koios::task<::std::optional<kv_entry>> 
+    get(const sequenced_key& key) const
     {
         toolpex::not_implemented();       
         co_return {};

@@ -14,6 +14,7 @@ namespace frenzykv
 class filter_policy
 {
 public:
+    virtual ~filter_policy() noexcept {}
     virtual ::std::string_view name() const noexcept = 0;
     virtual bool append_new_filter(::std::span<const_bspan> key, ::std::string& dst) const = 0;
     virtual bool may_match(const_bspan key, ::std::string_view filter) const = 0;

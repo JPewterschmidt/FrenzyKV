@@ -8,9 +8,6 @@
 #include "frenzykv/write_batch.h"
 #include "frenzykv/kvdb_deps.h"
 #include "koios/coroutine_shared_mutex.h"
-#include "entry_pbrep.pb.h"
-#include "frenzykv/util/key_cmp.h"
-#include "frenzykv/util/key_eq.h"
 
 namespace frenzykv
 {
@@ -46,7 +43,7 @@ public:
     koios::task<::std::error_code> insert(const write_batch& b);
     koios::task<::std::error_code> insert(write_batch&& b);
 
-    koios::task<::std::optional<entry_pbrep>> get(const seq_key& key) const noexcept;
+    koios::task<::std::optional<kv_entry>> get(const sequenced_key& key) const noexcept;
     koios::task<size_t> count() const;
     koios::task<bool> full() const;
     koios::task<size_t> bound_size_bytes() const;
@@ -56,23 +53,20 @@ public:
     const kvdb_deps& deps() const noexcept { return *m_deps; }
 
 private:
-    ::std::error_code insert_impl(entry_pbrep&& entry);
-    ::std::error_code insert_impl(const entry_pbrep& entry);
-    void delete_impl(const entry_pbrep& entry) noexcept
+    ::std::error_code insert_impl(kv_entry&& entry);
+    ::std::error_code insert_impl(const kv_entry& entry);
+    void delete_impl(const kv_entry& entry) noexcept
     {
         return delete_impl(entry.key());
     }
 
-    void delete_impl(const seq_key& key);
+    void delete_impl(const sequenced_key& key);
     
 private:
     const kvdb_deps* m_deps{};
 
     friend class imm_memtable;
-    toolpex::skip_list<
-        seq_key, user_value, 
-        seq_key_less, seq_key_equal_to> 
-    m_list;
+    toolpex::skip_list<sequenced_key, kv_user_value> m_list;
 
     size_t m_bound_size_bytes{};
     size_t m_size_bytes{};
@@ -90,7 +84,7 @@ public:
 
     imm_memtable(imm_memtable&&) noexcept = default;
 
-    koios::task<::std::optional<entry_pbrep>> get(const seq_key& key) const noexcept;
+    koios::task<::std::optional<kv_entry>> get(const sequenced_key& key) const noexcept;
     koios::task<size_t> size_bytes() const noexcept
     {
         co_return m_size_bytes;
@@ -99,10 +93,7 @@ public:
     const auto& storage() const noexcept { return m_list; }
 
 private:
-    toolpex::skip_list<
-        seq_key, user_value, 
-        seq_key_less, seq_key_equal_to> 
-    m_list;
+    toolpex::skip_list<sequenced_key, kv_user_value> m_list;
     const size_t m_size_bytes{};
 };
 

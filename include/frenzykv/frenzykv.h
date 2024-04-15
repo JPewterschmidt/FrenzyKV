@@ -4,12 +4,10 @@
 #include <span>
 #include <cstddef>
 
-#include "entry_pbrep.pb.h"
+#include "frenzykv/types.h"
 
 namespace frenzykv
 {
-    using bspan = ::std::span<::std::byte>;
-    using const_bspan = ::std::span<const ::std::byte>;
 }
 
 #endif

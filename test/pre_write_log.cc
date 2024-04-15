@@ -8,6 +8,7 @@
 
 using namespace frenzykv;
 using namespace ::std::string_literals;
+using namespace ::std::string_view_literals;
 
 namespace
 {
@@ -45,11 +46,17 @@ koios::task<toolpex::unique_posix_fd> open_file()
 koios::eager_task<bool> read()
 {
     auto fd = co_await open_file();
-    ::std::array<char, 1024> buffer{};
+    ::std::array<::std::byte, 1024> buffer{};
     co_await koios::uring::read(fd, ::std::as_writable_bytes(::std::span{buffer}));
-    entry_pbrep e;
-    e.ParseFromArray(buffer.data(), buffer.size());
-    co_return e.key().user_key() == "aaaa"s;
+    size_t first_entey_sz = serialized_entry_size(buffer.data());
+
+    kv_entry entry1{ buffer };
+    bool result = (entry1.key().user_key() == "xxxx"sv);
+
+    kv_entry entry2{ ::std::span{ buffer }.subspan(first_entey_sz) };
+    result &= (entry2.key().user_key() == "aaaa"sv);
+
+    co_return result;
 }
 
 koios::eager_task<> clean()
@@ -59,7 +66,7 @@ koios::eager_task<> clean()
 
 } // annoymous namespace
 
-TEST(logger, basic)
+TEST(pre_write_log, basic)
 {
     kvdb_deps deps;
     logger l(deps, "pre_write_test.txt");

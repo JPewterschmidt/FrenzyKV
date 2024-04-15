@@ -3,13 +3,12 @@
 
 #include <memory>
 #include <chrono>
+#include "frenzykv/types.h"
 #include "frenzykv/kvdb_deps.h"
 #include "toolpex/move_only.h"
 
 namespace frenzykv
 {
-
-using sequence_number_t = uint64_t;
 
 class abstract_versions
 {

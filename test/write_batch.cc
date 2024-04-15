@@ -1,6 +1,5 @@
 #include "gtest/gtest.h"
 #include "frenzykv/write_batch.h"
-#include "frenzykv/util/entry_extent.h"
 #include "google/protobuf/util/message_differencer.h"
 
 using namespace frenzykv;
@@ -16,13 +15,9 @@ TEST(write_batch, basic)
 
     ::std::array<::std::byte, 100> buffer{};
     b.serialize_to_array(buffer);
-    entry_pbrep example_entry, entry_from_buffer;
-    construct_regular_entry(&example_entry, k, 0, v);
+    kv_entry example_entry(0, as_bytes(k), as_bytes(v)), entry_from_buffer(buffer);
 
-    entry_from_buffer.ParseFromArray(buffer.data(), buffer.size());
-    ASSERT_TRUE(entry_from_buffer.IsInitialized());
-    ASSERT_EQ(entry_from_buffer.key().user_key(), example_entry.key().user_key());
-    ASSERT_EQ(entry_from_buffer.value().value(), example_entry.value().value());
+    ASSERT_EQ(entry_from_buffer, example_entry);
 }
 
 TEST(write_batch, remove)
@@ -44,13 +39,8 @@ TEST(write_batch, remove)
     ::std::array<::std::byte, 100> buffer{};
     b.serialize_to_array(buffer);
 
-    entry_pbrep example_entry, entry_from_buffer;
-    construct_deleting_entry(&example_entry, k, 0);
-
-    entry_from_buffer.ParseFromArray(buffer.data(), buffer.size());
-    ASSERT_TRUE(entry_from_buffer.IsInitialized());
-    ASSERT_EQ(entry_from_buffer.key().user_key(), example_entry.key().user_key());
-    ASSERT_EQ(entry_from_buffer.value().value(), example_entry.value().value());
+    kv_entry example_entry(0, as_bytes(k)), entry_from_buffer(buffer);
+    ASSERT_EQ(entry_from_buffer, example_entry);
 }
 
 TEST(write_batch, serialized_size)
@@ -65,7 +55,7 @@ TEST(write_batch, serialized_size)
     b.write(as_bytes(k), as_bytes(v));
     b.write(as_bytes(k), as_bytes(v));
     
-    ::std::array<::std::byte, 100> buffer{};
+    ::std::array<::std::byte, 512> buffer{};
     ASSERT_EQ(b.serialize_to_array(buffer), b.serialized_size());
 }
 
@@ -88,9 +78,4 @@ TEST(write_batch, from_another_batch)
     ASSERT_EQ(b.count(), 0);
     ASSERT_TRUE(b.empty());
     ASSERT_EQ(b2.count(), old_count);
-
-    write_batch b3;
-    b3.write(b2); // copy
-    ASSERT_EQ(b3.count(), b2.count());
-    ASSERT_FALSE(b2.empty());
 }

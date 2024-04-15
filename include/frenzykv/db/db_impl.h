@@ -12,6 +12,7 @@
 #include "koios/coroutine_mutex.h"
 #include "frenzykv/db.h"
 #include "frenzykv/kvdb_deps.h"
+#include "frenzykv/db/kv_entry.h"
 
 namespace frenzykv
 {
@@ -24,12 +25,12 @@ public:
 
     koios::task<size_t> write(write_batch batch) override;
 
-    virtual koios::task<::std::optional<entry_pbrep>> 
+    virtual koios::task<::std::optional<kv_entry>> 
     get(const_bspan key, ::std::error_code& ec_out) noexcept override;
 
 private:
     koios::task<> may_prepare_space(const write_batch& b);
-    koios::task<seq_key> make_query_key(const_bspan userkey);
+    koios::task<sequenced_key> make_query_key(const_bspan userkey);
 
 private:
     ::std::stop_source m_stp_src;

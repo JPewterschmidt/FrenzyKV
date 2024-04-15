@@ -38,22 +38,19 @@ db_impl::write(write_batch batch)
     co_return total_count;
 }
 
-koios::task<::std::optional<entry_pbrep>> 
+koios::task<::std::optional<kv_entry>> 
 db_impl::get(const_bspan key, ::std::error_code& ec_out) noexcept
 {
-    const seq_key skey = co_await this->make_query_key(key);
+    const sequenced_key skey = co_await this->make_query_key(key);
     auto result_opt = co_await m_memset.get(skey);
     if (result_opt) co_return result_opt;
 
     co_return {};
 }
 
-koios::task<seq_key> db_impl::make_query_key(const_bspan userkey)
+koios::task<sequenced_key> db_impl::make_query_key(const_bspan userkey)
 {
-    seq_key result{};
-    result.set_user_key(userkey.data(), userkey.size());
-    result.set_seq_number(co_await m_version.last_sequence_number());
-    co_return result;
+    co_return { co_await m_version.last_sequence_number(), userkey };
 }
 
 koios::task<> 
