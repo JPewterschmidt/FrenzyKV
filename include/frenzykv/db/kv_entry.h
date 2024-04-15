@@ -164,6 +164,25 @@ public:
     static kv_user_value parse(const_bspan serialized_value);
     size_t serialized_bytes_size() const noexcept;
     size_t serialize_to(bspan buffer) const noexcept;
+    size_t serialize_to(::std::span<char> buffer) const noexcept
+    {
+        return serialize_to(::std::as_writable_bytes(buffer));
+    }
+
+    size_t serialize_to(::std::string& dst) const
+    {
+        dst.clear();
+        dst.resize(serialized_bytes_size(), 0);
+        return serialize_to(::std::span{dst});
+    }
+
+    size_t serialize_append_to_string(::std::string& dst) const
+    {
+        ::std::string temp;
+        const size_t result = serialize_to(temp);
+        dst.append(::std::move(temp));
+        return result;
+    }
 
 private:
     ::std::unique_ptr<::std::string> m_user_value{};
@@ -235,7 +254,7 @@ public:
     {
         ::std::string appended{};
         const size_t result = serialize_to(appended);
-        str.append(appended);
+        str.append(::std::move(appended));
         return result;
     }
     
