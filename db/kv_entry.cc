@@ -8,6 +8,17 @@
 namespace frenzykv
 {
 
+koios::generator<kv_entry> kv_entries_from_buffer(const_bspan buffer)
+{
+    const ::std::byte* sentinal = buffer.data() + buffer.size();
+    for (const ::std::byte* cur = buffer.data(); 
+         cur && cur < sentinal; 
+         cur = next_serialized_entry_beg(cur))
+    {
+        co_yield kv_entry{ serialized_entry(cur) };
+    }
+}
+
 sequenced_key::sequenced_key(const_bspan serialized_seq_key)
 {
     // TODO: need test
@@ -168,15 +179,17 @@ const_bspan serialized_user_value(const ::std::byte* entry_beg)
     return { value_len_beg, 4u + value_len };
 }
 
-void append_eof_to_string(::std::string& dst)
+size_t append_eof_to_string(::std::string& dst)
 {
     static const ::std::string extra(4, 0);
     dst.append(extra);
+    return extra.size();
 }
 
-void write_eof_to_buffer(bspan buffer)
+size_t write_eof_to_buffer(bspan buffer)
 {
-    ::std::memset(buffer.data(), 0, buffer.size());
+    ::std::memset(buffer.data(), 0, 4);
+    return 4;
 }
 
 } // namespace frenzykv

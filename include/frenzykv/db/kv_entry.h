@@ -5,6 +5,7 @@
 #include <memory>
 #include <string_view>
 #include <functional>
+#include "koios/generator.h"
 #include "frenzykv/types.h"
 #include "toolpex/functional.h"
 
@@ -83,8 +84,8 @@ inline const_bspan serialized_user_value(const_bspan s_entry)
     return serialized_user_value(s_entry.data());
 }
 
-void append_eof_to_string(::std::string& dst);
-void write_eof_to_buffer(bspan buffer);
+size_t append_eof_to_string(::std::string& dst);
+size_t write_eof_to_buffer(bspan buffer);
 
 class sequenced_key
 {
@@ -294,6 +295,17 @@ private:
     sequenced_key m_key;
     kv_user_value m_value;
 };
+
+/*! \brief  Parse those kv_entrys from a bytes string.
+ *  \param  buffer A string buffer that contains all the serialized entries that you want parse.
+ *                 Make sure that this buffer a just fit all those entries or with a 4 bytes long range filled with zero.
+ */
+koios::generator<kv_entry> kv_entries_from_buffer(const_bspan buffer);
+
+inline koios::generator<kv_entry> kv_entries_from_buffer(const ::std::string& str)
+{
+    return kv_entries_from_buffer(::std::as_bytes(::std::span{str}));
+}
 
 class serialized_sequenced_key_less
 {
