@@ -83,6 +83,9 @@ inline const_bspan serialized_user_value(const_bspan s_entry)
     return serialized_user_value(s_entry.data());
 }
 
+void append_eof_to_string(::std::string& dst);
+void write_eof_to_buffer(bspan buffer);
+
 class sequenced_key
 {
 public:   

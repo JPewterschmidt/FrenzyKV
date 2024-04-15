@@ -168,4 +168,15 @@ const_bspan serialized_user_value(const ::std::byte* entry_beg)
     return { value_len_beg, 4u + value_len };
 }
 
+void append_eof_to_string(::std::string& dst)
+{
+    static const ::std::string extra(4, 0);
+    dst.append(extra);
+}
+
+void write_eof_to_buffer(bspan buffer)
+{
+    ::std::memset(buffer.data(), 0, buffer.size());
+}
+
 } // namespace frenzykv
