@@ -113,4 +113,27 @@ public:
     return ::std::make_unique<posix_uring_env>(::std::move(result));
 }
 
+::std:::error_code recreate_dirs_if_non_exists()
+{
+    namespace fs = ::std::filesystem;
+
+    // assume that we are already in the working directory
+    ::std::error_code result{};
+    const auto cur_dir = fs::current_path(result);
+    if (result) return result;
+    
+    if (!toolpex::bit_mask{fs::status(cur_dir).status().perms()}
+            .contains(fs::ferms::owner_read | fs::ferms::owner_write))
+    {
+        return { EPERM, ::std::system_category() };
+    }
+
+    fs::create_directory(cur_dir/"sstable");
+    fs::create_directory(cur_dir/"db_pre_write_log");
+    fs::create_directory(cur_dir/"config");
+    fs::create_directory(cur_dir/"system_log");
+
+    return result;
+}
+
 }
