@@ -40,6 +40,8 @@ public:
     static ::std::unique_ptr<env> make_default_env(const options& opt);
 };
 
+::std::error_code recreate_dirs_if_non_exists();
+
 class env_exception : public koios::exception
 {
 public:
