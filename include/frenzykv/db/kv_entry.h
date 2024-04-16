@@ -5,6 +5,7 @@
 #include <memory>
 #include <string_view>
 #include <functional>
+#include "koios/generator.h"
 #include "frenzykv/types.h"
 #include "toolpex/functional.h"
 
@@ -61,12 +62,30 @@ const_bspan serialized_user_value(const ::std::byte* entry_beg);
  *  \retval nullptr there is no entry could be consumed.
  *  \param end the sentinal pointer, if the result-ready value are exceeds than `end`, nullptr will be returned.
  */
-inline const ::std::byte* next_serialized_entry(const ::std::byte* entry_beg, const ::std::byte* end = nullptr)
+inline const ::std::byte* next_serialized_entry_beg(const ::std::byte* entry_beg, const ::std::byte* end = nullptr)
 {
     const size_t sz = serialized_entry_size(entry_beg);
-    if (sz == 0 || entry_beg + sz >= end) return nullptr;
+    if (sz == 0 || (end && entry_beg + sz >= end)) return nullptr;
     return entry_beg + sz;
 }
+
+inline const_bspan serialized_entry(const ::std::byte* entry_beg)
+{
+    return { entry_beg, serialized_entry_size(entry_beg) };
+}
+
+inline const_bspan serialized_sequenced_key(const_bspan s_entry)
+{
+    return serialized_sequenced_key(s_entry.data());
+}
+
+inline const_bspan serialized_user_value(const_bspan s_entry)
+{
+    return serialized_user_value(s_entry.data());
+}
+
+size_t append_eof_to_string(::std::string& dst);
+size_t write_eof_to_buffer(bspan buffer);
 
 class sequenced_key
 {
@@ -217,10 +236,11 @@ public:
     {
     }
 
-    kv_entry(const_bspan serialized_entry)
-        : m_key{ serialized_sequenced_key(serialized_entry.data()) }, 
-          m_value{ kv_user_value::parse(serialized_user_value(serialized_entry.data())) }
+    kv_entry(const_bspan s_entry)
+        : m_key{ serialized_sequenced_key(s_entry) }, 
+          m_value{ kv_user_value::parse(serialized_user_value(s_entry)) }
     {
+        if (s_entry.empty()) throw ::std::logic_error{ "kv_entry: could not parse from an empty bytes string." };
     }
 
     auto& mutable_value()               noexcept { return m_value; }
@@ -276,6 +296,17 @@ private:
     sequenced_key m_key;
     kv_user_value m_value;
 };
+
+/*! \brief  Parse those kv_entrys from a bytes string.
+ *  \param  buffer A string buffer that contains all the serialized entries that you want parse.
+ *                 Make sure that this buffer a just fit all those entries or with a 4 bytes long range filled with zero.
+ */
+koios::generator<kv_entry> kv_entries_from_buffer(const_bspan buffer);
+
+inline koios::generator<kv_entry> kv_entries_from_buffer(const ::std::string& str)
+{
+    return kv_entries_from_buffer(::std::as_bytes(::std::span{str}));
+}
 
 class serialized_sequenced_key_less
 {
