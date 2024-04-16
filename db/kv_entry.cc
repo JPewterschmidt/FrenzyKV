@@ -15,13 +15,16 @@ koios::generator<kv_entry> kv_entries_from_buffer(const_bspan buffer)
          cur && cur < sentinal; 
          cur = next_serialized_entry_beg(cur))
     {
-        co_yield kv_entry{ serialized_entry(cur) };
+        auto se_span = serialized_entry(cur);
+        if (se_span.empty()) continue;
+        co_yield kv_entry{ se_span };
     }
 }
 
 sequenced_key::sequenced_key(const_bspan serialized_seq_key)
 {
-    // TODO: need test
+    if (serialized_seq_key.empty()) return;
+
     uint16_t userkey_len{};
     ::std::memcpy(&userkey_len, serialized_seq_key.data(), sizeof(userkey_len));
 
@@ -36,7 +39,6 @@ size_t
 sequenced_key::
 serialize_to(::std::span<::std::byte> buffer) const noexcept 
 {
-    // TODO: need test
     const size_t serialized_sz = static_cast<size_t>(serialized_bytes_size());
     if (buffer.size() < serialized_sz) 
         return {};
@@ -85,7 +87,6 @@ size_t kv_user_value::serialize_to(bspan buffer) const noexcept
 size_t kv_entry::
 serialize_to(::std::span<::std::byte> dst) const noexcept
 {
-    // TODO: need test
     const uint32_t total_len = static_cast<uint32_t>(serialized_bytes_size());
     if (dst.size() < total_len) 
         return {};
@@ -121,6 +122,7 @@ kv_user_value
 kv_user_value::
 parse(const_bspan serialized_value) 
 { 
+    if (serialized_value.empty()) return {};
     uint32_t value_len{};
     ::std::memcpy(&value_len, serialized_value.data(), sizeof(value_len));
     if (value_len == 0) return {};
@@ -154,7 +156,6 @@ kv_user_value::value() const
 
 size_t serialized_entry_size(const ::std::byte* beg)
 {
-    // TODO: need test
     uint32_t result{};
     ::std::memcpy(&result, beg, sizeof(result));
     return result;
@@ -162,7 +163,6 @@ size_t serialized_entry_size(const ::std::byte* beg)
 
 const_bspan serialized_sequenced_key(const ::std::byte* entry_beg)
 {
-    // TODO: need test
     const ::std::byte* userkey_len_beg = entry_beg + 4;
     uint16_t userkey_len{};
     ::std::memcpy(&userkey_len, userkey_len_beg, sizeof(userkey_len));
@@ -171,7 +171,6 @@ const_bspan serialized_sequenced_key(const ::std::byte* entry_beg)
 
 const_bspan serialized_user_value(const ::std::byte* entry_beg)
 {
-    // TODO: need test
     auto seq_key = serialized_sequenced_key(entry_beg);
     const ::std::byte* value_len_beg = entry_beg + 4 + seq_key.size();
     uint32_t value_len{};
@@ -188,6 +187,7 @@ size_t append_eof_to_string(::std::string& dst)
 
 size_t write_eof_to_buffer(bspan buffer)
 {
+    if (buffer.size() < 4) return 0;
     ::std::memset(buffer.data(), 0, 4);
     return 4;
 }

@@ -65,7 +65,7 @@ const_bspan serialized_user_value(const ::std::byte* entry_beg);
 inline const ::std::byte* next_serialized_entry_beg(const ::std::byte* entry_beg, const ::std::byte* end = nullptr)
 {
     const size_t sz = serialized_entry_size(entry_beg);
-    if (sz == 0 || entry_beg + sz >= end) return nullptr;
+    if (sz == 0 || (end && entry_beg + sz >= end)) return nullptr;
     return entry_beg + sz;
 }
 
@@ -240,6 +240,7 @@ public:
         : m_key{ serialized_sequenced_key(s_entry) }, 
           m_value{ kv_user_value::parse(serialized_user_value(s_entry)) }
     {
+        if (s_entry.empty()) throw ::std::logic_error{ "kv_entry: could not parse from an empty bytes string." };
     }
 
     auto& mutable_value()               noexcept { return m_value; }
