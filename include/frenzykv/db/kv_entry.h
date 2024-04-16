@@ -126,31 +126,15 @@ public:
         return serialize_to(::std::as_writable_bytes(buffer));
     }
 
-    size_t serialize_to(::std::string& str) const 
-    {
-        str.clear();
-        str.resize(serialized_bytes_size());
-        return serialize_to(::std::span{str});
-    }
-
-    ::std::string serialize_as_string() const
-    {
-        ::std::string result(serialized_bytes_size(), 0);
-        serialize_to(::std::span{result});
-        return result;
-    }
-
+    size_t serialize_to(::std::string& str) const;
+    ::std::string serialize_as_string() const;
     size_t serialized_bytes_size() const noexcept
     {
         return seq_bytes_size + user_key_length_bytes_size + m_user_key.size();
     }
 
     ::std::string to_string_debug() const;
-
-    bool operator==(const sequenced_key& other) const noexcept
-    {
-        return sequence_number() == other.sequence_number() && user_key() == other.user_key();
-    }
+    bool operator==(const sequenced_key& other) const noexcept;
 
 private:
     sequence_number_t m_seq{};
@@ -179,13 +163,7 @@ public:
     ::std::string to_string_debug() const;
     size_t size() const noexcept { return m_user_value ? m_user_value->size() : 0; }
 
-    bool operator==(const kv_user_value& other) const noexcept
-    {
-        if (is_tomb_stone() && other.is_tomb_stone()) return true;
-        if (is_tomb_stone() || other.is_tomb_stone()) return false;
-        return *m_user_value == *(other.m_user_value);
-    }
-
+    bool operator==(const kv_user_value& other) const noexcept;
     static kv_user_value parse(const_bspan serialized_value);
     size_t serialized_bytes_size() const noexcept;
     size_t serialize_to(bspan buffer) const noexcept;
@@ -193,21 +171,10 @@ public:
     {
         return serialize_to(::std::as_writable_bytes(buffer));
     }
+    ::std::string serialize_as_string() const;
 
-    size_t serialize_to(::std::string& dst) const
-    {
-        dst.clear();
-        dst.resize(serialized_bytes_size(), 0);
-        return serialize_to(::std::span{dst});
-    }
-
-    size_t serialize_append_to_string(::std::string& dst) const
-    {
-        ::std::string temp;
-        const size_t result = serialize_to(temp);
-        dst.append(::std::move(temp));
-        return result;
-    }
+    size_t serialize_to(::std::string& dst) const;
+    size_t serialize_append_to_string(::std::string& dst) const;
 
 private:
     ::std::unique_ptr<::std::string> m_user_value{};
@@ -265,32 +232,14 @@ public:
         return serialize_to(::std::as_writable_bytes(dst));
     }
 
-    size_t serialize_to(::std::string& str) const 
-    {
-        str.clear();
-        str.resize(serialized_bytes_size());
-        return serialize_to(::std::span{str});
-    }
+    size_t serialize_to(::std::string& str) const;
 
     /*! \brief  Append the serialized bytes to the end of a string.
      *  \param str The destination string.
      *  \return The serialized bytes length
      */
-    size_t serialize_append_to_string(::std::string& str) const
-    {
-        ::std::string appended{};
-        const size_t result = serialize_to(appended);
-        str.append(::std::move(appended));
-        return result;
-    }
-    
-    size_t serialized_bytes_size() const noexcept
-    {
-        return total_length_bytes_size 
-            + m_key.serialized_bytes_size() 
-            + m_value.serialized_bytes_size();
-    }
-
+    size_t serialize_append_to_string(::std::string& str) const;
+    size_t serialized_bytes_size() const noexcept;
     ::std::string to_string_debug() const;
 
     bool operator==(const kv_entry& other) const noexcept

@@ -110,6 +110,28 @@ serialize_to(::std::span<::std::byte> dst) const noexcept
     return static_cast<size_t>(total_len);
 }
 
+size_t kv_entry::serialized_bytes_size() const noexcept
+{
+    return total_length_bytes_size 
+        + m_key.serialized_bytes_size() 
+        + m_value.serialized_bytes_size();
+}
+
+size_t kv_entry::serialize_append_to_string(::std::string& str) const
+{
+    ::std::string appended{};
+    const size_t result = serialize_to(appended);
+    str.append(::std::move(appended));
+    return result;
+}
+
+size_t kv_entry::serialize_to(::std::string& str) const 
+{
+    str.clear();
+    str.resize(serialized_bytes_size());
+    return serialize_to(::std::span{str});
+}
+
 kv_user_value::kv_user_value(const kv_user_value& other)
 {
     if (other.is_tomb_stone())
@@ -145,6 +167,47 @@ kv_user_value::value() const
         throw ::std::logic_error{"kv_user_value: There's no user value data."};
 
     return *m_user_value; 
+}
+
+size_t kv_user_value::serialize_to(::std::string& dst) const
+{
+    dst.clear();
+    dst.resize(serialized_bytes_size(), 0);
+    return serialize_to(::std::span{dst});
+}
+
+size_t kv_user_value::serialize_append_to_string(::std::string& dst) const
+{
+    ::std::string temp;
+    const size_t result = serialize_to(temp);
+    dst.append(::std::move(temp));
+    return result;
+}
+
+bool kv_user_value::operator==(const kv_user_value& other) const noexcept
+{
+    if (is_tomb_stone() && other.is_tomb_stone()) return true;
+    if (is_tomb_stone() || other.is_tomb_stone()) return false;
+    return *m_user_value == *(other.m_user_value);
+}
+
+bool sequenced_key::operator==(const sequenced_key& other) const noexcept
+{
+    return sequence_number() == other.sequence_number() && user_key() == other.user_key();
+}
+
+::std::string kv_user_value::serialize_as_string() const
+{
+    ::std::string result(serialized_bytes_size(), 0);
+    serialize_to(::std::span{result});
+    return result;
+}
+
+size_t sequenced_key::serialize_to(::std::string& str) const 
+{
+    str.clear();
+    str.resize(serialized_bytes_size());
+    return serialize_to(::std::span{str});
 }
 
 ::std::string kv_user_value::to_string_debug() const
