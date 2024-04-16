@@ -142,7 +142,7 @@ public:
 
     size_t serialized_bytes_size() const noexcept
     {
-        return seq_bytes_size + 2 + m_user_key.size();
+        return seq_bytes_size + user_key_length_bytes_size + m_user_key.size();
     }
 
     ::std::string to_string_debug() const;
