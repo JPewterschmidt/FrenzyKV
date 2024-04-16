@@ -1,4 +1,5 @@
 #include "frenzykv/db/kv_entry.h"
+#include "toolpex/exceptions.h"
 #include <limits>
 #include <cstdint>
 #include <cstdlib>
@@ -13,7 +14,7 @@ koios::generator<kv_entry> kv_entries_from_buffer(const_bspan buffer)
     const ::std::byte* sentinal = buffer.data() + buffer.size();
     for (const ::std::byte* cur = buffer.data(); 
          cur && cur < sentinal; 
-         cur = next_serialized_entry_beg(cur))
+         cur = next_serialized_entry_beg(cur, sentinal))
     {
         auto se_span = serialized_entry(cur);
         if (se_span.empty()) continue;
@@ -26,13 +27,20 @@ sequenced_key::sequenced_key(const_bspan serialized_seq_key)
     if (serialized_seq_key.empty()) return;
 
     uint16_t userkey_len{};
-    ::std::memcpy(&userkey_len, serialized_seq_key.data(), sizeof(userkey_len));
+    ::std::memcpy(&userkey_len, serialized_seq_key.data(), user_key_length_bytes_size);
 
     serialized_seq_key = serialized_seq_key.subspan(2);
     auto userkey = serialized_seq_key.subspan(0, userkey_len);
     auto seq_number_bytes = serialized_seq_key.subspan(userkey_len, 4);
-    ::std::memcpy(&m_seq, seq_number_bytes.data(), sizeof(m_seq));
+    ::std::memcpy(&m_seq, seq_number_bytes.data(), seq_bytes_size);
     m_user_key = ::std::string{ reinterpret_cast<const char*>(userkey.data()), userkey.size() };
+}
+
+bool is_partial_serialized_entry(const ::std::byte* entry_beg, 
+                                 const ::std::byte* sentinel)
+{
+    toolpex::not_implemented();
+    return {};
 }
     
 size_t
@@ -45,12 +53,12 @@ serialize_to(::std::span<::std::byte> buffer) const noexcept
 
     size_t cursor{};
     const uint16_t user_key_len = static_cast<uint16_t>(m_user_key.size());
-    ::std::memcpy(buffer.data(), &user_key_len, sizeof(user_key_len));
-    cursor += sizeof(user_key_len);
+    ::std::memcpy(buffer.data(), &user_key_len, user_key_length_bytes_size);
+    cursor += user_key_length_bytes_size;
     ::std::copy(m_user_key.begin(), m_user_key.end(), 
                 reinterpret_cast<char*>(buffer.data() + cursor));
     cursor += m_user_key.size();
-    ::std::memcpy(buffer.data() + cursor, &m_seq, sizeof(m_seq));
+    ::std::memcpy(buffer.data() + cursor, &m_seq, seq_bytes_size);
 
     return serialized_sz;
 }
@@ -73,13 +81,13 @@ size_t kv_user_value::serialize_to(bspan buffer) const noexcept
     if (buffer.size() < serialized_bytes_size())
         return 0;
     uint32_t value_len = static_cast<uint32_t>(size());
-    ::std::memcpy(buffer.data(), &value_len, sizeof(value_len));
+    ::std::memcpy(buffer.data(), &value_len, user_value_length_bytes_size);
     
     if (value_len)
     {
         const auto& value_rep = *m_user_value;
         ::std::copy(value_rep.begin(), value_rep.end(), 
-                    reinterpret_cast<char*>(buffer.data() + sizeof(value_len)));
+                    reinterpret_cast<char*>(buffer.data() + user_value_length_bytes_size));
     }
     return result;
 }
@@ -92,8 +100,8 @@ serialize_to(::std::span<::std::byte> dst) const noexcept
         return {};
     
     size_t cursor{};
-    ::std::memcpy(dst.data(), &total_len, sizeof(total_len));
-    cursor += sizeof(total_len);
+    ::std::memcpy(dst.data(), &total_len, total_length_bytes_size);
+    cursor += total_length_bytes_size;
     m_key.serialize_to(dst.subspan(cursor));
     cursor += m_key.serialized_bytes_size();
     
@@ -124,7 +132,7 @@ parse(const_bspan serialized_value)
 { 
     if (serialized_value.empty()) return {};
     uint32_t value_len{};
-    ::std::memcpy(&value_len, serialized_value.data(), sizeof(value_len));
+    ::std::memcpy(&value_len, serialized_value.data(), user_value_length_bytes_size);
     if (value_len == 0) return {};
     
     return {::std::string{reinterpret_cast<const char*>(serialized_value.data() + 4), value_len}};
@@ -157,7 +165,7 @@ kv_user_value::value() const
 size_t serialized_entry_size(const ::std::byte* beg)
 {
     uint32_t result{};
-    ::std::memcpy(&result, beg, sizeof(result));
+    ::std::memcpy(&result, beg, total_length_bytes_size);
     return result;
 }
 
@@ -165,7 +173,7 @@ const_bspan serialized_sequenced_key(const ::std::byte* entry_beg)
 {
     const ::std::byte* userkey_len_beg = entry_beg + 4;
     uint16_t userkey_len{};
-    ::std::memcpy(&userkey_len, userkey_len_beg, sizeof(userkey_len));
+    ::std::memcpy(&userkey_len, userkey_len_beg, user_key_length_bytes_size);
     return { userkey_len_beg, 2u + userkey_len + 4u };
 }
 
@@ -174,7 +182,7 @@ const_bspan serialized_user_value(const ::std::byte* entry_beg)
     auto seq_key = serialized_sequenced_key(entry_beg);
     const ::std::byte* value_len_beg = entry_beg + 4 + seq_key.size();
     uint32_t value_len{};
-    ::std::memcpy(&value_len, value_len_beg, sizeof(value_len));
+    ::std::memcpy(&value_len, value_len_beg, user_value_length_bytes_size);
     return { value_len_beg, 4u + value_len };
 }
 

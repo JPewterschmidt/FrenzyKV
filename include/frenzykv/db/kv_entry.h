@@ -41,6 +41,11 @@
 namespace frenzykv
 {
 
+inline static constexpr size_t total_length_bytes_size      = 4u;
+inline static constexpr size_t user_key_length_bytes_size   = 2u;
+inline static constexpr size_t seq_bytes_size               = 4u;
+inline static constexpr size_t user_value_length_bytes_size = 4u;
+
 // Functions below are usually used when dealing with file IO and deserialization.
 
 /*! \brief  Get the total length of a entry in a serialized memory.
@@ -51,6 +56,7 @@ namespace frenzykv
 size_t serialized_entry_size(const ::std::byte* entry_beg);
 const_bspan serialized_sequenced_key(const ::std::byte* entry_beg);
 const_bspan serialized_user_value(const ::std::byte* entry_beg);
+bool is_partial_serialized_entry(const ::std::byte* entry_beg, const ::std::byte* sentinel = nullptr);
 
 /*! \brief  Get the pointer point to the first byte of the next entry in serialized bytes.
  *
@@ -136,7 +142,7 @@ public:
 
     size_t serialized_bytes_size() const noexcept
     {
-        return sizeof(m_seq) + 2 + m_user_key.size();
+        return seq_bytes_size + 2 + m_user_key.size();
     }
 
     ::std::string to_string_debug() const;
@@ -280,9 +286,9 @@ public:
     
     size_t serialized_bytes_size() const noexcept
     {
-        return sizeof(m_key) 
-            + m_key.serialized_bytes_size()  // sequenced_key
-            + 4 + m_value.size();            // user value length + user value
+        return total_length_bytes_size 
+            + m_key.serialized_bytes_size() 
+            + m_value.serialized_bytes_size();
     }
 
     ::std::string to_string_debug() const;
