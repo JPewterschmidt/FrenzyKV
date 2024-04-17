@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <atomic>
+#include <functional>
 #include "frenzykv/options.h"
 #include "frenzykv/env.h"
 #include "frenzykv/statistics.h"
@@ -41,7 +42,7 @@ class kvdb_deps
 public:
     friend class kvdb_deps_manipulator;
     kvdb_deps();
-    kvdb_deps(options opt);
+    kvdb_deps(options opt, ::std::move_only_function<void()> after_init = nullptr);
 
     const auto opt() const noexcept { return m_opt.load(::std::memory_order_relaxed); }
     const auto env() const noexcept { return m_env.load(::std::memory_order_relaxed); } 

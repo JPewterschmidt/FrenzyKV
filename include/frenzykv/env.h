@@ -42,6 +42,21 @@ public:
 
 ::std::error_code recreate_dirs_if_non_exists();
 
+::std::filesystem::directory_entry sstables_dir(::std::error_code& ec);
+::std::filesystem::directory_entry prewrite_log_dir(::std::error_code& ec);
+::std::filesystem::directory_entry system_log_dir(::std::error_code& ec);
+::std::filesystem::directory_entry config_dir(::std::error_code& ec);
+
+::std::filesystem::directory_entry sstables_dir();
+::std::filesystem::directory_entry prewrite_log_dir();
+::std::filesystem::directory_entry system_log_dir();
+::std::filesystem::directory_entry config_dir();
+
+::std::filesystem::path sstables_path();
+::std::filesystem::path prewrite_log_path();
+::std::filesystem::path system_log_path();
+::std::filesystem::path config_path();
+
 class env_exception : public koios::exception
 {
 public:
