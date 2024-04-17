@@ -53,5 +53,6 @@ target("FrenzyKV")
         "util/*.cc", 
         "io/*.cc", 
         "db/*.cc", 
-        "log/*.cc"
+        "log/*.cc",
+        "persistent/*.cc"
     )
