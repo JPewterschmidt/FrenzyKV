@@ -13,7 +13,6 @@ namespace frenzykv
 db_impl::db_impl(::std::string dbname, const options& opt)
     : m_dbname{ ::std::move(dbname) }, 
       m_deps{ opt, recreate_dirs_if_non_exists },
-      m_version{ m_deps },
       m_log{ m_deps, "0001-test.frzkvlog" }, 
       m_memset{ m_deps }
 {
@@ -50,7 +49,8 @@ db_impl::get(const_bspan key, ::std::error_code& ec_out) noexcept
 
 koios::task<sequenced_key> db_impl::make_query_key(const_bspan userkey)
 {
-    co_return { co_await m_version.last_sequence_number(), userkey };
+    toolpex::not_implemented();
+    co_return {};
 }
 
 koios::task<> 

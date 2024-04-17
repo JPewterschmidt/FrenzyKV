@@ -5,7 +5,6 @@
 #include <memory>
 #include <stop_token>
 #include "frenzykv/db/memtable.h"
-#include "frenzykv/db/version.h"
 #include "frenzykv/util/record_writer_wrapper.h"
 #include "frenzykv/util/memtable_set.h"
 #include "frenzykv/log/logger.h"
@@ -36,7 +35,6 @@ private:
     ::std::stop_source m_stp_src;
     ::std::string m_dbname;
     kvdb_deps m_deps;
-    version_hub m_version;
     logger m_log;
     memtable_set m_memset;
 };
