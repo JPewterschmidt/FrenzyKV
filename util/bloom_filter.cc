@@ -13,7 +13,7 @@ auto get_delta(::std::integral auto h)
 }
 
 //template<typename HashFunc = murmur_bin_hash_x64_128_xor_shift_to_64>
-template<typename HashFunc = murmur_bin_hash_x64_128_plus_to_64>
+template<typename HashFunc = murmur_bin_hash_x64_128_xor_shift_to_64>
 class bloom_filter : public filter_policy
 {
 public:
