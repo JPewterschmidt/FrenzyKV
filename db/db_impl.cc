@@ -12,7 +12,7 @@ namespace frenzykv
 
 db_impl::db_impl(::std::string dbname, const options& opt)
     : m_dbname{ ::std::move(dbname) }, 
-      m_deps{ opt },
+      m_deps{ opt, recreate_dirs_if_non_exists },
       m_version{ m_deps },
       m_log{ m_deps, "0001-test.frzkvlog" }, 
       m_memset{ m_deps }

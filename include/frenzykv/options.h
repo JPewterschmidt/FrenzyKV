@@ -23,7 +23,7 @@ struct options
     bool need_buffered_write = true;
     bool sync_write = false;
     bool buffered_read = true;
-    ::std::filesystem::path root_path = "./";
+    ::std::filesystem::path root_path = "/tmp/frenzykv/";
     ::std::filesystem::path log_path = "frenzy-prewrite-log";
     logging_level log_level = logging_level::DEBUG;
 };

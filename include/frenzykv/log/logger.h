@@ -20,7 +20,7 @@ public:
     logger(const kvdb_deps& deps, ::std::string filename)
         : m_deps{ &deps }, 
           m_filename{ ::std::move(filename) }, 
-          m_filepath{ m_deps->opt()->root_path / m_filename }, 
+          m_filepath{ prewrite_log_dir().path() / m_filename }, 
           m_log_file{ m_deps->env()->get_seq_writable(m_filepath) }, 
           m_level{ m_deps->opt()->log_level }
     {

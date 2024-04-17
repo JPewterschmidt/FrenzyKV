@@ -157,6 +157,42 @@ namespace fs = ::std::filesystem;
     return { config_path(), ec };
 }
 
+::std::filesystem::directory_entry sstables_dir()
+{
+	::std::error_code ec;
+    fs::directory_entry result = sstables_dir(ec);
+    if (ec) throw koios::exception(ec);
+
+    return result;
+}
+
+::std::filesystem::directory_entry prewrite_log_dir()
+{
+	::std::error_code ec;
+    fs::directory_entry result = prewrite_log_dir(ec);
+    if (ec) throw koios::exception(ec);
+
+    return result;
+}
+
+::std::filesystem::directory_entry system_log_dir()
+{
+	::std::error_code ec;
+    fs::directory_entry result = system_log_dir(ec);
+    if (ec) throw koios::exception(ec);
+
+    return result;
+}
+
+::std::filesystem::directory_entry config_dir()
+{
+	::std::error_code ec;
+    fs::directory_entry result = config_dir(ec);
+    if (ec) throw koios::exception(ec);
+
+    return result;
+}
+
 ::std::error_code recreate_dirs_if_non_exists()
 {
     // assume that we are already in the working directory
@@ -171,10 +207,11 @@ namespace fs = ::std::filesystem;
     }
 
     result = {};
-    if (!fs::create_directory(sstables_path(), result)) return result;
-    if (!fs::create_directory(prewrite_log_path(), result)) return result;
-    if (!fs::create_directory(system_log_path(), result)) return result;
-    if (!fs::create_directory(config_path(), result)) return result;
+
+    if (fs::exists(sstables_path()) && !fs::create_directory(sstables_path(), result)) return result;
+    if (fs::exists(prewrite_log_path()) && !fs::create_directory(prewrite_log_path(), result)) return result;
+    if (fs::exists(system_log_path()) && !fs::create_directory(system_log_path(), result)) return result;
+    if (fs::exists(config_path()) && !fs::create_directory(config_path(), result)) return result;
 
     return result;
 }
