@@ -63,4 +63,18 @@ operator()(::std::span<const ::std::byte> buffer, ::std::size_t hints) const noe
     return h[0] + h[1];
 }
 
+uint32_t murmur_bin_hash_x86_32::hash32(::std::span<const ::std::byte> buffer) const noexcept
+{
+    uint32_t result{};
+    MurmurHash3_x86_32(buffer.data(), static_cast<int>(buffer.size()), 0, &result);
+    return result;
+}
+
+uint32_t murmur_bin_hash_x86_32::hash32(::std::span<const ::std::byte> buffer, ::std::size_t hints) const noexcept
+{
+    uint32_t result{};
+    MurmurHash3_x86_32(buffer.data(), static_cast<int>(buffer.size()), static_cast<uint32_t>(hints), &result);
+    return result;
+}
+
 } // namespace frenzykv

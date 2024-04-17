@@ -2,6 +2,7 @@
 #define FRENZYKV_HASH_H
 
 #include <cstddef>
+#include <cstdint>
 #include <span>
 
 namespace frenzykv
@@ -66,6 +67,16 @@ class murmur_bin_hash_x64_128_plus_to_64 final : public binary_hash_interface
 public:
     ::std::size_t operator()(::std::span<const ::std::byte> buffer) const noexcept override;
     ::std::size_t operator()(::std::span<const ::std::byte> buffer, ::std::size_t hints) const noexcept override;
+};
+
+class murmur_bin_hash_x86_32 final : public binary_hash_interface
+{
+public:
+    ::std::size_t operator()(::std::span<const ::std::byte> buffer) const noexcept override { return hash32(buffer); }
+    ::std::size_t operator()(::std::span<const ::std::byte> buffer, ::std::size_t hints) const noexcept override { return hash32(buffer, hints); }
+    
+    uint32_t hash32(::std::span<const ::std::byte> buffer) const noexcept;
+    uint32_t hash32(::std::span<const ::std::byte> buffer, ::std::size_t hints) const noexcept;
 };
 
 } // namespace frenzykv
