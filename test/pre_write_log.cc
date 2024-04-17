@@ -40,7 +40,7 @@ koios::task<bool> write(logger& l)
 koios::task<toolpex::unique_posix_fd> open_file()
 {
     toolpex::errret_thrower et;
-    co_return et << ::open((prewrite_log_dir().path()/"pre_write_test.txt").c_str(), O_RDWR);
+    co_return et << ::open("pre_write_test.txt", O_RDWR);
 }
 
 koios::eager_task<bool> read()

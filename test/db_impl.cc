@@ -25,8 +25,9 @@ private:
 
 TEST_F(db_impl_test, basic)
 {
-    ASSERT_TRUE(fs::exists(sstables_path()));
-    ASSERT_TRUE(fs::exists(prewrite_log_path()));
-    ASSERT_TRUE(fs::exists(system_log_path()));
-    ASSERT_TRUE(fs::exists(config_path()));
+    ::std::error_code ec;
+    ASSERT_TRUE(fs::exists(sstables_path(), ec));
+    ASSERT_TRUE(fs::exists(prewrite_log_path(), ec));
+    ASSERT_TRUE(fs::exists(system_log_path(), ec));
+    ASSERT_TRUE(fs::exists(config_path(), ec));
 }

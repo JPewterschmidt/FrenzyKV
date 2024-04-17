@@ -208,10 +208,13 @@ namespace fs = ::std::filesystem;
 
     result = {};
 
-    if (fs::exists(sstables_path()) && !fs::create_directory(sstables_path(), result)) return result;
-    if (fs::exists(prewrite_log_path()) && !fs::create_directory(prewrite_log_path(), result)) return result;
-    if (fs::exists(system_log_path()) && !fs::create_directory(system_log_path(), result)) return result;
-    if (fs::exists(config_path()) && !fs::create_directory(config_path(), result)) return result;
+    if (!fs::exists(sstables_path(), result) && !fs::create_directory(sstables_path(), result)) return result;
+    result = {};
+    if (!fs::exists(prewrite_log_path(), result) && !fs::create_directory(prewrite_log_path(), result)) return result;
+    result = {};
+    if (!fs::exists(system_log_path(), result) && !fs::create_directory(system_log_path(), result)) return result;
+    result = {};
+    if (!fs::exists(config_path(), result) && !fs::create_directory(config_path(), result)) return result;
 
     return result;
 }
