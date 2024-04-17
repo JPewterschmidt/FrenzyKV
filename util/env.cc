@@ -1,3 +1,5 @@
+#include "toolpex/bit_mask.h"
+
 #include "frenzykv/env.h"
 
 #include "frenzykv/iouring_readable.h"
@@ -113,25 +115,66 @@ public:
     return ::std::make_unique<posix_uring_env>(::std::move(result));
 }
 
-::std:::error_code recreate_dirs_if_non_exists()
-{
-    namespace fs = ::std::filesystem;
+namespace fs = ::std::filesystem;
 
+::std::filesystem::path sstables_path()
+{
+    return fs::current_path()/"sstable";
+}
+
+::std::filesystem::path prewrite_log_path()
+{
+    return fs::current_path()/"db_prewrite_log";
+}
+
+::std::filesystem::path system_log_path()
+{
+    return fs::current_path()/"system_log";
+}
+
+::std::filesystem::path config_path()
+{
+    return fs::current_path()/"config";
+}
+
+::std::filesystem::directory_entry sstables_dir(::std::error_code& ec)
+{
+    return { sstables_path(), ec };
+}
+
+::std::filesystem::directory_entry prewrite_log_dir(::std::error_code& ec)
+{
+    return { prewrite_log_path(), ec };
+}
+
+::std::filesystem::directory_entry system_log_dir(::std::error_code& ec)
+{
+    return { system_log_path(), ec };
+}
+
+::std::filesystem::directory_entry config_dir(::std::error_code& ec)
+{
+    return { config_path(), ec };
+}
+
+::std::error_code recreate_dirs_if_non_exists()
+{
     // assume that we are already in the working directory
     ::std::error_code result{};
     const auto cur_dir = fs::current_path(result);
     if (result) return result;
     
-    if (!toolpex::bit_mask{fs::status(cur_dir).status().perms()}
-            .contains(fs::ferms::owner_read | fs::ferms::owner_write))
+    if (!toolpex::bit_mask{fs::status(cur_dir).permissions()}
+            .contains(fs::perms::owner_read | fs::perms::owner_write))
     {
         return { EPERM, ::std::system_category() };
     }
 
-    fs::create_directory(cur_dir/"sstable");
-    fs::create_directory(cur_dir/"db_pre_write_log");
-    fs::create_directory(cur_dir/"config");
-    fs::create_directory(cur_dir/"system_log");
+    result = {};
+    if (!fs::create_directory(sstables_path(), result)) return result;
+    if (!fs::create_directory(prewrite_log_path(), result)) return result;
+    if (!fs::create_directory(system_log_path(), result)) return result;
+    if (!fs::create_directory(config_path(), result)) return result;
 
     return result;
 }
