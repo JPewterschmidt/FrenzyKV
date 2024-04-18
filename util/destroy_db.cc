@@ -45,8 +45,12 @@ koios::eager_task<> file_grinder(fs::directory_entry entry)
     co_return;
 }
 
-void destroy_db(::std::filesystem::path p)
+void destroy_db(::std::filesystem::path p, ::std::string_view caller_declaration)
 {
+    static ::std::string_view right_decl = "I know exactly what I'm doing, just destroy the DB unrecoverably right now!"; 
+    if (caller_declaration != right_decl) 
+        throw koios::exception{ R"(If you want to destroy the DB, you need pass a right caller declaration:"I know exactly what I'm doing, just destroy the DB unrecoverably right now!")" };
+        
     for (auto de : fs::recursive_directory_iterator{ p })
     {
         if (de.is_regular_file())
