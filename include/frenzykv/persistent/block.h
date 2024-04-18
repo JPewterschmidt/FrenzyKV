@@ -6,6 +6,7 @@
 #include <cstdint>
 #include "koios/exceptions.h"
 #include "frenzykv/util/parse_result.h"
+#include "frenzykv/types.h"
 
 namespace frenzykv
 {
@@ -13,11 +14,11 @@ namespace frenzykv
 class block_segment
 {
 public:
-    block_segment(::std::string_view block_seg_storage)
+    block_segment(const_bspan block_seg_storage)
         : m_storage{ block_seg_storage }
     {
         if ((m_parse_result = parse()) == parse_result_t::error) 
-            throw koios::exception{"block_segment, parse fail"};
+            throw koios::exception{"block_segment: parse fail"};
     }
 
     /*! \brief  determine the parse situation.
@@ -25,31 +26,38 @@ public:
      */
     parse_result_t parse_result() const noexcept { return m_parse_result; }
 
-    ::std::string_view public_prefix() const noexcept { return m_prefix; }
+    const_bspan public_prefix() const noexcept { return m_prefix; }
     size_t count() const noexcept { return m_items.size(); }
     const auto& items() const noexcept { return m_items; }
+    size_t storage_bytes_size() const noexcept { return m_storage.size(); }
 
 private:
     parse_result_t parse();
 
 private:
-    ::std::string_view m_storage;
-    ::std::string_view m_prefix;
-    ::std::vector<::std::string_view> m_items;
+    const_bspan m_storage;
+    const_bspan m_prefix;
+    ::std::vector<const_bspan> m_items;
     parse_result_t m_parse_result;
 };
 
 class block
 {
 public:
-    block(::std::string_view block_storage);
+    block(const_bspan block_storage)
+        : m_storage{ block_storage }
+    {
+        if ((m_parse_result = parse()) == parse_result_t::error)
+            throw koios::exception{"block: parse fail"};
+    }
     
 private:
     parse_result_t parse();
 
 private:
-    ::std::string_view m_storage;
+    const_bspan m_storage;
     ::std::vector<block_segment> m_segments;
+    parse_result_t m_parse_result{};
 };
 
 } // namespace frenzykv
