@@ -4,6 +4,24 @@
 namespace frenzykv
 {
 
+class zstd_category_t : public ::std::error_category
+{
+public:
+    virtual const char* name() const noexcept override { return "ZSTD category"; }
+
+    virtual ::std::string message(int condition) const override
+    {
+        const char* ename = ZSTD_getErrorName(condition);
+        return ename;
+    }
+};
+
+static const auto& zstd_category() noexcept
+{
+    static const zstd_category_t result;
+    return result;
+}
+
 class zstd_compressor final : public compressor_policy
 {
 public:
@@ -24,8 +42,7 @@ public:
 
         if (::ZSTD_isError(sz_compressed))
         {
-            // TODO return a ec with ZSTD category
-            return {};
+            return { static_cast<int>(sz_compressed), zstd_category() };
         }
         compressed_dst.resize(sz_compressed);
 
@@ -46,8 +63,7 @@ public:
 
         if (::ZSTD_isError(sz_decompr))
         {
-            // TODO return a ec with ZSTD category
-            return {};
+            return { static_cast<int>(sz_decompr), zstd_category() };
         }
         decompressed_dst.resize(sz_decompr);
 
