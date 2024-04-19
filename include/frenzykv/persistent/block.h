@@ -107,6 +107,7 @@ public:
 
     void add(const kv_entry& kv);
     ::std::string finish();
+    size_t segment_count() const noexcept { return m_seg_count; }
 
 private:
     ::std::string m_storage;
