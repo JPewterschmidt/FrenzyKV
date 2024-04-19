@@ -10,7 +10,8 @@ add_requires(
     "benchmark", 
     "nlohmann_json", 
     "spdlog", 
-    "jemalloc"
+    "jemalloc", 
+    "zstd"
 )
 
 includes(
@@ -45,7 +46,8 @@ target("FrenzyKV")
         "gflags", 
         "concurrentqueue", 
         "nlohmann_json", 
-        "spdlog"
+        "spdlog",
+        "zstd"
     )
     set_warnings("all", "error")
     add_cxflags("-Wconversion", { force = true })
