@@ -89,13 +89,37 @@ private:
     parse_result_t m_parse_result{};
 };
 
+/*! \brief  The block segment builder
+ *
+ *  This class will parse kv_entry into a segment, 
+ *  all the kv added here must have the same user key as the public_prefix.
+ *
+ *  This class won't manage storage, 
+ *  it just simply append new stuff to a string that you passed as a ctor argument.
+ */
 class block_segment_builder : public toolpex::move_only
 {
 public:
+    /*! \param dst the storage string
+     *  \userkey the userkey which will be the public prefix of this block segment
+     */
     block_segment_builder(::std::string& dst, ::std::string_view userkey) noexcept;
 
     auto public_prefix() const noexcept { return m_public_prefix; }
+
+    /*! \param kv A new kv entry which the user key value and `public_prefix()` are equal.
+     *
+     *  \retval true Added successfully
+     *  \retval false `kv` may have a different user key, or what ever. 
+     *                Means that you need to finish this seg builder, 
+     *                and replace it with a new one.1
+     */
     bool add(const kv_entry& kv);
+
+    /*! \brief Mark the termination of the current segment.
+     *  
+     *  This will append 4 zero-filled bytes to the storage string.
+     */
     void finish();
     bool is_finish() const noexcept { return m_finish; }
     

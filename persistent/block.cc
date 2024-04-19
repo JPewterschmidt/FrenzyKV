@@ -2,6 +2,7 @@
 #include "frenzykv/util/comp.h"
 #include "frenzykv/util/serialize_helper.h"
 #include <cstring>
+#include <limits>
 #include <cassert>
 #include <iterator>
 #include <array>
@@ -99,12 +100,12 @@ bool block_segment::fit_public_prefix(const_bspan user_prefix) const noexcept
  *                              |                   nsbs_beg_ptr(storage)
  *                              meta_data_beg_ptr(storage)
  *  
- *  BTL:    8   uint64_t    Block total length
+ *  BTL:    4   uint32_t    Block total length
  *  SBSO:   4   uint32_t    Special Block Segment Offset
  *  NSBS:   2   uint16_t    Number of Special Block Segment
  */
 
-using btl_t = uint64_t;
+using btl_t  = uint32_t;
 using nsbs_t = uint16_t;
 using sbso_t = uint32_t;
 static constexpr size_t bs_bl = sizeof(btl_t);
@@ -215,7 +216,7 @@ void block_segment_builder::finish()
     if (m_finish) [[unlikely]] return;
 
     // Write the BTL
-    ::std::array<char, 4> buffer{};
+    ::std::array<char, sizeof(btl_t)> buffer{};
     m_storage.append(buffer.data(), buffer.size());
     m_finish = true;
 }
@@ -296,7 +297,8 @@ void block_builder::add(const kv_entry& kv)
     append_encode_int_to<sizeof(nsbs_t)>(static_cast<nsbs_t>(m_sbsos.size()), m_storage);
     
     // Serialize BTL
-    btl_t btl = m_storage.size();
+    assert(m_storage.size() <= ::std::numeric_limits<btl_t>::max());
+    btl_t btl = static_cast<btl_t>(m_storage.size());
     ::std::array<char, sizeof(btl)> buffer{};
     encode_int_to<sizeof(btl_t)>(btl, buffer);
 
