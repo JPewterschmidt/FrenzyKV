@@ -3,6 +3,7 @@
 
 #include <compare>
 #include <span>
+#include <string_view>
 
 namespace frenzykv
 {
@@ -39,6 +40,12 @@ public:
     ::std::strong_ordering 
     operator()(::std::span<const ::std::byte> lhs, 
                ::std::span<const ::std::byte> rhs) const noexcept override;
+
+    ::std::strong_ordering
+    operator()(::std::string_view lhs, ::std::string_view rhs) const noexcept
+    {
+        return (*this)(::std::as_bytes(::std::span{lhs.data(), lhs.size()}), ::std::as_bytes(::std::span{rhs.data(), rhs.size()}));
+    }
 };
 
 } // namespace frenzykv
