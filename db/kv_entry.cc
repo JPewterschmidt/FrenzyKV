@@ -240,13 +240,20 @@ const_bspan serialized_sequenced_key(const ::std::byte* entry_beg)
     return { userkey_len_beg, user_key_length_bytes_size + userkey_len + seq_bytes_size };
 }
 
+const_bspan serialized_user_value_from_value_len(const ::std::byte* value_len_beg)
+{
+    uint32_t value_len{};
+    ::std::memcpy(&value_len, value_len_beg, user_value_length_bytes_size);
+
+    // Including the value len buffer itself
+    return { value_len_beg, user_value_length_bytes_size + value_len };
+}
+
 const_bspan serialized_user_value(const ::std::byte* entry_beg)
 {
     auto seq_key = serialized_sequenced_key(entry_beg);
     const ::std::byte* value_len_beg = entry_beg + total_length_bytes_size + seq_key.size();
-    uint32_t value_len{};
-    ::std::memcpy(&value_len, value_len_beg, user_value_length_bytes_size);
-    return { value_len_beg, user_value_length_bytes_size + value_len };
+    return serialized_user_value_from_value_len(value_len_beg);
 }
 
 size_t append_eof_to_string(::std::string& dst)
@@ -261,6 +268,24 @@ size_t write_eof_to_buffer(bspan buffer)
     if (buffer.size() < total_length_bytes_size) return 0;
     ::std::memset(buffer.data(), 0, total_length_bytes_size);
     return total_length_bytes_size;
+}
+
+size_t sequenced_key::serialize_sequence_number_append_to(::std::string& dst) const
+{
+    ::std::array<char, sizeof(sequence_number_t)> buffer{};
+    ::std::memcpy(buffer.data(), &m_seq, sizeof(m_seq));
+    dst.append(buffer.data(), buffer.size());
+    return buffer.size();
+}
+
+size_t sequenced_key::serialize_user_key_append_to(::std::string& dst) const
+{
+    ::std::array<char, sizeof(sequence_number_t)> ukl_buffer{};
+    uint16_t ukl = static_cast<uint16_t>(m_user_key.size());
+    ::std::memcpy(ukl_buffer.data(), &ukl, user_key_length_bytes_size);
+    dst.append(ukl_buffer.data(), ukl_buffer.size());
+    dst.append(m_user_key);
+    return user_key_length_bytes_size + m_user_key.size();
 }
 
 } // namespace frenzykv

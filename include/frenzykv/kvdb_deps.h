@@ -48,6 +48,8 @@ public:
     const auto env() const noexcept { return m_env.load(::std::memory_order_relaxed); } 
     auto stat()      const noexcept { return m_stat.load(::std::memory_order_relaxed); }
 
+    void set_opt(options opt) noexcept { m_opt.store(::std::make_shared<options>(::std::move(opt)), ::std::memory_order_relaxed); }
+
 private: // Deps
     ::std::atomic<::std::shared_ptr<options>>     m_opt;
     ::std::atomic<::std::shared_ptr<frenzykv::env>>         m_env;

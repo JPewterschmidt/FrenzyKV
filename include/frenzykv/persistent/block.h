@@ -4,10 +4,13 @@
 #include <string_view>
 #include <vector>
 #include <cstdint>
+#include "toolpex/move_only.h"
 #include "koios/generator.h"
 #include "koios/exceptions.h"
 #include "frenzykv/util/parse_result.h"
 #include "frenzykv/types.h"
+#include "frenzykv/kvdb_deps.h"
+#include "frenzykv/db/kv_entry.h"
 
 namespace frenzykv
 {
@@ -63,19 +66,62 @@ public:
     }
 
     const_bspan storage() const noexcept { return m_storage; }
-
-private:
-    parse_result_t parse_meta_data();
+    size_t special_segments_count() const noexcept { return m_special_segs.size(); }
 
     /*! \brief Get segments from speficied position
      *  \param from A pointer point to a block segment, usually an element of `m_special_segs`.
      */
-    koios::generator<block_segment> segments(::std::vector<const ::std::byte*>::const_iterator from);
+    koios::generator<block_segment> segments_in_single_interval(::std::vector<const ::std::byte*>::const_iterator from);
+
+    koios::generator<block_segment> segments_in_single_interval()
+    {
+        return segments_in_single_interval(m_special_segs.begin());
+    }
+
+    const auto& special_segment_ptrs() { return m_special_segs; }
+
+private:
+    parse_result_t parse_meta_data();
 
 private:
     const_bspan m_storage;
     ::std::vector<const ::std::byte*> m_special_segs;
     parse_result_t m_parse_result{};
+};
+
+class block_segment_builder : public toolpex::move_only
+{
+public:
+    block_segment_builder(::std::string& dst, ::std::string_view userkey) noexcept;
+
+    bool add(const kv_entry& kv);
+    void finish();
+    
+private:
+    ::std::string& m_storage;
+    ::std::string_view m_userkey;
+    bool m_finish{};
+};
+
+/*! \brief Convert a range of kv_entry into block.
+ *
+ *  Assume that the kv_entry range is sorted.
+ */
+class block_builder : public toolpex::move_only
+{
+public:
+    block_builder(const kvdb_deps& deps);
+
+    void add(const kv_entry& kv);
+    ::std::string finish();
+    size_t segment_count() const noexcept { return m_seg_count; }
+
+private:
+    ::std::string m_storage;
+    const kvdb_deps* m_deps{};
+    ::std::unique_ptr<block_segment_builder> m_current_seg_builder;
+    size_t m_seg_count{};
+    ::std::vector<uint32_t> m_sbsos;
 };
 
 } // namespace frenzykv

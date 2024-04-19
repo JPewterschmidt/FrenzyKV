@@ -4,8 +4,10 @@
 #include <cstddef>
 #include <filesystem>
 #include <memory>
+#include <limits>
 
 #include "nlohmann/json.hpp"
+#include "spdlog/spdlog.h"
 
 #include "log/logging_level.h"
 #include "frenzykv/statistics.h"
@@ -20,6 +22,7 @@ struct options
     // XXX remember to update those serializer code below after you add something above.
     size_t disk_block_bytes = 4096;
     size_t memory_page_bytes = 4096;
+    size_t max_block_segments_number = 1000;
     bool need_buffered_write = true;
     bool sync_write = false;
     bool buffered_read = true;
@@ -48,6 +51,7 @@ struct adl_serializer<frenzykv::options>
         j = json{ 
             { "disk_block_bytes",  opt.disk_block_bytes }, 
             { "memory_page_bytes", opt.memory_page_bytes },
+            { "max_block_segments_number", opt.max_block_segments_number },
             { "need_buffered_write", opt.need_buffered_write }, 
             { "sync_write", opt.sync_write }, 
             { "buffered_read", opt.buffered_read }, 
@@ -65,6 +69,11 @@ struct adl_serializer<frenzykv::options>
         j.at("disk_block_bytes").get_to(opt.disk_block_bytes);
         j.at("memory_page_bytes").get_to(opt.memory_page_bytes);
         j.at("need_buffered_write").get_to(opt.need_buffered_write);
+        j.at("max_block_segments_number").get_to(opt.max_block_segments_number);
+        if (opt.max_block_segments_number > ::std::numeric_limits<uint16_t>::max())
+        {
+            spdlog::debug("TODO: the max_block_segments_number exceeds the limits. Something bad happenning.");
+        }
         j.at("sync_write").get_to(opt.sync_write);
         j.at("buffered_read").get_to(opt.buffered_read);
         j.at("root_path").get_to(opt.root_path);
