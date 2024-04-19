@@ -90,11 +90,15 @@ bool block_segment::fit_public_prefix(const_bspan user_prefix) const noexcept
 }
 
 /*
- *  |                         Block                        |
- *  |-----|----|----|----|------|------|------|-----|------|
- *  | BTL | BS | BS | BS | .... | SBSO | SBSO | ... | NSBS |
- *  |-----|----|----|----|------|------|------|-----|------|
- *  |     |    Data             |  Meta Data               |
+ *  |-------------------------------------------------------------------|
+ *  |                            Block                                  |
+ *  |-----|------------------------------------------------|----|-------|
+ *  |     |                   Block content                | 1B |       |
+ *  |-----|----|----|----|------|------|------|-----|------|----|-------|  
+ *  | BTL | BS | BS | BS | .... | SBSO | SBSO | ... | NSBS | IC | CRC32 |
+ *  |-----|----|----|----|------|------|------|-----|------|----|-------|
+ *  |     |    Data             |  Meta Data               |    |       |
+ *  |-----|------------------------------------------------|----|-------|
  *                              ^                   ^
  *                              |                   |
  *                              |                   nsbs_beg_ptr(storage)
@@ -278,6 +282,11 @@ void block_builder::add(const kv_entry& kv)
     }
 }
 
+static ::std::span<char> block_content(::std::string& storage)
+{
+    return { storage.data() + sizeof(btl_t), storage.size() - sizeof(btl_t) };
+}
+
 ::std::string block_builder::finish()
 {
     assert(m_finish == false);
@@ -295,9 +304,14 @@ void block_builder::add(const kv_entry& kv)
         append_encode_int_to<sizeof(sbso_t)>(sbso, m_storage);
     }
     append_encode_int_to<sizeof(nsbs_t)>(static_cast<nsbs_t>(m_sbsos.size()), m_storage);
+
+    // Compression
+    [[maybe_unused]] auto bcontent = block_content(m_storage);
+    // TODO
     
     // Serialize BTL
     assert(m_storage.size() <= ::std::numeric_limits<btl_t>::max());
+
     btl_t btl = static_cast<btl_t>(m_storage.size());
     ::std::array<char, sizeof(btl)> buffer{};
     encode_int_to<sizeof(btl_t)>(btl, buffer);
