@@ -263,7 +263,7 @@ size_t write_eof_to_buffer(bspan buffer)
     return total_length_bytes_size;
 }
 
-size_t sequenced_key::serialize_sequence_number_append_to(::std::string& dst)
+size_t sequenced_key::serialize_sequence_number_append_to(::std::string& dst) const
 {
     ::std::array<char, sizeof(sequence_number_t)> buffer{};
     ::std::memcpy(buffer.data(), &m_seq, sizeof(m_seq));
@@ -271,7 +271,7 @@ size_t sequenced_key::serialize_sequence_number_append_to(::std::string& dst)
     return buffer.size();
 }
 
-size_t sequenced_key::serialize_user_key_append_to(::std::string& dst)
+size_t sequenced_key::serialize_user_key_append_to(::std::string& dst) const
 {
     ::std::array<char, sizeof(sequence_number_t)> ukl_buffer{};
     uint16_t ukl = static_cast<uint16_t>(m_user_key.size());

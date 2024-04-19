@@ -203,6 +203,7 @@ bool block_segment_builder::add(const kv_entry& kv)
     // Serialize RIL and RI
     ril_t ril = (ril_t)(sizeof(sequence_number_t) + kv.value().serialized_bytes_size());
     append_encode_int_to<sizeof(ril)>(ril, m_storage);
+    kv.key().serialize_sequence_number_append_to(m_storage);
     kv.value().serialize_append_to_string(m_storage);
 
     return true;
