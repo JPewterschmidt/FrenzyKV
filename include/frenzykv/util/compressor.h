@@ -17,8 +17,12 @@ class compressor_policy
 public:
     virtual ~compressor_policy() noexcept {}
     virtual ::std::string_view name() const noexcept = 0;
+
     virtual ::std::error_code compress(const_bspan original, ::std::string& compressed_dst) const = 0;
     virtual ::std::error_code decompress(const_bspan compressed_src, ::std::string& decompressed_dst) const = 0;
+
+    virtual ::std::error_code compress_append_to(const_bspan original, ::std::string& compressed_dst) const = 0;
+    virtual ::std::error_code decompress_append_to(const_bspan compressed_src, ::std::string& decompressed_dst) const = 0;
 };
 
 ::std::shared_ptr<compressor_policy> 
