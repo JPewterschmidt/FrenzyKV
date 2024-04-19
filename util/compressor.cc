@@ -71,4 +71,32 @@ public:
     }
 };
 
+::std::shared_ptr<compressor_policy> 
+get_compressor(const options& opt, ::std::string_view name)
+{
+    static const ::std::unordered_map<
+        ::std::string, 
+        ::std::shared_ptr<compressor_policy>
+    > compressors = 
+    []{ 
+        ::std::unordered_map<
+            ::std::string, 
+            ::std::shared_ptr<compressor_policy>
+        > result 
+        { 
+            { "zstd", ::std::make_shared<zstd_compressor>() }
+        };
+
+        return result;
+    }();
+
+    if (name.empty())
+    {
+        name = opt.compressor_name;
+    }
+
+    assert(compressors.contains(::std::string{name}));
+    return compressors.at(::std::string{name});
+}
+
 } // namespace frenzykv
