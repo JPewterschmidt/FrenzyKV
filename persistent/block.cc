@@ -147,7 +147,7 @@ const_bspan undecompressed_block_content(const_bspan storage)
     return { block_content_beg_ptr(storage), wc_beg_ptr(storage) };
 }
 
-crc32_t crc32_value_before_deserialization(const_bspan storage)
+crc32_t embeded_crc32_value(const_bspan storage)
 {
     const ::std::byte* crc32beg = crc32_beg_ptr(storage);
     crc32_t result{};
