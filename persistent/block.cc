@@ -182,4 +182,16 @@ segments(::std::vector<const ::std::byte*>::const_iterator insert_iter)
     }
 }
 
+void block_builder::add(const kv_entry& kv);
+{
+    const size_t seg_interval_sz = m_deps->opt()->max_block_segments_number;
+    ::std::string_view userk = kv.key().user_key();
+    if (!m_last_key.compare_and_increase_count(user_key))
+    {
+        m_last_key = { userk };
+    }
+    assert(m_last_key.number_v_with_last_k() <= seg_interval_sz);
+    // TODO
+}   
+
 } // namespace frenzykv

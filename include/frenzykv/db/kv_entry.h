@@ -14,6 +14,7 @@
  *      ----------------------------------------------------------------------------|  Next entry  |
  *      |total length |user key length |user key    |Seq |value length |value       |              |
  *      ----------------------------------------------------------------------------|~~~~~~~~~~~~~~|
+ *                    | serialized user key         |
  *                    | serialized sequenced key         | serialized value         |                      
  *                    ---------------------------------------------------------------
  *      ^                                                                            ^
@@ -135,6 +136,9 @@ public:
 
     ::std::string to_string_debug() const;
     bool operator==(const sequenced_key& other) const noexcept;
+
+    size_t serialize_sequence_number_append_to(::std::string& dst);
+    size_t serialize_user_key_append_to(::std::string& dst);
 
 private:
     sequence_number_t m_seq{};

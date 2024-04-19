@@ -263,4 +263,22 @@ size_t write_eof_to_buffer(bspan buffer)
     return total_length_bytes_size;
 }
 
+size_t kv_entry::serialize_sequence_number_append_to(::std::string& dst)
+{
+    ::std::array<char, sizeof(sequence_number_t)> buffer{};
+    ::std::memcpy(buffer.data(), &m_seq, sizeof(m_seq));
+    dst.append(buffer);
+    return buffer.size();
+}
+
+size_t kv_entry::serialize_user_key_append_to(::std::string& dst)
+{
+    ::std::array<char, sizeof(sequence_number_t)> ukl_buffer{};
+    uint16_t ukl = static_cast<uint16_t>(m_user_key.size());
+    ::std::memcpy(ukl_buffer.data(), &ukl, user_key_length_bytes_size);
+    dst.append(ukl_buffer);
+    dst.append(m_user_value);
+    return user_key_length_bytes_size + m_user_key.size();
+}
+
 } // namespace frenzykv

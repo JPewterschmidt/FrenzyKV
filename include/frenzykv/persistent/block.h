@@ -4,10 +4,13 @@
 #include <string_view>
 #include <vector>
 #include <cstdint>
+#include "toolpex/move_only.h"
 #include "koios/generator.h"
 #include "koios/exceptions.h"
 #include "frenzykv/util/parse_result.h"
 #include "frenzykv/types.h"
+#include "frenzykv/kvdb_deps.h"
+#include "frenzykv/db/kv_entry.h"
 
 namespace frenzykv
 {
@@ -76,6 +79,51 @@ private:
     const_bspan m_storage;
     ::std::vector<const ::std::byte*> m_special_segs;
     parse_result_t m_parse_result{};
+};
+
+/*! \brief Convert a range of kv_entry into block.
+ *
+ *  Assume that the kv_entry range is sorted.
+ */
+class block_builder : public toolpex::move_only
+{
+public:
+    block_builder(const kvdb_deps& deps) noexcept
+        : m_deps{ &deps }
+    {
+    }
+
+    void add(const kv_entry& kv);
+
+private:
+    struct last_key_helper
+    {
+        last_key_helper(::std::string_view uk) noexcept
+            : m_last_key{ uk }, m_count{ 1 }
+        {
+        }
+
+        size_t number_v_with_last_k() const noexcept { return m_count; }
+        ::std::string_view last_key() const noexcept { return m_last_key; }
+
+        bool compare_and_increase_count(::std::string_view newuk) noexcept
+        {
+            if (newuk == m_last_key) 
+            {
+                m_count++;
+                return true;
+            }
+            return false;
+        }
+
+        size_t m_count{};
+        ::std::string_view m_last_key{};
+    };
+
+private:
+    ::std::string m_storage;
+    const kvdb_deps* m_deps{};
+    last_key_helper m_last_k;
 };
 
 } // namespace frenzykv
