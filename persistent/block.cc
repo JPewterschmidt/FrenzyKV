@@ -101,10 +101,12 @@ bool block_segment::fit_public_prefix(const_bspan user_prefix) const noexcept
  *  |-----|----|----|----|------|------|------|-----|------|----|-------|
  *  |     |    Data             |  Meta Data               |    |       |
  *  |-----|------------------------------------------------|----|-------|
- *                              ^                   ^
- *                              |                   |
- *                              |                   nsbs_beg_ptr(storage)
- *                              meta_data_beg_ptr(storage)
+ *                              ^                   ^      ^    ^
+ *                              |                   |      |    |
+ *                              |                   |      |   crc32_beg_ptr(storage)
+ *                              |                   |    wc_beg_ptr(storage) 
+ *                              |          nsbs_beg_ptr(storage)
+ *                  meta_data_beg_ptr(storage)
  *  
  *  BTL:    4B  uint32_t    Block total length
  *  SBSO:   4B  uint32_t    Special Block Segment Offset
@@ -122,7 +124,36 @@ using btl_t  = uint32_t;
 using nsbs_t = uint16_t;
 using sbso_t = uint32_t;
 using crc32_t = uint32_t;
+using wc_t = uint8_t;
 static constexpr size_t bs_bl = sizeof(btl_t);
+
+static const ::std::byte* crc32_beg_ptr(const_bspan storage)
+{
+    btl_t btl{};
+    ::std::memcpy(&btl, storage.data(), sizeof(btl_t));
+    return storage.data() + btl - sizeof(crc32_t);
+}
+
+static crc32_t block_content_crc32_value(const_bspan storage)
+{
+    const ::std::byte* crc32beg = crc32_beg_ptr(storage);
+    crc32_t result{};
+    ::std::memcpy(&result, crc32beg, sizeof(crc32_t));
+    return result;
+}
+
+static const ::std::byte* wc_beg_ptr(const_bspan storage)
+{
+    return crc32_beg_ptr(storage) - 1;
+}
+
+static bool block_content_was_comprssed(const_bspan storage)
+{
+    wc_t wc{};
+    ::std::memcpy(&wc, wc_beg_ptr(storage), sizeof(wc));
+    assert(wc == 1 || wc == 0);
+    return wc == 1;
+}
 
 // UnCompressed data only
 static const ::std::byte* nsbs_beg_ptr(const_bspan s)
