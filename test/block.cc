@@ -32,6 +32,14 @@ TEST(block, builder)
     auto opt = *deps.opt();
     opt.max_block_segments_number = 100;
     deps.set_opt(::std::move(opt));
+
+    // You can serialize kv into SSTable via block_builder, 
+    // but block is also a basic conponents of an sstable, 
+    // the sstable also need add some metadata before and after those blocks.
+    //
+    // Until now(2024-04-19), the serialization and deserialization phase 
+    // of block are NOT support partial process.
+
     block_builder bb{deps};
     for (const auto& item : kvs)
     {

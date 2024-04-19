@@ -94,12 +94,13 @@ class block_segment_builder : public toolpex::move_only
 public:
     block_segment_builder(::std::string& dst, ::std::string_view userkey) noexcept;
 
+    auto public_prefix() const noexcept { return m_public_prefix; }
     bool add(const kv_entry& kv);
     void finish();
     
 private:
     ::std::string& m_storage;
-    ::std::string_view m_userkey;
+    ::std::string_view m_public_prefix;
     bool m_finish{};
 };
 

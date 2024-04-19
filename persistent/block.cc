@@ -185,20 +185,20 @@ segments_in_single_interval(::std::vector<const ::std::byte*>::const_iterator in
 }
 
 block_segment_builder::
-block_segment_builder(::std::string& dst, ::std::string_view userkey) noexcept
-    : m_storage{ dst }, m_userkey{ userkey }
+block_segment_builder(::std::string& dst, ::std::string_view public_prefix) noexcept
+    : m_storage{ dst }, m_public_prefix{ public_prefix }
 {
     // Serialize PPL and PP
-    ppl_t ppl = static_cast<ppl_t>(userkey.size());
+    ppl_t ppl = static_cast<ppl_t>(public_prefix.size());
     append_encode_int_to<sizeof(ppl)>(ppl, m_storage);
-    m_storage.append(userkey);
+    m_storage.append(public_prefix);
 }
 
 bool block_segment_builder::add(const kv_entry& kv)
 {
     if (m_finish) [[unlikely]] return false;
 
-    if (kv.key().user_key() != m_userkey)
+    if (kv.key().user_key() != m_public_prefix)
         return false;
 
     // Serialize RIL and RI
@@ -240,6 +240,10 @@ void block_builder::add(const kv_entry& kv)
     if (!m_current_seg_builder->add(kv))
     {
         m_current_seg_builder->finish();
+        [[maybe_unused]] auto last_prefix = m_current_seg_builder->public_prefix();
+        [[maybe_unused]] auto user_key = kv.key().user_key();
+        assert(memcmp_comparator{}(user_key, last_prefix) == ::std::strong_ordering::greater);
+        
         ++m_seg_count;
         if ((m_seg_count + 1) % interval_sz == 0)
         {
