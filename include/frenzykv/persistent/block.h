@@ -16,6 +16,9 @@
 namespace frenzykv
 {
 
+bool block_content_was_comprssed(const_bspan storage);
+const_bspan undecompressed_block_content(const_bspan storage);
+
 /*! \brief Segment of a block.
  *
  *  Parsing will be executed during construction. Not lazy evaluation.

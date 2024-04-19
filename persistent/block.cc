@@ -101,13 +101,21 @@ bool block_segment::fit_public_prefix(const_bspan user_prefix) const noexcept
  *  |-----|----|----|----|------|------|------|-----|------|----|-------|
  *  |     |    Data             |  Meta Data               |    |       |
  *  |-----|------------------------------------------------|----|-------|
- *                              ^                   ^      ^    ^
- *                              |                   |      |    |
- *                              |                   |      |   crc32_beg_ptr(storage)
- *                              |                   |    wc_beg_ptr(storage) 
- *                              |          nsbs_beg_ptr(storage)
- *                  meta_data_beg_ptr(storage)
- *  
+ *        ^                     ^                   ^      ^    ^
+ *        |                     |                   |      |    |
+ *        |                     |                   |      |   crc32_beg_ptr(storage)
+ *        |                     |                   |    wc_beg_ptr(storage) 
+ *        |                     |   nsbs_beg_ptr(storage)  ^ 
+ *        |          meta_data_beg_ptr(storage)            |
+ *   block_content_beg_ptr(storage)                        |
+ *        ^                                                |
+ *        |                                                |
+ *         ------------------------------------------------
+ *                                ^
+ *                                |
+ *              undecompressed_block_content(storage)
+ *
+ *
  *  BTL:    4B  uint32_t    Block total length
  *  SBSO:   4B  uint32_t    Special Block Segment Offset
  *  NSBS:   2B  uint16_t    Number of Special Block Segment
@@ -134,6 +142,21 @@ static const ::std::byte* crc32_beg_ptr(const_bspan storage)
     return storage.data() + btl - sizeof(crc32_t);
 }
 
+static const ::std::byte* block_content_beg_ptr(const_bspan storage)
+{
+    return storage.data() + sizeof(btl_t);
+}
+
+static const ::std::byte* wc_beg_ptr(const_bspan storage)
+{
+    return crc32_beg_ptr(storage) - 1;
+}
+
+const_bspan undecompressed_block_content(const_bspan storage)
+{
+    return { block_content_beg_ptr(storage), wc_beg_ptr(storage) };
+}
+
 static crc32_t block_content_crc32_value(const_bspan storage)
 {
     const ::std::byte* crc32beg = crc32_beg_ptr(storage);
@@ -142,12 +165,7 @@ static crc32_t block_content_crc32_value(const_bspan storage)
     return result;
 }
 
-static const ::std::byte* wc_beg_ptr(const_bspan storage)
-{
-    return crc32_beg_ptr(storage) - 1;
-}
-
-static bool block_content_was_comprssed(const_bspan storage)
+bool block_content_was_comprssed(const_bspan storage)
 {
     wc_t wc{};
     ::std::memcpy(&wc, wc_beg_ptr(storage), sizeof(wc));
