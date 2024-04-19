@@ -71,6 +71,24 @@ public:
     }
 };
 
+class empty_compressor final : public compressor_policy
+{
+public:
+    ::std::string_view name() const noexcept override { return "empty_compressor"; }
+
+    ::std::error_code compress(const_bspan original, ::std::string& compressed_dst) const override
+    {
+        compressed_dst = ::std::string{ as_string_view(original) };
+        return {};
+    }
+
+    ::std::error_code decompress(const_bspan compressed_src, ::std::string& decompressed_dst) const override
+    {
+        decompressed_dst = ::std::string{ as_string_view(compressed_src) };
+        return {};
+    }
+};
+
 ::std::shared_ptr<compressor_policy> 
 get_compressor(const options& opt, ::std::string_view name)
 {
@@ -84,7 +102,8 @@ get_compressor(const options& opt, ::std::string_view name)
             ::std::shared_ptr<compressor_policy>
         > result 
         { 
-            { "zstd", ::std::make_shared<zstd_compressor>() }
+            { "zstd", ::std::make_shared<zstd_compressor>() }, 
+            { "empty", ::std::make_shared<empty_compressor>() },
         };
 
         return result;
