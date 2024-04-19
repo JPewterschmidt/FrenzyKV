@@ -339,7 +339,7 @@ static ::std::span<char> block_content(::std::string& storage)
     auto b_content = block_content(m_storage);
 
     // Compression
-    if (m_compressor)
+    if (m_compressor && m_deps->opt()->need_compress)
     {
         auto opt_p = m_deps->opt();
 
@@ -352,6 +352,7 @@ static ::std::span<char> block_content(::std::string& storage)
             new_storage
         );
         if (ec) throw koios::exception(ec);
+        m_compressed = true;
 
         // Update b_content to the compressed version to calculate CRC32
         b_content = { 

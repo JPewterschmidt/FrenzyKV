@@ -176,7 +176,7 @@ public:
      *  This will append 4 zero-filled bytes to the storage string.
      */
     void finish();
-    bool is_finish() const noexcept { return m_finish; }
+    bool was_finish() const noexcept { return m_finish; }
     
 private:
     ::std::string& m_storage;
@@ -196,7 +196,8 @@ public:
     void add(const kv_entry& kv);
     ::std::string finish();
     size_t segment_count() const noexcept { return m_seg_count; }
-    bool is_finish() const noexcept { return m_finish; }
+    bool was_finish() const noexcept { return m_finish; }
+    bool was_compressed() const noexcept { return m_compressed; }
 
 private:
     ::std::string m_storage;
@@ -206,6 +207,7 @@ private:
     ::std::vector<uint32_t> m_sbsos;
     bool m_finish{};
     ::std::shared_ptr<compressor_policy> m_compressor{};
+    bool m_compressed{};
 };
 
 } // namespace frenzykv
