@@ -96,7 +96,7 @@ bool block_segment::fit_public_prefix(const_bspan user_prefix) const noexcept
  *  |-----|------------------------------------------------|----|-------|
  *  |     |                   Block content                | 1B |       |
  *  |-----|----|----|----|------|------|------|-----|------|----|-------|  
- *  | BTL | BS | BS | BS | .... | SBSO | SBSO | ... | NSBS | IC | CRC32 |
+ *  | BTL | BS | BS | BS | .... | SBSO | SBSO | ... | NSBS | WC | CRC32 |
  *  |-----|----|----|----|------|------|------|-----|------|----|-------|
  *  |     |    Data             |  Meta Data               |    |       |
  *  |-----|------------------------------------------------|----|-------|
@@ -324,6 +324,13 @@ static ::std::span<char> block_content(::std::string& storage)
         if (ec) throw koios::exception(ec);
 
         m_storage = ::std::move(new_storage);
+        // WC
+        m_storage.append(::std::string(1, 1));
+    }
+    else
+    {
+        // WC
+        m_storage.append(::std::string(1, 0));
     }
 
     // Serialize BTL
