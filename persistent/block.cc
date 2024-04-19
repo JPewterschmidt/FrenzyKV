@@ -59,7 +59,7 @@ parse_result_t block_segment::parse()
         return filled_with_zero<bs_ril>(cur);
     };
 
-    while (consumed_completely(current))
+    while (!consumed_completely(current))
     {
         ril_t r = read_ril(current);
         current += bs_ril;
@@ -160,7 +160,7 @@ segments(::std::vector<const ::std::byte*>::const_iterator insert_iter)
     
     auto parsing_end_iter = ::std::next(insert_iter);
 
-    const ::std::byte* sentinal = 
+    const ::std::byte* const sentinal = 
         (parsing_end_iter == m_special_segs.end()) ? meta_data_beg_ptr(m_storage) : *parsing_end_iter;
 
     while (current < sentinal)
@@ -230,7 +230,7 @@ void block_builder::add(const kv_entry& kv)
     if (!m_current_seg_builder)
     {
         m_current_seg_builder = ::std::make_unique<block_segment_builder>(m_storage, kv.key().user_key());
-        m_sbsos.push_back(0);
+        m_sbsos.push_back(sizeof(btl_t));
     }
 
     // Segment end, need a new segment.
@@ -271,6 +271,11 @@ void block_builder::add(const kv_entry& kv)
     btl_t btl = m_storage.size();
     ::std::array<char, sizeof(btl)> buffer{};
     encode_int_to<sizeof(btl_t)>(btl, buffer);
+
+    for (size_t i{}; i < sizeof(btl); ++i)
+    {
+        m_storage[i] = buffer[i];
+    }
 
     return ::std::move(m_storage);
 }

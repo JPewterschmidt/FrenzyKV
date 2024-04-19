@@ -68,13 +68,18 @@ public:
     const_bspan storage() const noexcept { return m_storage; }
     size_t special_segments_count() const noexcept { return m_special_segs.size(); }
 
-private:
-    parse_result_t parse_meta_data();
-
     /*! \brief Get segments from speficied position
      *  \param from A pointer point to a block segment, usually an element of `m_special_segs`.
      */
     koios::generator<block_segment> segments(::std::vector<const ::std::byte*>::const_iterator from);
+
+    koios::generator<block_segment> segments()
+    {
+        return segments(m_special_segs.begin());
+    }
+
+private:
+    parse_result_t parse_meta_data();
 
 private:
     const_bspan m_storage;

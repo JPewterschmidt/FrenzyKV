@@ -29,6 +29,9 @@ TEST(block, builder)
     }
     
     kvdb_deps deps{};
+    auto opt = *deps.opt();
+    opt.max_block_segments_number = 10;
+    deps.set_opt(::std::move(opt));
     block_builder bb{deps};
     for (const auto& item : kvs)
     {
@@ -39,6 +42,26 @@ TEST(block, builder)
 
     ASSERT_FALSE(block_rep.empty());
     
+
+    // -------------- deserialization --------------------
+    
+    const size_t desire_ssc = ((kvs.size() / 2000) / deps.opt()->max_block_segments_number) + 1;
     block b(::std::as_bytes(::std::span{block_rep}));
-    ASSERT_GE(b.special_segments_count(), 5);
+    ASSERT_GE(b.special_segments_count(), desire_ssc);
+
+    ::std::vector<kv_entry> kvs2{};
+    
+    for (block_segment seg : b.segments())
+    {
+        auto uk = seg.public_prefix();
+        for (const auto& item : seg.items())
+        {
+            sequence_number_t seq{};
+            ::std::memcpy(&seq, item.data(), sizeof(seq));
+            auto uv = item.subspan(sizeof(seq));
+            kvs2.emplace_back(seq, uk, uv);
+        }
+    }
+
+    ASSERT_EQ(kvs2.size(), kvs.size());
 }
