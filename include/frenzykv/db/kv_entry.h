@@ -48,7 +48,8 @@ inline static constexpr size_t seq_bytes_size               = 4u;
 inline static constexpr size_t user_value_length_bytes_size = 4u;
 
 // Functions below are usually used when dealing with file IO and deserialization.
-
+// XXX: You can ONLY use them when calling a ctor of kv components, 
+// including kv_entry, kv_user_value, sequenced_key.
 
 /*! \brief  Get the total length of a entry in a serialized memory.
  *
@@ -91,6 +92,11 @@ inline const_bspan serialized_sequenced_key(const_bspan s_entry)
 inline const_bspan serialized_user_value(const_bspan s_entry)
 {
     return serialized_user_value(s_entry.data());
+}
+
+inline const_bspan serialized_user_value_from_value_len(const_bspan user_value_with_len)
+{
+    return serialized_user_value_from_value_len(user_value_with_len.data());
 }
 
 size_t append_eof_to_string(::std::string& dst);
@@ -207,6 +213,11 @@ public:
 
     kv_entry(sequence_number_t seq, auto key, const_bspan value) 
         : kv_entry(seq, ::std::move(key), toolpex::lazy_string_concater{} + as_string_view(value))
+    {
+    }
+
+    kv_entry(sequence_number_t seq, auto key, kv_user_value val)
+        : kv_entry({seq, ::std::move(key)}, ::std::move(val))
     {
     }
 

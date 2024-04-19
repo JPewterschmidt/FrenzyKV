@@ -59,7 +59,8 @@ TEST(block, builder)
             sequence_number_t seq{};
             ::std::memcpy(&seq, item.data(), sizeof(seq));
             auto uv_with_len = item.subspan(sizeof(seq));
-            const auto& kkk = kvs2.emplace_back(seq, uk, serialized_user_value(uv_with_len));
+            uv_with_len = serialized_user_value_from_value_len(uv_with_len);
+            const auto& kkk = kvs2.emplace_back(seq, uk, kv_user_value::parse(uv_with_len));
             const auto seq2 = kkk.key().sequence_number();
             assert(seq2 == seq);
         }

@@ -244,6 +244,8 @@ const_bspan serialized_user_value_from_value_len(const ::std::byte* value_len_be
 {
     uint32_t value_len{};
     ::std::memcpy(&value_len, value_len_beg, user_value_length_bytes_size);
+
+    // Including the value len buffer itself
     return { value_len_beg, user_value_length_bytes_size + value_len };
 }
 
