@@ -89,6 +89,14 @@ private:
     parse_result_t m_parse_result{};
 };
 
+/*! \brief  The block segment builder
+ *
+ *  This class will parse kv_entry into a segment, 
+ *  all the kv added here must have the same user key as the public_prefix.
+ *
+ *  This class won't manage storage, 
+ *  it just simply append new stuff to a string that you passed as a ctor argument.
+ */
 class block_segment_builder : public toolpex::move_only
 {
 public:
