@@ -213,6 +213,8 @@ bool block_segment_builder::add(const kv_entry& kv)
 void block_segment_builder::finish()
 {
     if (m_finish) [[unlikely]] return;
+
+    // Write the BTL
     ::std::array<char, 4> buffer{};
     m_storage.append(buffer.data(), buffer.size());
     m_finish = true;
@@ -227,8 +229,11 @@ block_builder::block_builder(const kvdb_deps& deps)
 
 void block_builder::add(const kv_entry& kv)
 {
+    assert(m_finish == false);
+
     const size_t interval_sz = m_deps->opt()->max_block_segments_number;
 
+    // At the very beginning of the building phase, there's no seg builder, you need to create one.
     if (!m_current_seg_builder)
     {
         ++m_seg_count;
@@ -239,7 +244,12 @@ void block_builder::add(const kv_entry& kv)
     // Segment end, need a new segment.
     if (!m_current_seg_builder->add(kv))
     {
+        // This call will write 4 zero-filled bytes to the end of `m_storage`, 
+        // indicates termination of the current block segment.
         m_current_seg_builder->finish();
+
+        // You have to make sure that the following key are strictly larger the the last one.
+        // Only in the manner, the public prefix compression could give a best performance.
         [[maybe_unused]] auto last_prefix = m_current_seg_builder->public_prefix();
         [[maybe_unused]] auto user_key = kv.key().user_key();
         assert(memcmp_comparator{}(user_key, last_prefix) == ::std::strong_ordering::greater);
@@ -248,12 +258,20 @@ void block_builder::add(const kv_entry& kv)
         if ((m_seg_count + 1) % interval_sz == 0)
         {
             m_sbsos.push_back(static_cast<sbso_t>(m_storage.size()));
+
+            // Every block segment should has a terminator
+            // which compitable to RIL(See specification at the top of this file)
+            // filled with zero. Means there're no more one.
             assert(m_storage[m_storage.size() - 1] == 0);
             assert(m_storage[m_storage.size() - 2] == 0);
             assert(m_storage[m_storage.size() - 3] == 0);
             assert(m_storage[m_storage.size() - 4] == 0);
         }
+
+        // The block_segment_builder won't allocate any space, just simply append new stuff to `m_storage`
+        // so there won't be any problem invovlved with the memory management.
         m_current_seg_builder = ::std::make_unique<block_segment_builder>(m_storage, kv.key().user_key());
+
         [[maybe_unused]] bool add_result = m_current_seg_builder->add(kv);
         assert(add_result);
     }
@@ -261,6 +279,9 @@ void block_builder::add(const kv_entry& kv)
 
 ::std::string block_builder::finish()
 {
+    assert(m_finish == false);
+    m_finish = true;
+
     // If the last sbso point to exactly the end of data area, then delete it.
     if (m_sbsos.back() == m_storage.size())
     {

@@ -97,6 +97,7 @@ public:
     auto public_prefix() const noexcept { return m_public_prefix; }
     bool add(const kv_entry& kv);
     void finish();
+    bool is_finish() const noexcept { return m_finish; }
     
 private:
     ::std::string& m_storage;
@@ -116,6 +117,7 @@ public:
     void add(const kv_entry& kv);
     ::std::string finish();
     size_t segment_count() const noexcept { return m_seg_count; }
+    bool is_finish() const noexcept { return m_finish; }
 
 private:
     ::std::string m_storage;
@@ -123,6 +125,7 @@ private:
     ::std::unique_ptr<block_segment_builder> m_current_seg_builder;
     size_t m_seg_count{};
     ::std::vector<uint32_t> m_sbsos;
+    bool m_finish{};
 };
 
 } // namespace frenzykv
