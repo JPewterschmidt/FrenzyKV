@@ -14,9 +14,9 @@ TEST(block, builder)
     ::std::vector<kv_entry> kvs{};
     ::std::string key = "aaabbbccc";
 
-    for (size_t i{}; i < 1000; ++i)
+    for (size_t i{}; i < 10000; ++i)
     {
-        if (i % 20 == 0)
+        if (i % 200 == 0)
         {
             auto newkview = key | rv::transform([](auto&& ch){ return ch + 1; });
             key = ::std::string{ begin(newkview), end(newkview) };
@@ -24,13 +24,13 @@ TEST(block, builder)
 
         kvs.emplace_back(
             (sequence_number_t)i, 
-            key, "aaaaaaaaabbbbbbbbbbbbbcccccccccccdddddd"
+            key, "WilsonAlinaWilsonAlinaWilsonAlinaWilsonAlina"
         );
     }
     
     kvdb_deps deps{};
     auto opt = *deps.opt();
-    opt.max_block_segments_number = 10;
+    opt.max_block_segments_number = 100;
     deps.set_opt(::std::move(opt));
     block_builder bb{deps};
     for (const auto& item : kvs)
@@ -45,27 +45,31 @@ TEST(block, builder)
 
     // -------------- deserialization --------------------
     
-    const size_t desire_ssc = ((kvs.size() / 2000) / deps.opt()->max_block_segments_number) + 1;
+    const size_t desire_ssc = ((kvs.size() / 200) / deps.opt()->max_block_segments_number) + 1;
     block b(::std::as_bytes(::std::span{block_rep}));
     ASSERT_GE(b.special_segments_count(), desire_ssc);
 
     ::std::vector<kv_entry> kvs2{};
 
     size_t count{};
+    const auto& ssps = b.special_segment_ptrs();
     
-    for (block_segment seg : b.segments_in_single_interval())
+    for (auto iter = ssps.cbegin(); iter != ssps.cend(); ++iter)
     {
-        auto uk = seg.public_prefix();
-        for (const auto& item : seg.items())
+        for (block_segment seg : b.segments_in_single_interval(iter))
         {
-            sequence_number_t seq{};
-            ::std::memcpy(&seq, item.data(), sizeof(seq));
-            auto uv_with_len = item.subspan(sizeof(seq));
-            uv_with_len = serialized_user_value_from_value_len(uv_with_len);
-            const auto& kkk = kvs2.emplace_back(seq, uk, kv_user_value::parse(uv_with_len));
-            const auto seq2 = kkk.key().sequence_number();
-            ++count;
-            ASSERT_EQ(seq2, seq);
+            auto uk = seg.public_prefix();
+            for (const auto& item : seg.items())
+            {
+                sequence_number_t seq{};
+                ::std::memcpy(&seq, item.data(), sizeof(seq));
+                auto uv_with_len = item.subspan(sizeof(seq));
+                uv_with_len = serialized_user_value_from_value_len(uv_with_len);
+                const auto& kkk = kvs2.emplace_back(seq, uk, kv_user_value::parse(uv_with_len));
+                const auto seq2 = kkk.key().sequence_number();
+                ++count;
+                ASSERT_EQ(seq2, seq);
+            }
         }
     }
 
