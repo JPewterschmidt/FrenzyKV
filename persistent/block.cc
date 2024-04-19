@@ -94,7 +94,7 @@ bool block_segment::fit_public_prefix(const_bspan user_prefix) const noexcept
  *  |-------------------------------------------------------------------|
  *  |                            Block                                  |
  *  |-----|------------------------------------------------|----|-------|
- *  |     |                   Block content                | 1B |       |
+ *  |     |                   Block content                | 1B |  4B   |
  *  |-----|----|----|----|------|------|------|-----|------|----|-------|  
  *  | BTL | BS | BS | BS | .... | SBSO | SBSO | ... | NSBS | WC | CRC32 |
  *  |-----|----|----|----|------|------|------|-----|------|----|-------|
@@ -108,6 +108,8 @@ bool block_segment::fit_public_prefix(const_bspan user_prefix) const noexcept
  *  BTL:    4   uint32_t    Block total length
  *  SBSO:   4   uint32_t    Special Block Segment Offset
  *  NSBS:   2   uint16_t    Number of Special Block Segment
+ *  WC:     1               Wether compressed or not
+ *  CRC32:  4   uint32_t    The CRC32 result of NON-compressed Block content.
  */
 
 using btl_t  = uint32_t;
