@@ -48,7 +48,7 @@ public:
     const auto env() const noexcept { return m_env.load(::std::memory_order_relaxed); } 
     auto stat()      const noexcept { return m_stat.load(::std::memory_order_relaxed); }
 
-    void set_opt(options opt) noexcept { m_opt.store(::std::make_shared<options>(::std::move(opt)), ::std::memory_order_relaxed); }
+    // XXX Do not add any set_* function, see kvdb_deps_manipulator
 
 private: // Deps
     ::std::atomic<::std::shared_ptr<options>>     m_opt;
