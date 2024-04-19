@@ -1,3 +1,4 @@
+#include "crc32c/crc32c.h"
 #include "frenzykv/persistent/block.h"
 #include "frenzykv/util/comp.h"
 #include "frenzykv/util/serialize_helper.h"
@@ -105,23 +106,31 @@ bool block_segment::fit_public_prefix(const_bspan user_prefix) const noexcept
  *                              |                   nsbs_beg_ptr(storage)
  *                              meta_data_beg_ptr(storage)
  *  
- *  BTL:    4   uint32_t    Block total length
- *  SBSO:   4   uint32_t    Special Block Segment Offset
- *  NSBS:   2   uint16_t    Number of Special Block Segment
- *  WC:     1               Wether compressed or not
- *  CRC32:  4   uint32_t    The CRC32 result of NON-compressed Block content.
+ *  BTL:    4B  uint32_t    Block total length
+ *  SBSO:   4B  uint32_t    Special Block Segment Offset
+ *  NSBS:   2B  uint16_t    Number of Special Block Segment
+ *  WC:     1B              Wether compressed(=1) or not(=0)
+ *
+ *  CRC32:  4B  uint32_t    The CRC32 result of NON-compressed Block content.
+ *                          If the value of WC equals 1, the the value of CRC32 
+ *                          covers the integrity of compressed data
+ *                          Otherwise (the value WC is 0), CRC32 
+ *                          covers the integrity of uncompressed data.
  */
 
 using btl_t  = uint32_t;
 using nsbs_t = uint16_t;
 using sbso_t = uint32_t;
+using crc32_t = uint32_t;
 static constexpr size_t bs_bl = sizeof(btl_t);
 
+// UnCompressed data only
 static const ::std::byte* nsbs_beg_ptr(const_bspan s)
 {
     return s.data() + s.size() - sizeof(nsbs_t);
 }
 
+// UnCompressed data only
 static nsbs_t nsbs_value(const_bspan s)
 {
     nsbs_t result{};
@@ -131,6 +140,7 @@ static nsbs_t nsbs_value(const_bspan s)
     return result;
 }
 
+// UnCompressed data only
 static sbso_t sbso_value(const ::std::byte* sbso_ptr)
 {
     sbso_t result{};
@@ -138,12 +148,14 @@ static sbso_t sbso_value(const ::std::byte* sbso_ptr)
     return result;
 }
 
+// UnCompressed data only
 static const ::std::byte* meta_data_beg_ptr(const_bspan s)
 {
     nsbs_t nsbs = nsbs_value(s);
     return nsbs_beg_ptr(s) - (nsbs * sizeof(sbso_t));
 }
 
+// UnCompressed data only
 parse_result_t block::parse_meta_data()
 {
     const ::std::byte* sbso_cur = meta_data_beg_ptr(m_storage);
@@ -310,9 +322,6 @@ static ::std::span<char> block_content(::std::string& storage)
 
     auto b_content = block_content(m_storage);
 
-    // Calculate CRC
-    // TODO
-
     // Compression
     if (m_compressor)
     {
@@ -322,24 +331,37 @@ static ::std::span<char> block_content(::std::string& storage)
         ::std::string new_storage(sizeof(btl_t), 0);
 
         // Compress
-        auto ec = m_compressor->compress_append_to(::std::as_bytes(b_content), new_storage);
+        auto ec = m_compressor->compress_append_to(
+            ::std::as_bytes(b_content), 
+            new_storage
+        );
         if (ec) throw koios::exception(ec);
 
+        // Update b_content to the compressed version to calculate CRC32
+        b_content = { 
+            new_storage.data() + sizeof(btl_t), 
+            new_storage.size() - sizeof(btl_t) 
+        };
+
         m_storage = ::std::move(new_storage);
-        // WC
+        // WC Only 1 byte
         m_storage.append(::std::string(1, 1));
     }
     else
     {
-        // WC
+        // WC Only 1 byte
         m_storage.append(::std::string(1, 0));
     }
+
+    // Calculate and append CRC value
+    const crc32_t crc = crc32c::Crc32c(b_content.data(), b_content.size());
+    encode_int_append_to<sizeof(crc32_t)>(crc, m_storage);
 
     // Serialize BTL
     assert(m_storage.size() <= ::std::numeric_limits<btl_t>::max());
 
     btl_t btl = static_cast<btl_t>(m_storage.size());
-    encode_int_to<sizeof(btl_t)>(btl, { m_storage.data(), sizeof(btl) });
+    encode_int_append_to<sizeof(btl_t)>(btl, m_storage);
 
     return ::std::move(m_storage);
 }
