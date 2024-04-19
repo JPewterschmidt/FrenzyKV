@@ -100,6 +100,9 @@ private:
 class block_segment_builder : public toolpex::move_only
 {
 public:
+    /*! \param dst the storage string
+     *  \userkey the userkey which will be the public prefix of this block segment
+     */
     block_segment_builder(::std::string& dst, ::std::string_view userkey) noexcept;
 
     auto public_prefix() const noexcept { return m_public_prefix; }
