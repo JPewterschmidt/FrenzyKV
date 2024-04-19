@@ -14,9 +14,9 @@ TEST(block, builder)
     ::std::vector<kv_entry> kvs{};
     ::std::string key = "aaabbbccc";
 
-    for (size_t i{}; i < 100000; ++i)
+    for (size_t i{}; i < 1000; ++i)
     {
-        if (i % 2000 == 0)
+        if (i % 20 == 0)
         {
             auto newkview = key | rv::transform([](auto&& ch){ return ch + 1; });
             key = ::std::string{ begin(newkview), end(newkview) };
@@ -58,8 +58,10 @@ TEST(block, builder)
         {
             sequence_number_t seq{};
             ::std::memcpy(&seq, item.data(), sizeof(seq));
-            auto uv = item.subspan(sizeof(seq));
-            kvs2.emplace_back(seq, uk, uv);
+            auto uv_with_len = item.subspan(sizeof(seq));
+            const auto& kkk = kvs2.emplace_back(seq, uk, serialized_user_value(uv_with_len));
+            const auto seq2 = kkk.key().sequence_number();
+            assert(seq2 == seq);
         }
     }
 

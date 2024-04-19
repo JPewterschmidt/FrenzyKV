@@ -240,13 +240,18 @@ const_bspan serialized_sequenced_key(const ::std::byte* entry_beg)
     return { userkey_len_beg, user_key_length_bytes_size + userkey_len + seq_bytes_size };
 }
 
+const_bspan serialized_user_value_from_value_len(const ::std::byte* value_len_beg)
+{
+    uint32_t value_len{};
+    ::std::memcpy(&value_len, value_len_beg, user_value_length_bytes_size);
+    return { value_len_beg, user_value_length_bytes_size + value_len };
+}
+
 const_bspan serialized_user_value(const ::std::byte* entry_beg)
 {
     auto seq_key = serialized_sequenced_key(entry_beg);
     const ::std::byte* value_len_beg = entry_beg + total_length_bytes_size + seq_key.size();
-    uint32_t value_len{};
-    ::std::memcpy(&value_len, value_len_beg, user_value_length_bytes_size);
-    return { value_len_beg, user_value_length_bytes_size + value_len };
+    return serialized_user_value_from_value_len(value_len_beg);
 }
 
 size_t append_eof_to_string(::std::string& dst)

@@ -49,6 +49,7 @@ inline static constexpr size_t user_value_length_bytes_size = 4u;
 
 // Functions below are usually used when dealing with file IO and deserialization.
 
+
 /*! \brief  Get the total length of a entry in a serialized memory.
  *
  *  This function will noly read the first 4 bytes pointed by the `entry_beg` parameter.
@@ -57,6 +58,7 @@ inline static constexpr size_t user_value_length_bytes_size = 4u;
 size_t serialized_entry_size(const ::std::byte* entry_beg);
 const_bspan serialized_sequenced_key(const ::std::byte* entry_beg);
 const_bspan serialized_user_value(const ::std::byte* entry_beg);
+const_bspan serialized_user_value_from_value_len(const ::std::byte* value_len_beg);
 bool is_partial_serialized_entry(const ::std::byte* entry_beg, const ::std::byte* sentinel = nullptr);
 
 /*! \brief  Get the pointer point to the first byte of the next entry in serialized bytes.
