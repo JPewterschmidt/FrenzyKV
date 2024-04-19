@@ -61,7 +61,9 @@ using wc_t      = uint8_t;
 
 bool block_content_was_comprssed(const_bspan storage);
 const_bspan undecompressed_block_content(const_bspan storage);
-crc32_t block_content_crc32_value(const_bspan storage);
+crc32_t embeded_crc32_value(const_bspan storage);
+::std::string block_decompress(const_bspan storage, ::std::shared_ptr<compressor_policy> compressor);
+bool integrity_check(const_bspan storage);
 
 /*! \brief Segment of a block.
  *
@@ -176,7 +178,7 @@ public:
      *  This will append 4 zero-filled bytes to the storage string.
      */
     void finish();
-    bool is_finish() const noexcept { return m_finish; }
+    bool was_finish() const noexcept { return m_finish; }
     
 private:
     ::std::string& m_storage;
@@ -196,7 +198,8 @@ public:
     void add(const kv_entry& kv);
     ::std::string finish();
     size_t segment_count() const noexcept { return m_seg_count; }
-    bool is_finish() const noexcept { return m_finish; }
+    bool was_finish() const noexcept { return m_finish; }
+    bool was_compressed() const noexcept { return m_compressed; }
 
 private:
     ::std::string m_storage;
@@ -206,6 +209,7 @@ private:
     ::std::vector<uint32_t> m_sbsos;
     bool m_finish{};
     ::std::shared_ptr<compressor_policy> m_compressor{};
+    bool m_compressed{};
 };
 
 } // namespace frenzykv

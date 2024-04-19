@@ -26,6 +26,7 @@ struct options
     bool need_buffered_write = true;
     bool sync_write = false;
     bool buffered_read = true;
+    bool need_compress = true;
     ::std::filesystem::path root_path = "/tmp/frenzykv/";
     ::std::filesystem::path log_path = "frenzy-prewrite-log";
     logging_level log_level = logging_level::DEBUG;
@@ -53,6 +54,7 @@ struct adl_serializer<frenzykv::options>
             { "disk_block_bytes",  opt.disk_block_bytes }, 
             { "memory_page_bytes", opt.memory_page_bytes },
             { "max_block_segments_number", opt.max_block_segments_number },
+            { "need_compress", opt.need_compress },
             { "need_buffered_write", opt.need_buffered_write }, 
             { "sync_write", opt.sync_write }, 
             { "compressor_name", opt.compressor_name }, 
@@ -70,6 +72,7 @@ struct adl_serializer<frenzykv::options>
         ::std::string temp;
         j.at("disk_block_bytes").get_to(opt.disk_block_bytes);
         j.at("memory_page_bytes").get_to(opt.memory_page_bytes);
+        j.at("need_compress").get_to(opt.need_compress);
         j.at("need_buffered_write").get_to(opt.need_buffered_write);
         j.at("compressor_name").get_to(opt.compressor_name);
         j.at("max_block_segments_number").get_to(opt.max_block_segments_number);

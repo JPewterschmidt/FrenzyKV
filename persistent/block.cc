@@ -93,6 +93,42 @@ bool block_segment::fit_public_prefix(const_bspan user_prefix) const noexcept
 
 // ====================================================================
 
+static const ::std::byte* crc32_beg_ptr(const_bspan storage)
+{
+    btl_t btl{};
+    ::std::memcpy(&btl, storage.data(), sizeof(btl_t));
+    return storage.data() + btl - sizeof(crc32_t);
+}
+
+static const ::std::byte* wc_beg_ptr(const_bspan storage)
+{
+    return crc32_beg_ptr(storage) - 1;
+}
+
+static wc_t wc_value(const_bspan storage)
+{
+    wc_t result{};
+    const ::std::byte* wcp = wc_beg_ptr(storage);
+    ::std::memcpy(&result, wcp, sizeof(wc_t));
+    return result;
+}
+
+::std::string block_decompress(
+    const_bspan storage, 
+    ::std::shared_ptr<compressor_policy> compressor)
+{
+    assert(compressor != nullptr);
+    assert(wc_value(storage) == 1);
+    auto compressed_part = undecompressed_block_content(storage);
+    ::std::string result(sizeof(btl_t), 0);
+    ::std::error_code ec = compressor->decompress_append_to(compressed_part, result);
+    if (ec) throw koios::exception(ec);
+    
+    result.resize(result.size() + sizeof(wc_t) + sizeof(crc32_t), 0);
+
+    return result;
+}
+
 static btl_t btl_value(const_bspan storage)
 {
     btl_t result{};
@@ -101,21 +137,9 @@ static btl_t btl_value(const_bspan storage)
     return result;
 }
 
-static const ::std::byte* crc32_beg_ptr(const_bspan storage)
-{
-    btl_t btl{};
-    ::std::memcpy(&btl, storage.data(), sizeof(btl_t));
-    return storage.data() + btl - sizeof(crc32_t);
-}
-
 static const ::std::byte* block_content_beg_ptr(const_bspan storage)
 {
     return storage.data() + sizeof(btl_t);
-}
-
-static const ::std::byte* wc_beg_ptr(const_bspan storage)
-{
-    return crc32_beg_ptr(storage) - 1;
 }
 
 const_bspan undecompressed_block_content(const_bspan storage)
@@ -123,12 +147,20 @@ const_bspan undecompressed_block_content(const_bspan storage)
     return { block_content_beg_ptr(storage), wc_beg_ptr(storage) };
 }
 
-crc32_t block_content_crc32_value(const_bspan storage)
+crc32_t embeded_crc32_value(const_bspan storage)
 {
     const ::std::byte* crc32beg = crc32_beg_ptr(storage);
     crc32_t result{};
     ::std::memcpy(&result, crc32beg, sizeof(crc32_t));
     return result;
+}
+
+bool integrity_check(const_bspan storage)
+{
+    auto bc = undecompressed_block_content(storage);
+    crc32_t crc32 = crc32c::Crc32c(reinterpret_cast<const char*>(bc.data()), bc.size());
+    crc32_t ecrc32 = embeded_crc32_value(storage);
+    return crc32 == ecrc32;
 }
 
 bool block_content_was_comprssed(const_bspan storage)
@@ -339,7 +371,7 @@ static ::std::span<char> block_content(::std::string& storage)
     auto b_content = block_content(m_storage);
 
     // Compression
-    if (m_compressor)
+    if (m_compressor && m_deps->opt()->need_compress)
     {
         auto opt_p = m_deps->opt();
 
@@ -352,6 +384,7 @@ static ::std::span<char> block_content(::std::string& storage)
             new_storage
         );
         if (ec) throw koios::exception(ec);
+        m_compressed = true;
 
         // Update b_content to the compressed version to calculate CRC32
         b_content = { 
