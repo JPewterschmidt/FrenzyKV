@@ -106,7 +106,20 @@ public:
     block_segment_builder(::std::string& dst, ::std::string_view userkey) noexcept;
 
     auto public_prefix() const noexcept { return m_public_prefix; }
+
+    /*! \param kv A new kv entry which the user key value and `public_prefix()` are equal.
+     *
+     *  \retval true Added successfully
+     *  \retval false `kv` may have a different user key, or what ever. 
+     *                Means that you need to finish this seg builder, 
+     *                and replace it with a new one.1
+     */
     bool add(const kv_entry& kv);
+
+    /*! \brief Mark the termination of the current segment.
+     *  
+     *  This will append 4 zero-filled bytes to the storage string.
+     */
     void finish();
     bool is_finish() const noexcept { return m_finish; }
     
