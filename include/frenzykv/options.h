@@ -29,6 +29,7 @@ struct options
     ::std::filesystem::path root_path = "/tmp/frenzykv/";
     ::std::filesystem::path log_path = "frenzy-prewrite-log";
     logging_level log_level = logging_level::DEBUG;
+    ::std::string compressor_name = "zstd";
 };
 
 options get_global_options() noexcept;
@@ -54,6 +55,7 @@ struct adl_serializer<frenzykv::options>
             { "max_block_segments_number", opt.max_block_segments_number },
             { "need_buffered_write", opt.need_buffered_write }, 
             { "sync_write", opt.sync_write }, 
+            { "compressor_name", opt.compressor_name }, 
             { "buffered_read", opt.buffered_read }, 
             { "root_path", opt.root_path }, 
             { "log", {
@@ -69,6 +71,7 @@ struct adl_serializer<frenzykv::options>
         j.at("disk_block_bytes").get_to(opt.disk_block_bytes);
         j.at("memory_page_bytes").get_to(opt.memory_page_bytes);
         j.at("need_buffered_write").get_to(opt.need_buffered_write);
+        j.at("compressor_name").get_to(opt.compressor_name);
         j.at("max_block_segments_number").get_to(opt.max_block_segments_number);
         if (opt.max_block_segments_number > ::std::numeric_limits<uint16_t>::max())
         {
