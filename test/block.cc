@@ -87,6 +87,7 @@ TEST_F(block_test, builder)
     kvdb_deps deps{};
     auto opt = ::std::make_shared<options>(*deps.opt());
     opt->max_block_segments_number = 100;
+    opt->need_compress = false;
     kvdb_deps_manipulator(deps).exchange_option(opt);
 
     set_deps(deps);
@@ -101,6 +102,7 @@ TEST_F(block_test, deserialization)
     kvdb_deps deps{};
     auto opt = ::std::make_shared<options>(*deps.opt());
     opt->max_block_segments_number = 100;
+    opt->need_compress = false;
     kvdb_deps_manipulator(deps).exchange_option(opt);
 
     set_deps(deps);
