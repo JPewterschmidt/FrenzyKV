@@ -71,6 +71,7 @@ parse_result_t block_segment::parse()
         return parse_result_t::partial;
     else if (filled_with_zero<bs_ril>(current))
     {
+        current += 4; // zero-filled RIL OEF
         m_storage = m_storage.subspan(0, current - m_storage.data());
     }
 
@@ -230,6 +231,7 @@ void block_builder::add(const kv_entry& kv)
 
     if (!m_current_seg_builder)
     {
+        ++m_seg_count;
         m_current_seg_builder = ::std::make_unique<block_segment_builder>(m_storage, kv.key().user_key());
         m_sbsos.push_back(sizeof(btl_t));
     }
