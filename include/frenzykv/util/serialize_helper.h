@@ -33,15 +33,6 @@ void encode_int_to(::std::integral auto i, ::std::span<char> buffer)
     encode_int_to<intsize>(i, ::std::as_writable_bytes(buffer));
 }
 
-template<::std::size_t intsize>
-void encode_int_append_to(::std::integral auto i, ::std::string& dst)
-{
-    const size_t oldsz = dst.size();
-    static_assert(intsize == sizeof(i), "encode_int_append_to: intsize must equals to sizeof(i)");
-    dst.resize(oldsz + sizeof(intsize), 0);
-    ::std::memcpy(dst.data() + oldsz, &i, intsize);
-}
-
 } // namespace frenzykv
 
 #endif

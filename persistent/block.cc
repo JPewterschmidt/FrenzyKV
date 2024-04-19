@@ -93,6 +93,14 @@ bool block_segment::fit_public_prefix(const_bspan user_prefix) const noexcept
 
 // ====================================================================
 
+static btl_t btl_value(const_bspan storage)
+{
+    btl_t result{};
+    ::std::memcpy(&result, storage.data(), sizeof(btl_t));
+    assert(result != 0);
+    return result;
+}
+
 static const ::std::byte* crc32_beg_ptr(const_bspan storage)
 {
     btl_t btl{};
@@ -134,7 +142,8 @@ bool block_content_was_comprssed(const_bspan storage)
 // UnCompressed data only
 static const ::std::byte* nsbs_beg_ptr(const_bspan s)
 {
-    return s.data() + s.size() - sizeof(nsbs_t);
+    btl_t btl = btl_value(s);
+    return s.data() + btl - sizeof(nsbs_t) - sizeof(wc_t) - sizeof(crc32_t);
 }
 
 // UnCompressed data only
@@ -352,23 +361,25 @@ static ::std::span<char> block_content(::std::string& storage)
 
         m_storage = ::std::move(new_storage);
         // WC Only 1 byte
-        m_storage.append(::std::string(1, 1));
+        wc_t wc{ 1 };
+        append_encode_int_to<sizeof(uint8_t)>(wc, m_storage);
     }
     else
     {
         // WC Only 1 byte
-        m_storage.append(::std::string(1, 0));
+        wc_t wc{ 0 };
+        append_encode_int_to<sizeof(uint8_t)>(wc, m_storage);
     }
 
     // Calculate and append CRC value
     const crc32_t crc = crc32c::Crc32c(b_content.data(), b_content.size());
-    encode_int_append_to<sizeof(crc32_t)>(crc, m_storage);
+    append_encode_int_to<sizeof(crc32_t)>(crc, m_storage);
 
     // Serialize BTL
     assert(m_storage.size() <= ::std::numeric_limits<btl_t>::max());
 
     btl_t btl = static_cast<btl_t>(m_storage.size());
-    encode_int_append_to<sizeof(btl_t)>(btl, m_storage);
+    encode_int_to<sizeof(btl_t)>(btl, ::std::as_writable_bytes(::std::span{ m_storage.data(), sizeof(btl) }));
 
     return ::std::move(m_storage);
 }
