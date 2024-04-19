@@ -50,8 +50,10 @@ TEST(block, builder)
     ASSERT_GE(b.special_segments_count(), desire_ssc);
 
     ::std::vector<kv_entry> kvs2{};
+
+    size_t count{};
     
-    for (block_segment seg : b.segments())
+    for (block_segment seg : b.segments_in_single_interval())
     {
         auto uk = seg.public_prefix();
         for (const auto& item : seg.items())
@@ -62,7 +64,8 @@ TEST(block, builder)
             uv_with_len = serialized_user_value_from_value_len(uv_with_len);
             const auto& kkk = kvs2.emplace_back(seq, uk, kv_user_value::parse(uv_with_len));
             const auto seq2 = kkk.key().sequence_number();
-            assert(seq2 == seq);
+            ++count;
+            ASSERT_EQ(seq2, seq);
         }
     }
 
