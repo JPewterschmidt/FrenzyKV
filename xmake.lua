@@ -11,7 +11,8 @@ add_requires(
     "nlohmann_json", 
     "spdlog", 
     "jemalloc", 
-    "zstd"
+    "zstd", 
+    "crc32c"
 )
 
 includes(
@@ -47,7 +48,8 @@ target("FrenzyKV")
         "concurrentqueue", 
         "nlohmann_json", 
         "spdlog",
-        "zstd"
+        "zstd", 
+        "crc32c"
     )
     set_warnings("all", "error")
     add_cxflags("-Wconversion", { force = true })
