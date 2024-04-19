@@ -155,6 +155,14 @@ crc32_t embeded_crc32_value(const_bspan storage)
     return result;
 }
 
+bool integrity_check(const_bspan storage)
+{
+    auto bc = undecompressed_block_content(storage);
+    crc32_t crc32 = crc32c::Crc32c(reinterpret_cast<const char*>(bc.data()), bc.size());
+    crc32_t ecrc32 = embeded_crc32_value(storage);
+    return crc32 == ecrc32;
+}
+
 bool block_content_was_comprssed(const_bspan storage)
 {
     wc_t wc{};
