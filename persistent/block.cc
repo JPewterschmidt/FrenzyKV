@@ -1,6 +1,7 @@
 #include "frenzykv/persistent/block.h"
 #include "frenzykv/util/comp.h"
 #include "frenzykv/util/serialize_helper.h"
+#include "frenzykv/util/compressor.h"
 #include <cstring>
 #include <limits>
 #include <cassert>
@@ -225,8 +226,8 @@ void block_segment_builder::finish()
     m_finish = true;
 }
 
-block_builder::block_builder(const kvdb_deps& deps) 
-    : m_deps{ &deps }
+block_builder::block_builder(const kvdb_deps& deps, ::std::shared_ptr<compressor_policy> compressor) 
+    : m_deps{ &deps }, m_compressor{ ::std::move(compressor) }
 {
     // Prepare BTL space
     m_storage.resize(sizeof(btl_t), 0);
@@ -305,21 +306,31 @@ static ::std::span<char> block_content(::std::string& storage)
     }
     append_encode_int_to<sizeof(nsbs_t)>(static_cast<nsbs_t>(m_sbsos.size()), m_storage);
 
-    // Compression
-    [[maybe_unused]] auto bcontent = block_content(m_storage);
+    auto b_content = block_content(m_storage);
+
+    // Calculate CRC
     // TODO
-    
+
+    // Compression
+    if (m_compressor)
+    {
+        auto opt_p = m_deps->opt();
+
+        // Prepare memory for BTL
+        ::std::string new_storage(sizeof(btl_t), 0);
+
+        // Compress
+        auto ec = m_compressor->compress_append_to(::std::as_bytes(b_content), new_storage);
+        if (ec) throw koios::exception(ec);
+
+        m_storage = ::std::move(new_storage);
+    }
+
     // Serialize BTL
     assert(m_storage.size() <= ::std::numeric_limits<btl_t>::max());
 
     btl_t btl = static_cast<btl_t>(m_storage.size());
-    ::std::array<char, sizeof(btl)> buffer{};
-    encode_int_to<sizeof(btl_t)>(btl, buffer);
-
-    for (size_t i{}; i < sizeof(btl); ++i)
-    {
-        m_storage[i] = buffer[i];
-    }
+    encode_int_to<sizeof(btl_t)>(btl, { m_storage.data(), sizeof(btl) });
 
     return ::std::move(m_storage);
 }

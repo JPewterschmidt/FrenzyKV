@@ -8,6 +8,7 @@
 #include "koios/generator.h"
 #include "koios/exceptions.h"
 #include "frenzykv/util/parse_result.h"
+#include "frenzykv/util/compressor.h"
 #include "frenzykv/types.h"
 #include "frenzykv/kvdb_deps.h"
 #include "frenzykv/db/kv_entry.h"
@@ -136,7 +137,7 @@ private:
 class block_builder : public toolpex::move_only
 {
 public:
-    block_builder(const kvdb_deps& deps);
+    block_builder(const kvdb_deps& deps, ::std::shared_ptr<compressor_policy> compressor = {});
 
     void add(const kv_entry& kv);
     ::std::string finish();
@@ -150,6 +151,7 @@ private:
     size_t m_seg_count{};
     ::std::vector<uint32_t> m_sbsos;
     bool m_finish{};
+    ::std::shared_ptr<compressor_policy> m_compressor{};
 };
 
 } // namespace frenzykv
