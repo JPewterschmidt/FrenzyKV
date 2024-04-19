@@ -66,6 +66,7 @@ public:
     }
 
     const_bspan storage() const noexcept { return m_storage; }
+    size_t special_segments_count() const noexcept { return m_special_segs.size(); }
 
 private:
     parse_result_t parse_meta_data();
