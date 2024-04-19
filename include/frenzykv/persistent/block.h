@@ -53,11 +53,11 @@ namespace frenzykv
  *                          covers the integrity of uncompressed data.
  */
 
-using btl_t  = uint32_t;
-using nsbs_t = uint16_t;
-using sbso_t = uint32_t;
-using crc32_t = uint32_t;
-using wc_t = uint8_t;
+using btl_t     = uint32_t;
+using nsbs_t    = uint16_t;
+using sbso_t    = uint32_t;
+using crc32_t   = uint32_t;
+using wc_t      = uint8_t;
 
 bool block_content_was_comprssed(const_bspan storage);
 const_bspan undecompressed_block_content(const_bspan storage);
@@ -106,6 +106,13 @@ private:
 class block
 {
 public:
+    /*! \param  Uncompressed block storage
+     *
+     *  Wont check the CRC32 checksum, since the value of checksum 
+     *  depends on wethere compression happened.
+     *  Caller should deal with the check sum.
+     *  Caller should decompress the block storage.
+     */
     block(const_bspan block_storage)
         : m_storage{ block_storage }
     {
