@@ -81,6 +81,20 @@ private:
     parse_result_t m_parse_result{};
 };
 
+class block_segment_builder : public toolpex::move_only
+{
+public:
+    block_segment_builder(::std::string& dst, ::std::string_view userkey) noexcept;
+
+    bool add(const kv_entry& kv);
+    void finish();
+    
+private:
+    ::std::string& m_storage;
+    ::std::string_view m_userkey;
+    bool m_finish{};
+};
+
 /*! \brief Convert a range of kv_entry into block.
  *
  *  Assume that the kv_entry range is sorted.
@@ -88,42 +102,17 @@ private:
 class block_builder : public toolpex::move_only
 {
 public:
-    block_builder(const kvdb_deps& deps) noexcept
-        : m_deps{ &deps }
-    {
-    }
+    block_builder(const kvdb_deps& deps);
 
     void add(const kv_entry& kv);
-
-private:
-    struct last_key_helper
-    {
-        last_key_helper(::std::string_view uk) noexcept
-            : m_last_key{ uk }, m_count{ 1 }
-        {
-        }
-
-        size_t number_v_with_last_k() const noexcept { return m_count; }
-        ::std::string_view last_key() const noexcept { return m_last_key; }
-
-        bool compare_and_increase_count(::std::string_view newuk) noexcept
-        {
-            if (newuk == m_last_key) 
-            {
-                m_count++;
-                return true;
-            }
-            return false;
-        }
-
-        size_t m_count{};
-        ::std::string_view m_last_key{};
-    };
+    ::std::string finish();
 
 private:
     ::std::string m_storage;
     const kvdb_deps* m_deps{};
-    last_key_helper m_last_k;
+    ::std::unique_ptr<block_segment_builder> m_current_seg_builder;
+    size_t m_seg_count{};
+    ::std::vector<uint32_t> m_sbsos;
 };
 
 } // namespace frenzykv

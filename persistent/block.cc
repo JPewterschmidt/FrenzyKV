@@ -1,5 +1,6 @@
 #include "frenzykv/persistent/block.h"
 #include "frenzykv/util/comp.h"
+#include "frenzykv/util/serialize_helper.h"
 #include <cstring>
 #include <cassert>
 #include <iterator>
@@ -182,16 +183,96 @@ segments(::std::vector<const ::std::byte*>::const_iterator insert_iter)
     }
 }
 
-void block_builder::add(const kv_entry& kv);
+block_segment_builder::
+block_segment_builder(::std::string& dst, ::std::string_view userkey) noexcept
+    : m_storage{ dst }, m_userkey{ userkey }
 {
-    const size_t seg_interval_sz = m_deps->opt()->max_block_segments_number;
-    ::std::string_view userk = kv.key().user_key();
-    if (!m_last_key.compare_and_increase_count(user_key))
-    {
-        m_last_key = { userk };
-    }
-    assert(m_last_key.number_v_with_last_k() <= seg_interval_sz);
-    // TODO
+    // Serialize PPL and PP
+    ppl_t ppl = static_cast<ppl_t>(userkey.size());
+    append_encode_int_to<sizeof(ppl)>(ppl, m_storage);
+    m_storage.append(userkey);
+}
+
+bool block_segment_builder::add(const kv_entry& kv)
+{
+    if (m_finish) [[unlikely]] return false;
+
+    if (kv.key().user_key() != m_userkey)
+        return false;
+
+    // Serialize RIL and RI
+    ril_t ril = (ril_t)(sizeof(sequence_number_t) + kv.value().serialized_bytes_size());
+    append_encode_int_to<sizeof(ril)>(ril, m_storage);
+    kv.value().serialize_append_to_string(m_storage);
+
+    return true;
 }   
+       
+void block_segment_builder::finish()
+{
+    if (m_finish) [[unlikely]] return;
+    ::std::array<char, 4> buffer{};
+    m_storage.append(buffer.data(), buffer.size());
+    m_finish = true;
+}
+
+block_builder::block_builder(const kvdb_deps& deps) 
+    : m_deps{ &deps }
+{
+    // Prepare BTL space
+    m_storage.resize(sizeof(btl_t), 0);
+}
+
+void block_builder::add(const kv_entry& kv)
+{
+    const size_t interval_sz = m_deps->opt()->max_block_segments_number;
+
+    if (!m_current_seg_builder)
+    {
+        m_current_seg_builder = ::std::make_unique<block_segment_builder>(m_storage, kv.key().user_key());
+        m_sbsos.push_back(0);
+    }
+
+    // Segment end, need a new segment.
+    if (!m_current_seg_builder->add(kv))
+    {
+        m_current_seg_builder->finish();
+        ++m_seg_count;
+        if ((m_seg_count + 1) % interval_sz == 0)
+        {
+            m_sbsos.push_back(static_cast<sbso_t>(m_storage.size()));
+            assert(m_storage[m_storage.size() - 1] == 0);
+            assert(m_storage[m_storage.size() - 2] == 0);
+            assert(m_storage[m_storage.size() - 3] == 0);
+            assert(m_storage[m_storage.size() - 4] == 0);
+        }
+        m_current_seg_builder = ::std::make_unique<block_segment_builder>(m_storage, kv.key().user_key());
+        [[maybe_unused]] bool add_result = m_current_seg_builder->add(kv);
+        assert(add_result);
+    }
+}
+
+::std::string block_builder::finish()
+{
+    // If the last sbso point to exactly the end of data area, then delete it.
+    if (m_sbsos.back() == m_storage.size())
+    {
+        m_sbsos.erase(::std::prev(m_sbsos.end()));
+    }
+
+    // Serialize Meta data area.
+    for (sbso_t sbso : m_sbsos)
+    {
+        append_encode_int_to<sizeof(sbso_t)>(sbso, m_storage);
+    }
+    append_encode_int_to<sizeof(nsbs_t)>(static_cast<nsbs_t>(m_sbsos.size()), m_storage);
+    
+    // Serialize BTL
+    btl_t btl = m_storage.size();
+    ::std::array<char, sizeof(btl)> buffer{};
+    encode_int_to<sizeof(btl_t)>(btl, buffer);
+
+    return ::std::move(m_storage);
+}
 
 } // namespace frenzykv

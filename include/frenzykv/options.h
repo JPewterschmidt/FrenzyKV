@@ -7,6 +7,7 @@
 #include <limits>
 
 #include "nlohmann/json.hpp"
+#include "spdlog/spdlog.h"
 
 #include "log/logging_level.h"
 #include "frenzykv/statistics.h"
