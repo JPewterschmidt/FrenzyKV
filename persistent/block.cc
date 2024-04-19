@@ -91,49 +91,7 @@ bool block_segment::fit_public_prefix(const_bspan user_prefix) const noexcept
     ) == ::std::strong_ordering::equal;
 }
 
-/*
- *  |-------------------------------------------------------------------|
- *  |                            Block                                  |
- *  |-----|------------------------------------------------|----|-------|
- *  |     |                   Block content                | 1B |  4B   |
- *  |-----|----|----|----|------|------|------|-----|------|----|-------|  
- *  | BTL | BS | BS | BS | .... | SBSO | SBSO | ... | NSBS | WC | CRC32 |
- *  |-----|----|----|----|------|------|------|-----|------|----|-------|
- *  |     |    Data             |  Meta Data               |    |       |
- *  |-----|------------------------------------------------|----|-------|
- *        ^                     ^                   ^      ^    ^
- *        |                     |                   |      |    |
- *        |                     |                   |      |   crc32_beg_ptr(storage)
- *        |                     |                   |    wc_beg_ptr(storage) 
- *        |                     |   nsbs_beg_ptr(storage)  ^ 
- *        |          meta_data_beg_ptr(storage)            |
- *   block_content_beg_ptr(storage)                        |
- *        ^                                                |
- *        |                                                |
- *         ------------------------------------------------
- *                                ^
- *                                |
- *              undecompressed_block_content(storage)
- *
- *
- *  BTL:    4B  uint32_t    Block total length
- *  SBSO:   4B  uint32_t    Special Block Segment Offset
- *  NSBS:   2B  uint16_t    Number of Special Block Segment
- *  WC:     1B              Wether compressed(=1) or not(=0)
- *
- *  CRC32:  4B  uint32_t    The CRC32 result of NON-compressed Block content.
- *                          If the value of WC equals 1, the the value of CRC32 
- *                          covers the integrity of compressed data
- *                          Otherwise (the value WC is 0), CRC32 
- *                          covers the integrity of uncompressed data.
- */
-
-using btl_t  = uint32_t;
-using nsbs_t = uint16_t;
-using sbso_t = uint32_t;
-using crc32_t = uint32_t;
-using wc_t = uint8_t;
-static constexpr size_t bs_bl = sizeof(btl_t);
+// ====================================================================
 
 static const ::std::byte* crc32_beg_ptr(const_bspan storage)
 {
@@ -157,7 +115,7 @@ const_bspan undecompressed_block_content(const_bspan storage)
     return { block_content_beg_ptr(storage), wc_beg_ptr(storage) };
 }
 
-static crc32_t block_content_crc32_value(const_bspan storage)
+crc32_t block_content_crc32_value(const_bspan storage)
 {
     const ::std::byte* crc32beg = crc32_beg_ptr(storage);
     crc32_t result{};
