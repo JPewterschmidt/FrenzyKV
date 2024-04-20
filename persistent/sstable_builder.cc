@@ -4,7 +4,7 @@
 namespace frenzykv
 {
 
-static constexpr uint32_t magic_number = 0x47d6ddc3;
+static constexpr mgn_t magic_number = 0x47d6ddc3;
 
 sstable_builder::sstable_builder(
         const kvdb_deps& deps, 

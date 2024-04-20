@@ -36,6 +36,7 @@ namespace frenzykv
  */
 
 using mbo_t = uint64_t;
+using mgn_t = uint32_t; // magic number type
 
 class sstable_builder
 {
