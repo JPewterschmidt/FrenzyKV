@@ -1,4 +1,4 @@
-#include "frenzykv/persistent/sstable.h"
+#include "frenzykv/persistent/sstable_builder.h"
 #include "frenzykv/util/serialize_helper.h"
 
 namespace frenzykv
