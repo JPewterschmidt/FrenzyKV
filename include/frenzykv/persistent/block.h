@@ -202,6 +202,7 @@ public:
     bool was_finish() const noexcept { return m_finish; }
     bool was_compressed() const noexcept { return m_compressed; }
     size_t bytes_size() const noexcept { return m_storage.size(); }
+    auto compressor() const noexcept { return m_compressor; }
 
 private:
     ::std::string m_storage;

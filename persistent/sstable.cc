@@ -5,16 +5,73 @@ namespace frenzykv
 
 static constexpr uint32_t magic_number = 0x47d6ddc3;
 
-bool sstable::add(const sequenced_key& key, const kv_user_value& value)
+sstable_builder::sstable_builder(
+        const kvdb_deps& deps, 
+        ::std::unique_ptr<filter_policy> filter, 
+        ::std::unique_ptr<seq_writable> file)
+    : m_deps{ &deps }, 
+      m_filter{ ::std::move(filter) }, 
+      m_block_builder{ *m_deps, get_compressor(*m_deps->opt(), "zstd") },
+      m_file{ ::std::move(file) }
+{
+}
+
+koios::task<bool> sstable_builder::add(
+    const sequenced_key& key, const kv_user_value& value)
 {
     assert(was_finish());
     assert(m_filter != nullptr);
-    if (key.user_key() != m_last_uk)
+    if (::std::string_view uk = key.user_key(); uk != m_last_uk)
     {
-        // TODO: add new key to filter.
+        m_filter->append_new_filter(uk, m_filter_rep);
+        m_last_uk = uk;
     }
 
-    return true;
+    if (!m_block_builder.add(key, value))
+    {
+        co_return false;
+    }
+
+    // Flush to file
+    if (m_block_builder.bytes_size() >= m_deps->opt()->block_size)
+    {
+        bool ret = co_await flush_current_block();
+        if (!ret) co_return false;
+    }
+
+    co_return true;
+}
+
+koios::task<bool> sstable_builder::flush_current_block(bool need_flush)
+{
+    auto block_storage = m_block_builder.finish();
+    m_block_builder = { *m_deps, m_block_builder.compressor() };
+    size_t wrote = co_await m_file->append(block_storage);
+
+    if (need_flush)
+    {
+        //  Has to make sure the contents has been successfully wrote.
+        co_await m_file->flush(); 
+    }
+
+    co_return wrote == block_storage.size();
+}
+
+koios::task<bool> sstable_builder::finish()
+{
+    assert(!was_finish());
+    m_finish = true;
+
+    if (!m_block_builder.was_finish())
+    {
+        co_await flush_current_block(false); // wont flush.
+    }
+    
+    // Build meta block
+    // TODO
+
+    co_await m_file->close();
+    co_return true;
 }
 
 } // namespace frenzykv
