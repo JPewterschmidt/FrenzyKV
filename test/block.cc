@@ -63,6 +63,19 @@ public:
         return !m_storage.empty();
     }
 
+    bool generate_compressed_storage(const auto& kvs)
+    {
+        auto opt = m_deps.opt();
+        block_builder bb{m_deps, get_compressor(*opt, "zstd")};
+        for (const auto& item : kvs)
+        {
+            bb.add(item);
+        }
+
+        m_storage = bb.finish();
+        return !m_storage.empty();
+    }
+
     const ::std::string& storage() const noexcept { return m_storage; }
 
     void reset()
@@ -137,4 +150,19 @@ TEST_F(block_test, deserialization)
     }
 
     ASSERT_EQ(kvs2.size(), kvs.size());
+}
+
+TEST_F(block_test, compression)
+{
+    reset();
+
+    auto kvs = make_kvs();
+    kvdb_deps deps{};
+    auto opt = ::std::make_shared<options>(*deps.opt());
+    opt->max_block_segments_number = 100;
+    opt->need_compress = true;
+    kvdb_deps_manipulator(deps).exchange_option(opt);
+
+    set_deps(deps);
+    ASSERT_TRUE(generate_compressed_storage(kvs));
 }
