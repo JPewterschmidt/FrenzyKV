@@ -125,6 +125,9 @@ static wc_t wc_value(const_bspan storage)
     if (ec) throw koios::exception(ec);
     
     result.resize(result.size() + sizeof(wc_t) + sizeof(crc32_t), 0);
+    // Re-calculate BTL
+    btl_t newbtl = static_cast<btl_t>(result.size());
+    ::std::memcpy(result.data(), &newbtl, sizeof(btl_t));
 
     return result;
 }
@@ -155,7 +158,7 @@ crc32_t embeded_crc32_value(const_bspan storage)
     return result;
 }
 
-bool integrity_check(const_bspan storage)
+bool block_integrity_check(const_bspan storage)
 {
     auto bc = undecompressed_block_content(storage);
     crc32_t crc32 = crc32c::Crc32c(reinterpret_cast<const char*>(bc.data()), bc.size());
