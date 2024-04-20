@@ -153,6 +153,10 @@ sstable::get(const_bspan user_key)
 
         auto cur_uk = cur_blk_opt->first_segment_public_prefix();
 
+        // TODO: After you fount out some block might be the one, 
+        // we should be able to call a function like this one 
+        // to retrive a optional<block_segment> to get the final result.
+
         // means the current iter is the last iter
         // we need go through this block
         if (next_offset == 0) 
