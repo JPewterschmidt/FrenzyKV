@@ -120,6 +120,7 @@ public:
 
     const_bspan storage() const noexcept { return m_storage; }
     size_t special_segments_count() const noexcept { return m_special_segs.size(); }
+    size_t bytes_size() const noexcept { return m_storage.size(); }
 
     /*! \brief Get segments from speficied position
      *  \param from A pointer point to a block segment, usually an element of `m_special_segs`.
@@ -200,6 +201,7 @@ public:
     size_t segment_count() const noexcept { return m_seg_count; }
     bool was_finish() const noexcept { return m_finish; }
     bool was_compressed() const noexcept { return m_compressed; }
+    size_t bytes_size() const noexcept { return m_storage.size(); }
 
 private:
     ::std::string m_storage;
