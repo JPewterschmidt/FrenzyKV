@@ -1,9 +1,9 @@
 #include "gtest/gtest.h"
-#include "frenzykv/readable.h"
-#include "frenzykv/writable.h"
-#include "frenzykv/in_mem_rw.h"
+#include "frenzykv/io/readable.h"
+#include "frenzykv/io/writable.h"
+#include "frenzykv/io/in_mem_rw.h"
+#include "frenzykv/io/iouring_writable.h"
 #include "frenzykv/kvdb_deps.h"
-#include "frenzykv/iouring_writable.h"
 #include "koios/iouring_awaitables.h"
 
 #include <fstream>

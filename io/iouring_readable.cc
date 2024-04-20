@@ -1,18 +1,24 @@
-#include "frenzykv/iouring_readable.h"
+#include "frenzykv/io/iouring_readable.h"
 #include "toolpex/errret_thrower.h"
 #include "koios/iouring_awaitables.h"
 #include "koios/task.h"
 #include <fcntl.h>
+#include <sys/stat.h>
 
 using namespace koios;
 
 namespace frenzykv
 {
 
+static toolpex::errret_thrower et;
+
 iouring_readable::iouring_readable(const ::std::filesystem::path& p, const kvdb_deps& deps)
-    : posix_base{ toolpex::errret_thrower{} << ::open(p.c_str(), O_RDONLY | O_CLOEXEC) }, 
+    : posix_base{ et << ::open(p.c_str(), O_RDONLY | O_CLOEXEC) }, 
       m_deps{ &deps }
 {
+    typename ::stat st{};
+    et << ::fstat(fd(), &st);
+    m_filesize = static_cast<uintmax_t>(st.st_size);
 }
 
 koios::task<size_t>

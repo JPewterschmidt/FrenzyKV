@@ -1,36 +1,50 @@
 #ifndef FRENZYKV_PERSISTENT_SSTABLE_H
 #define FRENZYKV_PERSISTENT_SSTABLE_H
 
-#include <string>
-#include <memory>
+#include "koios/task.h"
 
+#include "frenzykv/io/readable.h"
 #include "frenzykv/kvdb_deps.h"
 #include "frenzykv/db/filter.h"
-#include "frenzykv/persistent/block.h"
 
 namespace frenzykv
 {
 
+/*
+ *      |-------------------|
+ *      | Data Block        |
+ *      |-------------------|
+ *      | Data Block        |
+ *      |-------------------|
+ *      | Data Block        |
+ *      |-------------------|
+ *      |         ...       |
+ *      |-------------------|
+ *      | Meta Block        |
+ *      |-------------------|
+ *      |  MBO              |   uint64_t    8B
+ *      |-------------------|
+ *      |  Magic Number     |   uint32_t    4B 
+ *      |-------------------|
+ *      
+ *      MBO             Meta Block Offset   the offset position of Meta block
+ *      Meta block      meta_builder.add({0, "bloomfilter"}, m_filter_rep);
+ *      Magic Number    See the sstable.cc source file.
+ */
+
 class sstable
 {
 public:
-    sstable(const kvdb_deps& deps, ::std::unique_ptr<filter_policy> filter)
-        : m_deps{ &deps }, m_filter{ ::std::move(filter) }
-    {
-    }
+    sstable(const kvdb_deps& deps, 
+            ::std::unique_ptr<random_readable> file);
     
-    bool add(const sequenced_key& key, const kv_user_value& value);
-    bool add(const kv_entry& kv) { return add(kv.key(), kv.value()); }
-    bool was_finish() const noexcept { return m_finish; }
-    ::std::string finish();
+private:
+    koios::task<bool> parse_meta_data();
 
 private:
-    ::std::string m_storage;
-    bool m_finish{};
-    const kvdb_deps* m_deps;
-    ::std::unique_ptr<filter_policy> m_filter{};
-    ::std::string_view m_last_uk{};
-    ::std::string m_filter_rep{};
+    ::std::unique_ptr<random_readable> m_file;
+    ::std::string m_filter_rep;
+    ::std::unique_ptr<filter_policy> m_filter;
 };
 
 } // namespace frenzykv

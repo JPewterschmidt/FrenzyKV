@@ -1,4 +1,4 @@
-#include "frenzykv/iouring_writable.h"
+#include "frenzykv/io/iouring_writable.h"
 #include "frenzykv/error_category.h"
 #include "toolpex/errret_thrower.h"
 #include "koios/iouring_awaitables.h"
@@ -126,7 +126,9 @@ koios::task<>
 iouring_writable::
 flush_valid()
 {
-    co_await uring::append_all(m_fd, m_buffer.valid_span());
+    auto sp = m_buffer.valid_span();
+    if (sp.empty()) co_return;
+    co_await uring::append_all(m_fd, sp);
     m_buffer.turncate();
     m_streambuf.update_state();
 }

@@ -23,6 +23,11 @@ public:
     {
         return append_new_filter(::std::span{ key }, dst);
     }
+
+    bool append_new_filter(::std::string_view sv, ::std::string& dst) const
+    {
+        return append_new_filter(::std::as_bytes(::std::span{sv}), dst);
+    }
 };
 
 ::std::unique_ptr<filter_policy> make_bloom_filter(size_t num_key_bits);
