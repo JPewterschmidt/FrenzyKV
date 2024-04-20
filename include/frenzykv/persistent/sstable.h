@@ -2,8 +2,10 @@
 #define FRENZYKV_PERSISTENT_SSTABLE_H
 
 #include <string>
+#include <memory>
 
 #include "frenzykv/kvdb_deps.h"
+#include "frenzykv/db/filter.h"
 #include "frenzykv/persistent/block.h"
 
 namespace frenzykv
@@ -17,12 +19,18 @@ public:
     {
     }
     
-    
+    bool add(const sequenced_key& key, const kv_user_value& value);
+    bool add(const kv_entry& kv) { return add(kv.key(), kv.value()); }
+    bool was_finish() const noexcept { return m_finish; }
+    ::std::string finish();
 
 private:
     ::std::string m_storage;
+    bool m_finish{};
     const kvdb_deps* m_deps;
-    ::std::unqiue_ptr<filter_policy> m_filter{};
+    ::std::unique_ptr<filter_policy> m_filter{};
+    ::std::string_view m_last_uk{};
+    ::std::string m_filter_rep{};
 };
 
 } // namespace frenzykv
