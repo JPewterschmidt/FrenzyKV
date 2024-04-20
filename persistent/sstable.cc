@@ -1,4 +1,5 @@
 #include <string>
+#include <iterator>
 
 #include "toolpex/exceptions.h"
 #include "frenzykv/persistent/sstable.h"
@@ -116,16 +117,11 @@ sstable::get_block(uintmax_t offset, btl_t btl)
     co_return result;
 }
 
-static ::std::optional<block_segment> 
-get_segment_from_block(const block& b, const_bspan user_key)
-{
-    // TODO
-    return {};
-}
-
 koios::task<::std::optional<block_segment>> 
 sstable::get(const_bspan user_key)
 {
+    ::std::optional<block_segment> result{};
+
     if (!m_meta_data_parsed)
         co_await parse_meta_data();
 
@@ -138,22 +134,38 @@ sstable::get(const_bspan user_key)
         m_buffer = {};
     }
     
-    for (const auto& [offset, btl] : m_block_offsets)
+    for (auto iter = m_block_offsets.begin(); iter != m_block_offsets.end(); ++iter)
     {
-        auto opt = co_await get_block(offset, btl);
-        if (!opt) co_return {};
-        auto cur_uk = opt->first_segment_public_prefix();
+        const auto cur_offset   = iter->first, next_offset{};
+        const auto cur_btl      = iter->second, next_ntl{};
+        const auto next_iter    = ::std::next(iter);
 
-        // TODO There should be check the range, of course, including the beg, and the last public_prefix of the current block
-        if (auto cmp_ret = memcmp_comparator{}(cur_uk, user_key);
-            cmp_ret == ::std::strong_ordering::equal
-            /*TODO*/)
+        if (next_iter != m_block_offsets.end())
         {
-            co_return get_segment_from_block(opt.value(), user_key);
+            next_offset = next_iter->first;
+            next_btl = next_iter->second;
+        }
+
+        auto cur_blk_opt = co_await get_block(cur_offset, cur_btl);
+        if (!cur_blk_opt) co_return {};
+
+        auto cur_uk = cur_blk_opt->first_segment_public_prefix();
+
+        // means the current iter is the last iter
+        // we need go through this block
+        if (next_offset == 0) 
+        {
+            // TODO           
+        }
+        else
+        {
+            auto next_blk_opt = co_await get_block(next_offset, next_btl);
+            assert(next_blk_opt);
+            // TODO
         }
     }
 
-    co_return {};
+    co_return result;
 }
 
 } // namespace frenzykv
