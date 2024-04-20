@@ -73,6 +73,7 @@ wc_t wc_value(const_bspan storage);
 class block_segment
 {
 public:
+    constexpr block_segment() noexcept = default;
     block_segment(const_bspan block_seg_storage)
         : m_storage{ block_seg_storage }
     {
@@ -92,6 +93,8 @@ public:
     const_bspan storage() const noexcept { return m_storage; }
 
     bool fit_public_prefix(const_bspan user_prefix) const noexcept;
+    bool larger_equal_public_prefix(const_bspan user_prefix) const noexcept;
+    bool lesser_public_prefix(const_bspan user_prefix) const noexcept;
 
 private:
     parse_result_t parse();
@@ -135,6 +138,8 @@ public:
     const auto& special_segment_ptrs() { return m_special_segs; }
     const_bspan first_segment_public_prefix() const noexcept { return m_first_seg_public_prefix; }
     bool larger_equal_first_segment_public_prefix(const_bspan cb) const noexcept;
+
+    ::std::optional<block_segment> get(const_bspan public_prefix) const;
 
 private:
     parse_result_t parse_meta_data();
