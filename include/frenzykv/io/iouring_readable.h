@@ -36,9 +36,12 @@ public:
 
     constexpr bool is_buffering() const noexcept override { return false; }
 
+    uintmax_t file_size() const override { return m_filesize; }
+
 private:
     const kvdb_deps* m_deps;
     seq_readable_context m_fdctx;
+    uintmax_t m_filesize{};
 };
 
 }

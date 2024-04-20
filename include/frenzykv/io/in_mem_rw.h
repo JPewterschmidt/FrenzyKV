@@ -58,6 +58,8 @@ public:
 
     constexpr bool is_buffering() const noexcept override { return true; }
 
+    uintmax_t file_size() const noexcept override;
+
 private:
     koios::generator<::std::span<const ::std::byte>> 
     target_spans(size_t offset, size_t dest_size) const noexcept;

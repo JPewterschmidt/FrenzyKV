@@ -111,4 +111,15 @@ read(::std::span<::std::byte> dest) noexcept
     co_return ret;
 }
 
+uintmax_t in_mem_rw::
+file_size() const noexcept
+{
+    uintmax_t result{};
+    for (const auto& bf : m_blocks)
+    {
+        result += bf.size();
+    }
+    return result;
+}
+
 } // namespace frenzykv

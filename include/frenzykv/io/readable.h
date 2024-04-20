@@ -22,6 +22,7 @@ public:
 
     virtual ~seq_readable() noexcept {}
     virtual bool is_buffering() const = 0;
+    virtual uintmax_t file_size() const = 0;
 };
 
 class random_readable : public seq_readable
