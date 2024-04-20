@@ -3,10 +3,10 @@
 
 #include <filesystem>
 
-#include "frenzykv/readable.h"
+#include "frenzykv/io/readable.h"
+#include "frenzykv/io/inner_buffer.h"
 #include "frenzykv/kvdb_deps.h"
 #include "frenzykv/posix_base.h"
-#include "frenzykv/inner_buffer.h"
 
 #include "toolpex/unique_posix_fd.h"
 

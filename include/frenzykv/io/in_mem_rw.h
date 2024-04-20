@@ -1,9 +1,9 @@
 #ifndef FRENZYKV_IN_MEM_RW_H
 #define FRENZYKV_IN_MEM_RW_H
 
-#include "frenzykv/writable.h"
-#include "frenzykv/readable.h"
-#include "frenzykv/inner_buffer.h"
+#include "frenzykv/io/writable.h"
+#include "frenzykv/io/readable.h"
+#include "frenzykv/io/inner_buffer.h"
 #include "frenzykv/error_category.h"
 #include "koios/coroutine_mutex.h"
 #include "koios/generator.h"

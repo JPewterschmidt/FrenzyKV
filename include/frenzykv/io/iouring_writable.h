@@ -5,8 +5,8 @@
 #include "koios/task.h"
 #include "koios/coroutine_mutex.h"
 #include "frenzykv/kvdb_deps.h"
-#include "frenzykv/writable.h"
-#include "frenzykv/inner_buffer.h"
+#include "frenzykv/io/writable.h"
+#include "frenzykv/io/inner_buffer.h"
 #include "frenzykv/posix_base.h"
 
 #include <span>

@@ -2,11 +2,11 @@
 #include <fstream>
 #include "nlohmann/json.hpp"
 
-#include "frenzykv/readable.h"
-#include "frenzykv/writable.h"
-#include "frenzykv/in_mem_rw.h"
-#include "frenzykv/iouring_writable.h"
-#include "frenzykv/iouring_readable.h"
+#include "frenzykv/io/readable.h"
+#include "frenzykv/io/writable.h"
+#include "frenzykv/io/in_mem_rw.h"
+#include "frenzykv/io/iouring_writable.h"
+#include "frenzykv/io/iouring_readable.h"
 #include "frenzykv/util/multi_dest_record_writer.h"
 #include "frenzykv/util/stdout_debug_record_writer.h"
 #include "frenzykv/write_batch.h"

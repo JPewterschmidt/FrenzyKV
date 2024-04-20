@@ -11,8 +11,8 @@
 
 #include "koios/task.h"
 
-#include "frenzykv/writable.h"
-#include "frenzykv/readable.h"
+#include "frenzykv/io/writable.h"
+#include "frenzykv/io/readable.h"
 #include "frenzykv/options.h"
 
 namespace frenzykv
