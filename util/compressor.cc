@@ -24,7 +24,18 @@ static const auto& zstd_category() noexcept
 
 class zstd_compressor final : public compressor_policy
 {
+private:
+    int m_level{};
+    int compress_level() const noexcept { return m_level; }
+
 public:
+    zstd_compressor(int compress_level = 15)
+        : m_level{ compress_level }
+    {
+        if (m_level < ::ZSTD_minCLevel() || m_level > ::ZSTD_maxCLevel())
+            throw ::std::out_of_range("zstd_compressor: level out of range [1, 22]");
+    }
+
     ::std::string_view name() const noexcept override { return "zstd_compressor"; }
 
     ::std::error_code 
@@ -55,7 +66,7 @@ public:
         const size_t sz_compressed = ::ZSTD_compress(
             compressed_dst.data() + old_size, compression_need_sz, 
             original.data(), original.size(), 
-            ::ZSTD_maxCLevel()
+            compress_level()
         );
 
         if (::ZSTD_isError(sz_compressed))
@@ -140,18 +151,18 @@ get_compressor(const options& opt, ::std::string_view name)
         ::std::string, 
         ::std::shared_ptr<compressor_policy>
     > compressors = 
-    []{ 
+    [](const auto& opt){ 
         ::std::unordered_map<
             ::std::string, 
             ::std::shared_ptr<compressor_policy>
         > result 
         { 
-            { "zstd", ::std::make_shared<zstd_compressor>() }, 
+            { "zstd", ::std::make_shared<zstd_compressor>(opt.compress_level) }, 
             { "empty", ::std::make_shared<empty_compressor>() },
         };
 
         return result;
-    }();
+    }(opt);
 
     if (name.empty())
     {

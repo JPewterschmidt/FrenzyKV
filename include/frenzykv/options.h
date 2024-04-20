@@ -23,6 +23,7 @@ struct options
     size_t disk_block_bytes = 4096;
     size_t memory_page_bytes = 4096;
     size_t max_block_segments_number = 1000;
+    int compress_level = 15;
     bool need_buffered_write = true;
     bool sync_write = false;
     bool buffered_read = true;
@@ -34,7 +35,7 @@ struct options
 };
 
 options get_global_options() noexcept;
-void set_global_options(const nlohmann::json& j);
+void set_global_options(nlohmann::json j);
 void set_global_options(const ::std::filesystem::path& filepath);
 
 struct write_options
@@ -56,6 +57,7 @@ struct adl_serializer<frenzykv::options>
             { "max_block_segments_number", opt.max_block_segments_number },
             { "need_compress", opt.need_compress },
             { "need_buffered_write", opt.need_buffered_write }, 
+            { "compress_level", opt.compress_level }, 
             { "sync_write", opt.sync_write }, 
             { "compressor_name", opt.compressor_name }, 
             { "buffered_read", opt.buffered_read }, 
@@ -75,6 +77,7 @@ struct adl_serializer<frenzykv::options>
         j.at("need_compress").get_to(opt.need_compress);
         j.at("need_buffered_write").get_to(opt.need_buffered_write);
         j.at("compressor_name").get_to(opt.compressor_name);
+        j.at("compress_level").get_to(opt.compress_level);
         j.at("max_block_segments_number").get_to(opt.max_block_segments_number);
         if (opt.max_block_segments_number > ::std::numeric_limits<uint16_t>::max())
         {

@@ -18,7 +18,7 @@ namespace frenzykv
         return {};
     }
 
-    void set_global_options(nlohmann::json& j)
+    void set_global_options(nlohmann::json j)
     {
         g_data = ::std::make_unique<nlohmann::json>(::std::move(j));
     }
