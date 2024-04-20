@@ -12,7 +12,8 @@ add_requires(
     "spdlog", 
     "jemalloc", 
     "zstd", 
-    "crc32c"
+    "crc32c", 
+    "magic_enum"
 )
 
 includes(
@@ -49,7 +50,8 @@ target("FrenzyKV")
         "nlohmann_json", 
         "spdlog",
         "zstd", 
-        "crc32c"
+        "crc32c", 
+        "magic_enum"
     )
     set_warnings("all", "error")
     add_cxflags("-Wconversion", { force = true })
