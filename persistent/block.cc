@@ -240,7 +240,6 @@ parse_result_t block::parse_meta_data()
 koios::generator<block_segment> block::
 segments_in_single_interval(::std::vector<const ::std::byte*>::const_iterator insert_iter)
 {
-    // TODO: untested
     const ::std::byte* from = *insert_iter;
     const ::std::byte* current = from;
     
