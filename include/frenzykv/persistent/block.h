@@ -170,6 +170,7 @@ public:
      *                and replace it with a new one.1
      */
     bool add(const kv_entry& kv);
+    bool add(const sequenced_key& key, const kv_user_value& value);
 
     /*! \brief Mark the termination of the current segment.
      *  
@@ -193,7 +194,8 @@ class block_builder : public toolpex::move_only
 public:
     block_builder(const kvdb_deps& deps, ::std::shared_ptr<compressor_policy> compressor = {});
 
-    void add(const kv_entry& kv);
+    bool add(const kv_entry& kv);
+    bool add(const sequenced_key& key, const kv_user_value& value);
     ::std::string finish();
     size_t segment_count() const noexcept { return m_seg_count; }
     bool was_finish() const noexcept { return m_finish; }
