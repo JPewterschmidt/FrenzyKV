@@ -7,6 +7,12 @@
 namespace frenzykv
 {
 
+sstable::sstable(const kvdb_deps& deps, 
+                 ::std::unique_ptr<random_readable> file)
+    : m_deps{ &deps }, m_file{ ::std::move(file) }
+{
+}
+
 koios::task<bool> sstable::parse_meta_data()
 {
     const uintmax_t filesz = m_file->file_size();
@@ -40,7 +46,106 @@ koios::task<bool> sstable::parse_meta_data()
         }
     }
 
+    if (!co_await generate_block_offsets()) 
+        co_return false;
+
+    m_meta_data_parsed = true;
     co_return true;
+}
+
+koios::task<btl_t> sstable::btl_value(uintmax_t offset);
+{
+    static :std::array<::std::byte, sizeof(btl_t)> buffer{};
+    btl_t result{};
+    ::std::memset(buffer.data(), buffer.size(), 0);
+
+    if (!co_await m_file->read(buffer, offset))
+        return 0;
+
+    ::std::memcpy(&result, buffer.data(), sizeof(btl_t));
+    return result;
+}
+
+koios::task<bool> sstable::generate_block_offsets()
+{
+    btl_t current_btl{};
+    uintmax_t offset{};
+    const uintmax_t filesz = m_file->file_size();
+    while (offset < filesz)
+    {
+        current_btl = co_await btl_value(offset);
+        if (current_btl == 0)
+            co_return false;
+
+        m_block_offsets.emplace_back(offset, current_btl);
+        offset += current_btl;
+    }
+    co_return true;
+}
+
+koios::task<::std::optional<block>> 
+sstable::get_block(uintmax_t offset, btl_t btl)
+{
+    ::std::optional<block> result{};
+
+    m_buffer.clear();
+    m_buffer.resize(btl, 0);
+    [[maybe_unused]] size_t readed = co_await m_file->read({ m_buffer.data(), m_buffer.size() }, offset);
+    assert(readed == btl);
+
+    const_bspan bs{ ::std::as_bytes(::std::span{m_buffer}) };
+
+    if (!block_integrity_check(bs))
+        co_return result;
+
+    if (block_content_was_comprssed(bs))
+    {
+        m_buffer = block_decompress(bs, m_compressor);
+        bs = { ::std::as_bytes(::std::span{m_buffer}) };
+    }
+    
+    result.emplace(bs);
+    co_return result;
+}
+
+static ::std::optional<block_segment> 
+get_segment_from_block(const block& b, const_bspan user_key)
+{
+    // TODO
+    return {};
+}
+
+koios::task<::std::optional<block_segment>> 
+sstable::get(const_bspan user_key) const
+{
+    if (!m_meta_data_parsed)
+        co_await parse_meta_data();
+
+    if (!m_filter->may_match(user_key, m_filter_rep))
+        co_return {};
+
+    // Re-allocate space from heap, to shrink the memory useage.
+    if (++m_get_call_count % 128 == 0)
+    {
+        m_buffer = {};
+    }
+    
+    for (const auto& [offset, btl] : m_block_offsets)
+    {
+        auto opt = get_block(offset, btl);
+        if (!opt) co_return {};
+        auto cur_uk = opt->first_segment_public_prefix();
+
+        // TODO There should be check the range, of course, including the beg, and the last public_prefix of the current block
+        if (auto cmp_ret = memcmp_comparator{}(cur_uk, user_key);
+            cmp_ret == ::std::strong_ordering::equal
+            /*TODO*/)
+        {
+            co_return get_segment_from_block(opt.value(), user_key);
+        }
+    }
+
+    co_return {};
 }
 
 } // namespace frenzykv
