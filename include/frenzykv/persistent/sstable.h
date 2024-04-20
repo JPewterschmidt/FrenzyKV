@@ -10,6 +10,28 @@
 namespace frenzykv
 {
 
+/*
+ *      |-------------------|
+ *      | Data Block        |
+ *      |-------------------|
+ *      | Data Block        |
+ *      |-------------------|
+ *      | Data Block        |
+ *      |-------------------|
+ *      |         ...       |
+ *      |-------------------|
+ *      | Meta Block        |
+ *      |-------------------|
+ *      |  MBO              |   uint64_t    8B
+ *      |-------------------|
+ *      |  Magic Number     |   uint32_t    4B 
+ *      |-------------------|
+ *      
+ *      MBO             Meta Block Offset   the offset position of Meta block
+ *      Meta block      meta_builder.add({0, "bloomfilter"}, m_filter_rep);
+ *      Magic Number    See the sstable.cc source file.
+ */
+
 class sstable
 {
 public:

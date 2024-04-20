@@ -6,6 +6,11 @@ namespace frenzykv
 
 static constexpr mgn_t magic_number = 0x47d6ddc3;
 
+mgn_t magic_number_value() noexcept
+{
+    return magic_number;
+}
+
 sstable_builder::sstable_builder(
         const kvdb_deps& deps, 
         ::std::unique_ptr<filter_policy> filter, 

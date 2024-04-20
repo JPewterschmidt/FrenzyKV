@@ -38,6 +38,8 @@ namespace frenzykv
 using mbo_t = uint64_t;
 using mgn_t = uint32_t; // magic number type
 
+mgn_t magic_number_value() noexcept;
+
 class sstable_builder
 {
 public:
