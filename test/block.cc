@@ -93,6 +93,11 @@ public:
         const size_t desire_ssc = ((kvs.size() / 200) / m_deps.opt()->max_block_segments_number) + 1;
         auto bc = ::std::as_bytes(::std::span{storage()});
         result &= block_integrity_check(bc);
+        if (!result) 
+        {
+            ::std::cerr << "block_integrity_check fail" << ::std::endl;
+            return result;
+        }
 
         ::std::string new_storage;
         if (block_content_was_comprssed(bc))
@@ -103,6 +108,10 @@ public:
 
         block b(bc);
         result &= (b.special_segments_count() >= desire_ssc);
+        if (!result) 
+        {
+            return result;
+        }
 
         ::std::vector<kv_entry> kvs2{};
 
@@ -124,11 +133,15 @@ public:
                     const auto seq2 = kkk.key().sequence_number();
                     ++count;
                     result &= (seq2 == seq);
+                    if (!result) 
+                    {
+                        return result;
+                    }
                 }
             }
         }
 
-        result &= (kvs2.size() == kvs.size());
+        result &= (kvs2 == kvs);
         return result;
     }
 

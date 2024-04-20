@@ -158,10 +158,15 @@ crc32_t embeded_crc32_value(const_bspan storage)
     return result;
 }
 
+static crc32_t calculate_block_content_crc32(const_bspan bc)
+{
+    return crc32c::Crc32c(reinterpret_cast<const char*>(bc.data()), bc.size());
+}
+
 bool block_integrity_check(const_bspan storage)
 {
     auto bc = undecompressed_block_content(storage);
-    crc32_t crc32 = crc32c::Crc32c(reinterpret_cast<const char*>(bc.data()), bc.size());
+    crc32_t crc32 = calculate_block_content_crc32(bc);
     crc32_t ecrc32 = embeded_crc32_value(storage);
     return crc32 == ecrc32;
 }
@@ -204,6 +209,15 @@ static const ::std::byte* meta_data_beg_ptr(const_bspan s)
 {
     nsbs_t nsbs = nsbs_value(s);
     return nsbs_beg_ptr(s) - (nsbs * sizeof(sbso_t));
+}
+
+block::block(const_bspan block_storage)
+    : m_storage{ block_storage }
+{
+    if ((m_parse_result = parse_meta_data()) == parse_result_t::error)
+        throw koios::exception{"block_segment: parse fail"};
+    auto segs = segments_in_single_interval();
+    m_first_seg_public_prefix = ::std::begin(segs)->public_prefix();
 }
 
 // UnCompressed data only
@@ -267,19 +281,22 @@ block_segment_builder(::std::string& dst, ::std::string_view public_prefix) noex
 
 bool block_segment_builder::add(const kv_entry& kv)
 {
-    if (m_finish) [[unlikely]] return false;
+    return add(kv.key(), kv.value());
+}   
 
-    if (kv.key().user_key() != m_public_prefix)
+bool block_segment_builder::add(const sequenced_key& key, const kv_user_value& value)
+{
+    if (key.user_key() != m_public_prefix)
         return false;
 
     // Serialize RIL and RI
-    ril_t ril = (ril_t)(sizeof(sequence_number_t) + kv.value().serialized_bytes_size());
+    ril_t ril = (ril_t)(sizeof(sequence_number_t) + value.serialized_bytes_size());
     append_encode_int_to<sizeof(ril)>(ril, m_storage);
-    kv.key().serialize_sequence_number_append_to(m_storage);
-    kv.value().serialize_append_to_string(m_storage);
+    key.serialize_sequence_number_append_to(m_storage);
+    value.serialize_append_to_string(m_storage);
 
     return true;
-}   
+}
        
 void block_segment_builder::finish()
 {
@@ -298,7 +315,12 @@ block_builder::block_builder(const kvdb_deps& deps, ::std::shared_ptr<compressor
     m_storage.resize(sizeof(btl_t), 0);
 }
 
-void block_builder::add(const kv_entry& kv)
+bool block_builder::add(const kv_entry& kv)
+{
+    return add(kv.key(), kv.value());
+}
+
+bool block_builder::add(const sequenced_key& key, const kv_user_value& value)
 {
     assert(m_finish == false);
 
@@ -308,12 +330,12 @@ void block_builder::add(const kv_entry& kv)
     if (!m_current_seg_builder)
     {
         ++m_seg_count;
-        m_current_seg_builder = ::std::make_unique<block_segment_builder>(m_storage, kv.key().user_key());
+        m_current_seg_builder = ::std::make_unique<block_segment_builder>(m_storage, key.user_key());
         m_sbsos.push_back(sizeof(btl_t));
     }
 
     // Segment end, need a new segment.
-    if (!m_current_seg_builder->add(kv))
+    if (!m_current_seg_builder->add(key, value))
     {
         // This call will write 4 zero-filled bytes to the end of `m_storage`, 
         // indicates termination of the current block segment.
@@ -322,7 +344,7 @@ void block_builder::add(const kv_entry& kv)
         // You have to make sure that the following key are strictly larger the the last one.
         // Only in the manner, the public prefix compression could give a best performance.
         [[maybe_unused]] auto last_prefix = m_current_seg_builder->public_prefix();
-        [[maybe_unused]] auto user_key = kv.key().user_key();
+        [[maybe_unused]] auto user_key = key.user_key();
         assert(memcmp_comparator{}(user_key, last_prefix) == ::std::strong_ordering::greater);
         
         ++m_seg_count;
@@ -341,11 +363,13 @@ void block_builder::add(const kv_entry& kv)
 
         // The block_segment_builder won't allocate any space, just simply append new stuff to `m_storage`
         // so there won't be any problem invovlved with the memory management.
-        m_current_seg_builder = ::std::make_unique<block_segment_builder>(m_storage, kv.key().user_key());
+        m_current_seg_builder = ::std::make_unique<block_segment_builder>(m_storage, key.user_key());
 
-        [[maybe_unused]] bool add_result = m_current_seg_builder->add(kv);
+        [[maybe_unused]] bool add_result = m_current_seg_builder->add(key, value);
         assert(add_result);
     }
+
+    return true;
 }
 
 static ::std::span<char> block_content(::std::string& storage)
@@ -408,7 +432,7 @@ static ::std::span<char> block_content(::std::string& storage)
     }
 
     // Calculate and append CRC value
-    const crc32_t crc = crc32c::Crc32c(b_content.data(), b_content.size());
+    const crc32_t crc = calculate_block_content_crc32(::std::as_bytes(b_content));
     append_encode_int_to<sizeof(crc32_t)>(crc, m_storage);
 
     // Serialize BTL

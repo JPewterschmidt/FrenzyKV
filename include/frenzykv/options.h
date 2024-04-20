@@ -6,6 +6,7 @@
 #include <memory>
 #include <limits>
 
+#include "magic_enum.hpp"
 #include "nlohmann/json.hpp"
 #include "spdlog/spdlog.h"
 
@@ -23,6 +24,8 @@ struct options
     size_t disk_block_bytes = 4096;
     size_t memory_page_bytes = 4096;
     size_t max_block_segments_number = 1000;
+    size_t block_size = 4096;
+    int compress_level = 15;
     bool need_buffered_write = true;
     bool sync_write = false;
     bool buffered_read = true;
@@ -34,7 +37,7 @@ struct options
 };
 
 options get_global_options() noexcept;
-void set_global_options(const nlohmann::json& j);
+void set_global_options(nlohmann::json j);
 void set_global_options(const ::std::filesystem::path& filepath);
 
 struct write_options
@@ -54,15 +57,17 @@ struct adl_serializer<frenzykv::options>
             { "disk_block_bytes",  opt.disk_block_bytes }, 
             { "memory_page_bytes", opt.memory_page_bytes },
             { "max_block_segments_number", opt.max_block_segments_number },
+            { "block_size", opt.block_size },
             { "need_compress", opt.need_compress },
             { "need_buffered_write", opt.need_buffered_write }, 
+            { "compress_level", opt.compress_level }, 
             { "sync_write", opt.sync_write }, 
             { "compressor_name", opt.compressor_name }, 
             { "buffered_read", opt.buffered_read }, 
             { "root_path", opt.root_path }, 
             { "log", {
                 { "path", opt.log_path }, 
-                { "level", opt.log_level }, 
+                { "level", magic_enum::enum_name<frenzykv::logging_level>(opt.log_level) }, 
             }}
         };
     }
@@ -74,7 +79,9 @@ struct adl_serializer<frenzykv::options>
         j.at("memory_page_bytes").get_to(opt.memory_page_bytes);
         j.at("need_compress").get_to(opt.need_compress);
         j.at("need_buffered_write").get_to(opt.need_buffered_write);
+        j.at("block_size").get_to(opt.block_size);
         j.at("compressor_name").get_to(opt.compressor_name);
+        j.at("compress_level").get_to(opt.compress_level);
         j.at("max_block_segments_number").get_to(opt.max_block_segments_number);
         if (opt.max_block_segments_number > ::std::numeric_limits<uint16_t>::max())
         {
@@ -87,7 +94,18 @@ struct adl_serializer<frenzykv::options>
         j.at("log").at("path").get_to(temp);
         // TODO, assign to opt
         temp.clear();
-        j.at("log").at("level").get_to(temp);
+        
+        ::std::string level_str;
+        j.at("log").at("level").get_to(level_str);
+        auto logl_opt = magic_enum::enum_cast<frenzykv::logging_level>(level_str);
+        if (logl_opt)
+        {
+            opt.log_level = logl_opt.value();
+        }
+        else
+        {
+            spdlog::error("could not retrive logging level from your conf file.");
+        }
         // TODO, assign to opt
     }
 };

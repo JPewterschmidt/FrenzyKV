@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include "nlohmann/json.hpp"
 
 #include "frenzykv/readable.h"
@@ -25,5 +26,9 @@ koios::task<> file_test()
 
 int main()
 {
-
+    auto opt = get_global_options();
+    nlohmann::json j(opt);
+    ::std::ofstream ofs{ "test-config.json" };
+    ofs << j.dump(4);
+    ::std::cout << j << ::std::endl;
 }
