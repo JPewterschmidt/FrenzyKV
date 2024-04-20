@@ -3,14 +3,22 @@
 #include "toolpex/exceptions.h"
 #include "frenzykv/persistent/sstable.h"
 #include "frenzykv/persistent/sstable_builder.h"
+#include "frenzykv/util/comp.h"
 
 namespace frenzykv
 {
 
 sstable::sstable(const kvdb_deps& deps, 
-                 ::std::unique_ptr<random_readable> file)
-    : m_deps{ &deps }, m_file{ ::std::move(file) }
+                 ::std::unique_ptr<random_readable> file, 
+                 ::std::unique_ptr<filter_policy> filter,
+                 ::std::shared_ptr<compressor_policy> compressor)
+    : m_deps{ &deps }, 
+      m_file{ ::std::move(file) }, 
+      m_filter{ ::std::move(filter) },
+      m_compressor{ ::std::move(compressor) }
 {
+    assert(m_compressor);
+    assert(m_filter);
 }
 
 koios::task<bool> sstable::parse_meta_data()
@@ -53,17 +61,17 @@ koios::task<bool> sstable::parse_meta_data()
     co_return true;
 }
 
-koios::task<btl_t> sstable::btl_value(uintmax_t offset);
+koios::task<btl_t> sstable::btl_value(uintmax_t offset)
 {
-    static :std::array<::std::byte, sizeof(btl_t)> buffer{};
+    static ::std::array<::std::byte, sizeof(btl_t)> buffer{};
     btl_t result{};
-    ::std::memset(buffer.data(), buffer.size(), 0);
+    ::std::memset(buffer.data(), 0, buffer.size());
 
     if (!co_await m_file->read(buffer, offset))
-        return 0;
+        co_return 0;
 
     ::std::memcpy(&result, buffer.data(), sizeof(btl_t));
-    return result;
+    co_return result;
 }
 
 koios::task<bool> sstable::generate_block_offsets()
@@ -116,7 +124,7 @@ get_segment_from_block(const block& b, const_bspan user_key)
 }
 
 koios::task<::std::optional<block_segment>> 
-sstable::get(const_bspan user_key) const
+sstable::get(const_bspan user_key)
 {
     if (!m_meta_data_parsed)
         co_await parse_meta_data();
@@ -132,7 +140,7 @@ sstable::get(const_bspan user_key) const
     
     for (const auto& [offset, btl] : m_block_offsets)
     {
-        auto opt = get_block(offset, btl);
+        auto opt = co_await get_block(offset, btl);
         if (!opt) co_return {};
         auto cur_uk = opt->first_segment_public_prefix();
 

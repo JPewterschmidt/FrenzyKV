@@ -11,6 +11,7 @@
 #include "frenzykv/db/filter.h"
 #include "frenzykv/types.h"
 #include "frenzykv/persistent/block.h"
+#include "frenzykv/util/compressor.h"
 
 namespace frenzykv
 {
@@ -41,7 +42,9 @@ class sstable
 {
 public:
     sstable(const kvdb_deps& deps, 
-            ::std::unique_ptr<random_readable> file);
+            ::std::unique_ptr<random_readable> file, 
+            ::std::unique_ptr<filter_policy> filter,
+            ::std::shared_ptr<compressor_policy> compessor);
 
     /*! \brief Searching specific user key from this memtable
      *  
@@ -56,7 +59,7 @@ public:
      *              `block_segment` object are XXX undefined behaviour.
      */
     koios::task<::std::optional<block_segment>> 
-    get(const_bspan user_key) const;
+    get(const_bspan user_key);
 
     /*! \brief Searching specific user key from this memtable
      *  
@@ -71,7 +74,7 @@ public:
      *              `block_segment` object are XXX undefined behaviour.
      */
     koios::task<::std::optional<block_segment>>
-    get(::std::string_view user_key) const
+    get(::std::string_view user_key) 
     {
         return get(::std::as_bytes(::std::span{user_key}));
     }
@@ -90,6 +93,7 @@ private:
     ::std::unique_ptr<random_readable> m_file;
     ::std::string m_filter_rep;
     ::std::unique_ptr<filter_policy> m_filter;
+    ::std::shared_ptr<compressor_policy> m_compressor;
     ::std::vector<::std::pair<uintmax_t, btl_t>> m_block_offsets;
     ::std::string m_buffer{};
     size_t m_get_call_count{};
