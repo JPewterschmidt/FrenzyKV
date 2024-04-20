@@ -116,12 +116,7 @@ public:
      *  Caller should deal with the check sum.
      *  Caller should decompress the block storage.
      */
-    block(const_bspan block_storage)
-        : m_storage{ block_storage }
-    {
-        if ((m_parse_result = parse_meta_data()) == parse_result_t::error)
-            throw koios::exception{"block_segment: parse fail"};
-    }
+    block(const_bspan block_storage);
 
     const_bspan storage() const noexcept { return m_storage; }
     size_t special_segments_count() const noexcept { return m_special_segs.size(); }
@@ -137,6 +132,7 @@ public:
     }
 
     const auto& special_segment_ptrs() { return m_special_segs; }
+    const_bspan first_segment_public_prefix() const noexcept { return m_first_seg_public_prefix; }
 
 private:
     parse_result_t parse_meta_data();
@@ -145,6 +141,7 @@ private:
     const_bspan m_storage;
     ::std::vector<const ::std::byte*> m_special_segs;
     parse_result_t m_parse_result{};
+    const_bspan m_first_seg_public_prefix{};
 };
 
 /*! \brief  The block segment builder

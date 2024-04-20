@@ -206,6 +206,15 @@ static const ::std::byte* meta_data_beg_ptr(const_bspan s)
     return nsbs_beg_ptr(s) - (nsbs * sizeof(sbso_t));
 }
 
+block::block(const_bspan block_storage)
+    : m_storage{ block_storage }
+{
+    if ((m_parse_result = parse_meta_data()) == parse_result_t::error)
+        throw koios::exception{"block_segment: parse fail"};
+    auto segs = segments_in_single_interval();
+    m_first_seg_public_prefix = ::std::begin(segs)->public_prefix();
+}
+
 // UnCompressed data only
 parse_result_t block::parse_meta_data()
 {
