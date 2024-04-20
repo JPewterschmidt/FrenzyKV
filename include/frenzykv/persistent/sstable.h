@@ -13,6 +13,30 @@
 namespace frenzykv
 {
 
+/*
+ *      |-------------------|
+ *      | Data Block        |
+ *      |-------------------|
+ *      | Data Block        |
+ *      |-------------------|
+ *      | Data Block        |
+ *      |-------------------|
+ *      |         ...       |
+ *      |-------------------|
+ *      | Meta Block        |
+ *      |-------------------|
+ *      |  MBO              |   uint64_t    8B
+ *      |-------------------|
+ *      |  Magic Number     |   uint32_t    4B 
+ *      |-------------------|
+ *      
+ *      MBO             Meta Block Offset   the offset position of Meta block
+ *      Meta block      meta_builder.add({0, "bloomfilter"}, m_filter_rep);
+ *      Magic Number    See the sstable.cc source file.
+ */
+
+using mbo_t = uint64_t;
+
 class sstable_builder
 {
 public:
@@ -35,7 +59,9 @@ private:
     ::std::string_view m_last_uk{};
     ::std::string m_filter_rep{};
     block_builder m_block_builder;
+
     ::std::unique_ptr<seq_writable> m_file;
+    mbo_t m_bytes_appended_to_file{};
 };
 
 } // namespace frenzykv

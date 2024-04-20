@@ -54,7 +54,10 @@ koios::task<bool> sstable_builder::flush_current_block(bool need_flush)
         co_await m_file->flush(); 
     }
 
-    co_return wrote == block_storage.size();
+    const bool result{ wrote == block_storage.size() };
+    if (result) m_bytes_appended_to_file += wrote;
+
+    co_return result;
 }
 
 koios::task<bool> sstable_builder::finish()
@@ -68,8 +71,16 @@ koios::task<bool> sstable_builder::finish()
     }
     
     // Build meta block
-    // TODO
+    block_builder meta_builder{ *m_deps };
+    meta_builder.add({0, "bloomfilter"}, m_filter_rep);
+    m_block_builder = ::std::move(meta_builder);
 
+    const mbo_t mbo = m_bytes_appended_to_file;
+    co_await flush_current_block(false);
+    ::std::string mbo_and_magic_number_buffer;
+    encode_int_to<sizeof(mbo)>(mbo, mbo_and_magic_number_buffer);
+    encode_int_to<sizeof(magic_number)>(magic_number, mbo_and_magic_number_buffer);
+    co_await m_file->append(mbo_and_magic_number_buffer);
     co_await m_file->close();
     co_return true;
 }
