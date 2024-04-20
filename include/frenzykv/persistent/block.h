@@ -134,6 +134,7 @@ public:
 
     const auto& special_segment_ptrs() { return m_special_segs; }
     const_bspan first_segment_public_prefix() const noexcept { return m_first_seg_public_prefix; }
+    bool larger_equal_first_segment_public_prefix(const_bspan cb) const noexcept;
 
 private:
     parse_result_t parse_meta_data();

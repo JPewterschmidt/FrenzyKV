@@ -136,9 +136,11 @@ sstable::get(const_bspan user_key)
     
     for (auto iter = m_block_offsets.begin(); iter != m_block_offsets.end(); ++iter)
     {
-        const auto cur_offset   = iter->first, next_offset{};
-        const auto cur_btl      = iter->second, next_ntl{};
-        const auto next_iter    = ::std::next(iter);
+        const uintmax_t cur_offset = iter->first;
+        const btl_t cur_btl = iter->second;
+        const auto next_iter = ::std::next(iter);
+        [[maybe_unused]] uintmax_t next_offset{};
+        [[maybe_unused]] btl_t next_btl{};
 
         if (next_iter != m_block_offsets.end())
         {

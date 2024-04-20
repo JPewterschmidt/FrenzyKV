@@ -268,6 +268,14 @@ segments_in_single_interval(::std::vector<const ::std::byte*>::const_iterator in
     }
 }
 
+bool block::larger_equal_first_segment_public_prefix(const_bspan cb) const noexcept
+{
+    auto fspp = first_segment_public_prefix();
+    auto comp_ret = memcmp_comparator{}(cb, fspp);
+    return comp_ret == ::std::strong_ordering::equal
+        || comp_ret == ::std::strong_ordering::greater;
+}
+
 block_segment_builder::
 block_segment_builder(::std::string& dst, ::std::string_view public_prefix) noexcept
     : m_storage{ dst }, m_public_prefix{ public_prefix }
