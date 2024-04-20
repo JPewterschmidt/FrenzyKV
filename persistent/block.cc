@@ -158,10 +158,15 @@ crc32_t embeded_crc32_value(const_bspan storage)
     return result;
 }
 
+static crc32_t calculate_block_content_crc32(const_bspan bc)
+{
+    return crc32c::Crc32c(reinterpret_cast<const char*>(bc.data()), bc.size());
+}
+
 bool block_integrity_check(const_bspan storage)
 {
     auto bc = undecompressed_block_content(storage);
-    crc32_t crc32 = crc32c::Crc32c(reinterpret_cast<const char*>(bc.data()), bc.size());
+    crc32_t crc32 = calculate_block_content_crc32(bc);
     crc32_t ecrc32 = embeded_crc32_value(storage);
     return crc32 == ecrc32;
 }
@@ -427,7 +432,7 @@ static ::std::span<char> block_content(::std::string& storage)
     }
 
     // Calculate and append CRC value
-    const crc32_t crc = crc32c::Crc32c(b_content.data(), b_content.size());
+    const crc32_t crc = calculate_block_content_crc32(::std::as_bytes(b_content));
     append_encode_int_to<sizeof(crc32_t)>(crc, m_storage);
 
     // Serialize BTL
