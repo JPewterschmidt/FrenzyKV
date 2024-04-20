@@ -1,4 +1,5 @@
 #include "frenzykv/persistent/sstable.h"
+#include "frenzykv/util/serialize_helper.h"
 
 namespace frenzykv
 {
@@ -78,8 +79,8 @@ koios::task<bool> sstable_builder::finish()
     const mbo_t mbo = m_bytes_appended_to_file;
     co_await flush_current_block(false);
     ::std::string mbo_and_magic_number_buffer;
-    encode_int_to<sizeof(mbo)>(mbo, mbo_and_magic_number_buffer);
-    encode_int_to<sizeof(magic_number)>(magic_number, mbo_and_magic_number_buffer);
+    append_encode_int_to<sizeof(mbo)>(mbo, mbo_and_magic_number_buffer);
+    append_encode_int_to<sizeof(magic_number)>(magic_number, mbo_and_magic_number_buffer);
     co_await m_file->append(mbo_and_magic_number_buffer);
     co_await m_file->close();
     co_return true;
