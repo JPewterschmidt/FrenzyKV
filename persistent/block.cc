@@ -105,7 +105,7 @@ static const ::std::byte* wc_beg_ptr(const_bspan storage)
     return crc32_beg_ptr(storage) - 1;
 }
 
-static wc_t wc_value(const_bspan storage)
+wc_t wc_value(const_bspan storage)
 {
     wc_t result{};
     const ::std::byte* wcp = wc_beg_ptr(storage);

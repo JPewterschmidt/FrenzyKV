@@ -64,6 +64,7 @@ const_bspan undecompressed_block_content(const_bspan storage);
 crc32_t embeded_crc32_value(const_bspan storage);
 ::std::string block_decompress(const_bspan storage, ::std::shared_ptr<compressor_policy> compressor);
 bool block_integrity_check(const_bspan storage);
+wc_t wc_value(const_bspan storage);
 
 /*! \brief Segment of a block.
  *
