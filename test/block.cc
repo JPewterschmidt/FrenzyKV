@@ -124,7 +124,7 @@ public:
         {
             for (block_segment seg : b.segments_in_single_interval(iter))
             {
-                for (auto seg : entries_form_block_segment(seg))
+                for (auto seg : entries_from_block_segment(seg))
                     kvs2.push_back(::std::move(seg));
             }
         }

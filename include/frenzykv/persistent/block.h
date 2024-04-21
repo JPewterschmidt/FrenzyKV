@@ -106,7 +106,7 @@ private:
     parse_result_t m_parse_result;
 };
 
-koios::generator<kv_entry> entries_form_block_segment(const block_segment& seg);
+koios::generator<kv_entry> entries_from_block_segment(const block_segment& seg);
 
 /*! \brief  Block obejct
  *  Lazy evaluation. But it will parse the meta data during construction.

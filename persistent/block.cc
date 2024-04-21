@@ -112,7 +112,7 @@ bool block_segment::less_than_this_public_prefix(const_bspan user_prefix) const 
 }
 
 koios::generator<kv_entry> 
-entries_form_block_segment(const block_segment& seg)
+entries_from_block_segment(const block_segment& seg)
 {
     auto uk_from_seg = seg.public_prefix();
     for (const auto& item : seg.items())
