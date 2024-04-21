@@ -111,6 +111,20 @@ bool block_segment::less_than_this_public_prefix(const_bspan user_prefix) const 
     return cmp_ret == ::std::strong_ordering::less;
 }
 
+koios::generator<kv_entry> 
+entries_form_block_segment(const block_segment& seg)
+{
+    auto uk_from_seg = seg.public_prefix();
+    for (const auto& item : seg.items())
+    {
+        sequence_number_t seq{};
+        ::std::memcpy(&seq, item.data(), sizeof(seq));
+        auto uv_with_len = item.subspan(sizeof(seq));
+        uv_with_len = serialized_user_value_from_value_len(uv_with_len);
+        co_yield kv_entry{ seq, uk_from_seg, kv_user_value::parse(uv_with_len) };
+    }
+}
+
 // ====================================================================
 
 static const ::std::byte* crc32_beg_ptr(const_bspan storage)
