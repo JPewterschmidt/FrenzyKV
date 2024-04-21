@@ -95,16 +95,20 @@ private:
 
     struct block_with_storage
     {
-        block_with_storage(block bb, ::std::string sto) noexcept
+        block_with_storage(block bb, buffer<> sto) noexcept
             : b{ ::std::move(bb) }, s{ ::std::move(sto) }
+        {
+        }
+
+        block_with_storage(block bb) noexcept
+            : b{ ::std::move(bb) }
         {
         }
 
         block b;
 
         // Iff s.empty(), then the block uses sstable::s_storage
-        ::std::string s; 
-        //buffer<> s;
+        buffer<> s;
     };
 
     koios::task<::std::optional<block_with_storage>> 
@@ -118,7 +122,7 @@ private:
     ::std::unique_ptr<filter_policy> m_filter;
     ::std::shared_ptr<compressor_policy> m_compressor;
     ::std::vector<::std::pair<uintmax_t, btl_t>> m_block_offsets;
-    ::std::string m_buffer{};
+    buffer<> m_buffer{};
     size_t m_get_call_count{};
 };
 

@@ -20,6 +20,8 @@ public:
     using const_pointer = typename ::std::allocator_traits<allocator>::const_pointer;
 
 public:
+    constexpr buffer() noexcept = default;
+
     buffer(size_t capacity)
         : m_capa{ capacity }, m_left{ capacity }
     {

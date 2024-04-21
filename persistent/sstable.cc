@@ -99,25 +99,31 @@ sstable::get_block(uintmax_t offset, btl_t btl)
 {
     ::std::optional<sstable::block_with_storage> result{};
 
-    m_buffer.clear();
-    m_buffer.resize(btl, 0);
-    [[maybe_unused]] size_t readed = co_await m_file->read({ m_buffer.data(), m_buffer.size() }, offset);
+    m_buffer = {btl};
+    size_t readed = co_await m_file->read(m_buffer.writable_span(), offset);
     assert(readed == btl);
+    m_buffer.commit(readed);
 
-    const_bspan bs{ ::std::as_bytes(::std::span{m_buffer}) };
+    const_bspan bs = m_buffer.valid_span();
 
     if (!block_integrity_check(bs))
         co_return result;
 
     if (block_content_was_comprssed(bs))
     {
-        auto new_storage = block_decompress(bs, m_compressor);
-        bs = { ::std::as_bytes(::std::span{new_storage}) };
-        result.emplace(block(bs), ::std::move(new_storage));
+        size_t minimum_buffer_sz = approx_block_decompress_size(bs, m_compressor);
+        buffer<> buf{ minimum_buffer_sz };
+        auto w = buf.writable_span();
+        if (!block_decompress_to(bs, w, m_compressor))
+            co_return result;
+        buf.commit(w.size());
+        
+        bs = w;
+        result.emplace(block(bs), ::std::move(buf));
         co_return result;
     }
     
-    result.emplace(block(bs), ::std::string());
+    result.emplace(block(bs));
     co_return result;
 }
 
@@ -129,12 +135,6 @@ sstable::get_segment(const_bspan user_key)
 
     if (!m_filter->may_match(user_key, m_filter_rep))
         co_return {};
-
-    // Re-allocate space from heap, to shrink the memory useage.
-    if (++m_get_call_count % 128 == 0)
-    {
-        m_buffer = {};
-    }
 
     auto blk_aws = m_block_offsets
         | rv::transform([this](auto&& pair){ 
