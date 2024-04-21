@@ -43,8 +43,7 @@ class sstable
 public:
     sstable(const kvdb_deps& deps, 
             ::std::unique_ptr<random_readable> file, 
-            ::std::unique_ptr<filter_policy> filter,
-            ::std::shared_ptr<compressor_policy> compessor);
+            ::std::unique_ptr<filter_policy> filter);
 
     /*! \brief Searching specific user key from this memtable
      *  

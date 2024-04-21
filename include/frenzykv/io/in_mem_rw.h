@@ -60,6 +60,8 @@ public:
 
     uintmax_t file_size() const noexcept override;
 
+    const ::std::vector<buffer<>>& storage() const noexcept { return m_blocks; }
+
 private:
     koios::generator<::std::span<const ::std::byte>> 
     target_spans(size_t offset, size_t dest_size) const noexcept;

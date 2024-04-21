@@ -25,7 +25,7 @@ sstable_builder::sstable_builder(
 koios::task<bool> sstable_builder::add(
     const sequenced_key& key, const kv_user_value& value)
 {
-    assert(was_finish());
+    assert(!was_finish());
     assert(m_filter != nullptr);
     if (::std::string_view uk = key.user_key(); uk != m_last_uk)
     {
@@ -52,7 +52,9 @@ koios::task<bool> sstable_builder::flush_current_block(bool need_flush)
 {
     auto block_storage = m_block_builder.finish();
     m_block_builder = { *m_deps, m_block_builder.compressor() };
-    size_t wrote = co_await m_file->append(block_storage);
+    
+    ::std::span cb{ block_storage };
+    size_t wrote = co_await m_file->append(::std::as_bytes(cb));
 
     if (need_flush)
     {
@@ -86,7 +88,7 @@ koios::task<bool> sstable_builder::finish()
     ::std::string mbo_and_magic_number_buffer;
     append_encode_int_to<sizeof(mbo)>(mbo, mbo_and_magic_number_buffer);
     append_encode_int_to<sizeof(magic_number)>(magic_number, mbo_and_magic_number_buffer);
-    co_await m_file->append(mbo_and_magic_number_buffer);
+    co_await m_file->append(::std::as_bytes(::std::span{mbo_and_magic_number_buffer}));
     co_await m_file->close();
     co_return true;
 }

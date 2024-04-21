@@ -40,10 +40,9 @@ append(::std::span<const ::std::byte> buffer)
     do
     {
         auto& last_buf = next_writable_buffer();
-        last_buf.append(buffer.subspan(
-            0, ::std::min(last_buf.left(), buffer.size())
-        ));
-        buffer = buffer.subspan(last_buf.size());
+        const size_t appended = ::std::min(last_buf.left(), buffer.size());
+        last_buf.append(buffer.subspan( 0, appended ));
+        buffer = buffer.subspan(appended);
     }
     while (!buffer.empty());
 

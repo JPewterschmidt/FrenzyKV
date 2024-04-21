@@ -19,7 +19,7 @@ public:
     append(::std::string_view buffer) noexcept 
     {
         ::std::span<const char> temp{ buffer.begin(), buffer.end() };
-        return append(as_bytes(temp));
+        co_return co_await append(as_bytes(temp));
     }
 
     virtual koios::task<size_t> append(::std::span<const ::std::byte> buffer) = 0;

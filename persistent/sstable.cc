@@ -14,12 +14,11 @@ namespace rv = ::std::ranges::views;
 
 sstable::sstable(const kvdb_deps& deps, 
                  ::std::unique_ptr<random_readable> file, 
-                 ::std::unique_ptr<filter_policy> filter,
-                 ::std::shared_ptr<compressor_policy> compressor)
+                 ::std::unique_ptr<filter_policy> filter)
     : m_deps{ &deps }, 
       m_file{ ::std::move(file) }, 
       m_filter{ ::std::move(filter) },
-      m_compressor{ ::std::move(compressor) }
+      m_compressor{ get_compressor(*m_deps->opt(), m_deps->opt()->compressor_name) }
 {
     assert(m_compressor);
     assert(m_filter);
