@@ -13,8 +13,8 @@ namespace frenzykv
 namespace rv = ::std::ranges::views;
 
 sstable::sstable(const kvdb_deps& deps, 
-                 ::std::unique_ptr<random_readable> file, 
-                 ::std::unique_ptr<filter_policy> filter)
+                 ::std::unique_ptr<filter_policy> filter, 
+                 ::std::unique_ptr<random_readable> file)
     : m_deps{ &deps }, 
       m_file{ ::std::move(file) }, 
       m_filter{ ::std::move(filter) },
@@ -27,13 +27,13 @@ sstable::sstable(const kvdb_deps& deps,
 koios::task<bool> sstable::parse_meta_data()
 {
     const uintmax_t filesz = m_file->file_size();
-    ::std::string buffer(sizeof(mbo_t) + sizeof(mgn_t), 0);
-    
-    co_await m_file->read({ buffer.data(), buffer.size() }, filesz);
+    const size_t footer_sz = sizeof(mbo_t) + sizeof(mgn_t);
+    ::std::string buffer(footer_sz, 0);
+    co_await m_file->read({ buffer.data(), buffer.size() }, filesz - footer_sz);
     mbo_t mbo{};
     mgn_t magic_num{};
     ::std::memcpy(&mbo, buffer.data(), sizeof(mbo));
-    ::std::memcpy(&magic_num, buffer.data(), sizeof(magic_num));
+    ::std::memcpy(&magic_num, buffer.data() + sizeof(mbo), sizeof(magic_num));
 
     // file integrity check
     if (magic_number_value() != magic_num)
@@ -50,8 +50,8 @@ koios::task<bool> sstable::parse_meta_data()
     {
         if (as_string_view(seg.public_prefix()) == "bloom_filter")
         {
-            auto fake_user_value_sp = seg.items().front();
-            auto uv = kv_user_value::parse(fake_user_value_sp);
+            auto fake_user_value_sp_with_seq = seg.items().front();
+            auto uv = kv_user_value::parse(fake_user_value_sp_with_seq.subspan(sizeof(sequence_number_t)));
             m_filter_rep = uv.value();
             break; // Until now, there should be only one segment, only one element in segment.
         }
@@ -136,6 +136,8 @@ sstable::get(const_bspan user_key)
 
     auto blk_aws = m_block_offsets
         | rv::transform([this](auto&& pair){ 
+              // TODO: This function will rewrite the m_buffer, 
+              // not friendly to slide view.
               return this->get_block(pair.first, pair.second);
           });
 

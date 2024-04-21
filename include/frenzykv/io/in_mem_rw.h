@@ -20,7 +20,7 @@ class in_mem_rw final
       public seq_readable_context
 {
 public:
-    in_mem_rw(size_t block_size) 
+    in_mem_rw(size_t block_size = 4096) 
         : m_block_size{ block_size }
     {
         m_blocks.emplace_back(m_block_size);
