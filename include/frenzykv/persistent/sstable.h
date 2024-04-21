@@ -83,7 +83,20 @@ private:
     koios::task<btl_t>  btl_value(uintmax_t offset);    // Required by `generate_block_offsets()`
     koios::task<bool>   generate_block_offsets();       // Required by `parse_meta_data()`
 
-    koios::task<::std::optional<block>> 
+    struct block_with_storage
+    {
+        block_with_storage(block bb, ::std::string sto) noexcept
+            : b{ ::std::move(bb) }, s{ ::std::move(sto) }
+        {
+        }
+
+        block b;
+
+        // Iff s.empty(), then the block uses sstable::s_storage
+        ::std::string s; 
+    };
+
+    koios::task<::std::optional<block_with_storage>> 
     get_block(uintmax_t offset, btl_t btl);             // Required by `get()`
     
 private:

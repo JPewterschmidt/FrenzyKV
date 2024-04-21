@@ -94,10 +94,10 @@ koios::task<bool> sstable::generate_block_offsets()
     co_return true;
 }
 
-koios::task<::std::optional<block>> 
+koios::task<::std::optional<sstable::block_with_storage>> 
 sstable::get_block(uintmax_t offset, btl_t btl)
 {
-    ::std::optional<block> result{};
+    ::std::optional<sstable::block_with_storage> result{};
 
     m_buffer.clear();
     m_buffer.resize(btl, 0);
@@ -111,11 +111,13 @@ sstable::get_block(uintmax_t offset, btl_t btl)
 
     if (block_content_was_comprssed(bs))
     {
-        m_buffer = block_decompress(bs, m_compressor);
-        bs = { ::std::as_bytes(::std::span{m_buffer}) };
+        auto new_storage = block_decompress(bs, m_compressor);
+        bs = { ::std::as_bytes(::std::span{new_storage}) };
+        result.emplace(block(bs), ::std::move(new_storage));
+        co_return result;
     }
     
-    result.emplace(bs);
+    result.emplace(block(bs), ::std::string());
     co_return result;
 }
 
@@ -151,17 +153,19 @@ sstable::get(const_bspan user_key)
         assert(blk1_opt.has_value());
 
         // Shot!
-        if (blk0_opt->larger_equal_than_this_first_segment_public_prefix(user_key)
-           && blk1_opt->less_than_this_first_segment_public_prefix(user_key))
+        if (blk0_opt->b.larger_equal_than_this_first_segment_public_prefix(user_key)
+           && blk1_opt->b.less_than_this_first_segment_public_prefix(user_key))
         {
-            co_return blk0_opt->get(user_key);
+            if (auto& ss = blk0_opt->s; !ss.empty())
+                m_buffer = ::std::move(ss); // TODO Cause UB?
+            co_return blk0_opt->b.get(user_key);
         }
         
         last_block_opt = ::std::move(blk1_opt);
     }
-    if (last_block_opt->larger_equal_than_this_first_segment_public_prefix(user_key))
+    if (last_block_opt->b.larger_equal_than_this_first_segment_public_prefix(user_key))
     {
-        co_return last_block_opt->get(user_key);
+        co_return last_block_opt->b.get(user_key);
     }
 
     co_return {};
