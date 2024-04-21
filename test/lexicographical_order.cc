@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 #include "frenzykv/db/kv_entry.h"
+#include "frenzykv/util/comp.h"
 #include <string>
 #include <functional>
 
@@ -108,4 +109,17 @@ TEST(lexicographical_order, expect_same_order_diffuk)
     ASSERT_EQ(::std::less<frenzykv::sequenced_key>{}(key1, key2), serialized_sequenced_key_less{}(key1_str, key2_str));
     ASSERT_EQ(::std::less<frenzykv::sequenced_key>{}(key1, key3), serialized_sequenced_key_less{}(key1_str, key3_str));
     ASSERT_EQ(::std::less<frenzykv::sequenced_key>{}(key3, key4), serialized_sequenced_key_less{}(key3_str, key4_str));
+}
+
+TEST(lexicographical_order, basic)
+{
+    uint32_t i1{ 15 }, i2{ 30 };
+    ::std::array<::std::byte, sizeof(uint32_t)> bytes1{};
+    ::std::array<::std::byte, sizeof(uint32_t)> bytes2{};
+    ::std::memcpy(bytes1.data(), &i1, sizeof(uint32_t));
+    ::std::memcpy(bytes2.data(), &i2, sizeof(uint32_t));
+
+    namespace rv = ::std::ranges::views;
+
+    ASSERT_TRUE(memcmp_comparator{}(bytes1, bytes2) == ::std::strong_ordering::less);
 }
