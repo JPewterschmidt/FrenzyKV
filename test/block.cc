@@ -118,29 +118,14 @@ public:
 
         ::std::vector<kv_entry> kvs2{};
 
-        size_t count{};
         const auto& ssps = b.special_segment_ptrs();
         
         for (auto iter = ssps.cbegin(); iter != ssps.cend(); ++iter)
         {
             for (block_segment seg : b.segments_in_single_interval(iter))
             {
-                auto uk = seg.public_prefix();
-                for (const auto& item : seg.items())
-                {
-                    sequence_number_t seq{};
-                    ::std::memcpy(&seq, item.data(), sizeof(seq));
-                    auto uv_with_len = item.subspan(sizeof(seq));
-                    uv_with_len = serialized_user_value_from_value_len(uv_with_len);
-                    const auto& kkk = kvs2.emplace_back(seq, uk, kv_user_value::parse(uv_with_len));
-                    const auto seq2 = kkk.key().sequence_number();
-                    ++count;
-                    result &= (seq2 == seq);
-                    if (!result) 
-                    {
-                        return result;
-                    }
-                }
+                for (auto seg : entries_form_block_segment(seg))
+                    kvs2.push_back(::std::move(seg));
             }
         }
 
