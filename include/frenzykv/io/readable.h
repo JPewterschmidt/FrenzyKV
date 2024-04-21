@@ -34,6 +34,18 @@ public:
     virtual koios::task<size_t>
     read(::std::span<::std::byte> dest) override = 0;
 
+    koios::task<size_t>
+    read(::std::span<char> dest, size_t offset)
+    {
+        return read(::std::as_writable_bytes(dest), offset);
+    }
+
+    virtual koios::task<size_t>
+    read(::std::span<char> dest)
+    {
+        return read(::std::as_writable_bytes(dest));
+    }
+
     virtual ~random_readable() noexcept override {}
     virtual bool is_buffering() const override = 0;
 };

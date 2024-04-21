@@ -12,6 +12,8 @@
 namespace frenzykv
 {
 
+namespace rv = ::std::ranges::views;
+
 /*  block segment format
  *
  *  PP:         string      public prefix
@@ -89,6 +91,24 @@ bool block_segment::fit_public_prefix(const_bspan user_prefix) const noexcept
     return memcmp_comparator{}(
         user_prefix, m_prefix.subspan(0, user_prefix.size())
     ) == ::std::strong_ordering::equal;
+}
+
+bool block_segment::larger_equal_than_this_public_prefix(const_bspan user_prefix) const noexcept
+{
+    auto cmp_ret = memcmp_comparator{}(
+        user_prefix, m_prefix.subspan(0, user_prefix.size())
+    );
+
+    return cmp_ret == ::std::strong_ordering::greater
+        || cmp_ret == ::std::strong_ordering::equal;
+}
+
+bool block_segment::less_than_this_public_prefix(const_bspan user_prefix) const noexcept
+{
+    auto cmp_ret = memcmp_comparator{}(
+        user_prefix, m_prefix.subspan(0, user_prefix.size())
+    );
+    return cmp_ret == ::std::strong_ordering::less;
 }
 
 // ====================================================================
@@ -240,7 +260,6 @@ parse_result_t block::parse_meta_data()
 koios::generator<block_segment> block::
 segments_in_single_interval(::std::vector<const ::std::byte*>::const_iterator insert_iter)
 {
-    // TODO: untested
     const ::std::byte* from = *insert_iter;
     const ::std::byte* current = from;
     
@@ -267,6 +286,52 @@ segments_in_single_interval(::std::vector<const ::std::byte*>::const_iterator in
         // their distance far enough to ensure the searching performance.
         co_yield ::std::move(seg);
     }
+}
+
+::std::optional<block_segment> block::get(const_bspan user_prefix) const
+{
+    if (!larger_equal_than_this_first_segment_public_prefix(user_prefix))
+        return {};
+
+    auto sp_seg = m_special_segs
+        | rv::transform([this](auto&& ptr){
+              return block_segment{ { ptr, m_storage.data() + m_storage.size() } };
+          });
+
+    block_segment last_seg = *begin(sp_seg);
+    for (auto curwin : sp_seg | rv::slide(2))
+    {
+        block_segment seg1 = curwin[0];
+        block_segment seg2 = curwin[1];
+
+        // Shot!
+        if (seg1.larger_equal_than_this_public_prefix(user_prefix) 
+            && seg2.less_than_this_public_prefix(user_prefix))
+        {
+            return seg1;
+        }
+        last_seg = ::std::move(seg2);
+    }
+
+    if (last_seg.larger_equal_than_this_public_prefix(user_prefix))
+        return last_seg;
+
+    return {};
+}
+
+bool block::larger_equal_than_this_first_segment_public_prefix(const_bspan cb) const noexcept
+{
+    auto fspp = first_segment_public_prefix();
+    auto comp_ret = memcmp_comparator{}(cb, fspp);
+    return comp_ret == ::std::strong_ordering::equal
+        || comp_ret == ::std::strong_ordering::greater;
+}
+
+bool block::less_than_this_first_segment_public_prefix(const_bspan user_prefix) const noexcept
+{
+    auto fspp = first_segment_public_prefix();
+    auto comp_ret = memcmp_comparator{}(cb, fspp);
+    return comp_ret == ::std::strong_ordering::less;
 }
 
 block_segment_builder::

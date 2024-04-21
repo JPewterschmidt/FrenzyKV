@@ -1,12 +1,15 @@
 #include "gtest/gtest.h"
 
 #include <string>
+#include <string_view>
 #include <ranges>
 
 #include "frenzykv/persistent/block.h"
 #include "frenzykv/db/kv_entry.h"
 
 using namespace frenzykv;
+using namespace ::std::string_view_literals;
+using namespace ::std::string_literals;
 namespace rv = ::std::ranges::views;
 
 namespace
@@ -199,4 +202,16 @@ TEST_F(block_test, compression)
     ASSERT_TRUE(generate_compressed_storage(kvs));
 
     ASSERT_TRUE(contents_test(kvs));
+}
+
+TEST_F(block_test, get)
+{
+    reset();
+    generate_serialized_storage(make_kvs());
+    auto bc = ::std::as_bytes(::std::span{storage()});
+    block b(bc);
+    const_bspan key = ::std::as_bytes(::std::span{"dddeeefff"sv});
+    auto seg_opt = b.get(key);
+    ASSERT_TRUE(seg_opt.has_value());
+    ASSERT_TRUE(seg_opt->larger_equal_than_this_public_prefix(key));
 }
