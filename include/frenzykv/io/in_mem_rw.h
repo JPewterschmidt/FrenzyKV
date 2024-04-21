@@ -61,6 +61,13 @@ public:
     uintmax_t file_size() const noexcept override;
 
     const ::std::vector<buffer<>>& storage() const noexcept { return m_blocks; }
+    ::std::vector<buffer<>>& storage() noexcept { return m_blocks; }
+
+    void clone_from(::std::vector<buffer<>> blocks, size_t block_size)
+    {
+        m_blocks = ::std::move(blocks);
+        m_block_size = block_size;
+    }
 
 private:
     koios::generator<::std::span<const ::std::byte>> 
