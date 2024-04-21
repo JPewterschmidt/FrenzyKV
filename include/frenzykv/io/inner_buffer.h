@@ -43,7 +43,9 @@ public:
     {
     }
 
-    ~buffer() noexcept
+    ~buffer() noexcept { release(); }
+
+    void release() noexcept
     {
         if (!valid()) return;
         ::std::allocator_traits<Alloc>::deallocate(
@@ -61,6 +63,7 @@ public:
 
     buffer& operator = (buffer&& other) noexcept
     {
+        release();
         m_alloc = ::std::move(other.m_alloc);
         m_storage = ::std::exchange(other.m_storage, nullptr);
         m_capa = other.m_capa;
