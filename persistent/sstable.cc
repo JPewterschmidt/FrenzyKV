@@ -13,13 +13,12 @@ namespace frenzykv
 namespace rv = ::std::ranges::views;
 
 sstable::sstable(const kvdb_deps& deps, 
-                 ::std::unique_ptr<random_readable> file, 
-                 ::std::unique_ptr<filter_policy> filter,
-                 ::std::shared_ptr<compressor_policy> compressor)
+                 ::std::unique_ptr<filter_policy> filter, 
+                 ::std::unique_ptr<random_readable> file)
     : m_deps{ &deps }, 
       m_file{ ::std::move(file) }, 
       m_filter{ ::std::move(filter) },
-      m_compressor{ ::std::move(compressor) }
+      m_compressor{ get_compressor(*m_deps->opt(), m_deps->opt()->compressor_name) }
 {
     assert(m_compressor);
     assert(m_filter);
@@ -28,13 +27,13 @@ sstable::sstable(const kvdb_deps& deps,
 koios::task<bool> sstable::parse_meta_data()
 {
     const uintmax_t filesz = m_file->file_size();
-    ::std::string buffer(sizeof(mbo_t) + sizeof(mgn_t), 0);
-    
-    co_await m_file->read({ buffer.data(), buffer.size() }, filesz);
+    const size_t footer_sz = sizeof(mbo_t) + sizeof(mgn_t);
+    ::std::string buffer(footer_sz, 0);
+    co_await m_file->read({ buffer.data(), buffer.size() }, filesz - footer_sz);
     mbo_t mbo{};
     mgn_t magic_num{};
     ::std::memcpy(&mbo, buffer.data(), sizeof(mbo));
-    ::std::memcpy(&magic_num, buffer.data(), sizeof(magic_num));
+    ::std::memcpy(&magic_num, buffer.data() + sizeof(mbo), sizeof(magic_num));
 
     // file integrity check
     if (magic_number_value() != magic_num)
@@ -51,8 +50,8 @@ koios::task<bool> sstable::parse_meta_data()
     {
         if (as_string_view(seg.public_prefix()) == "bloom_filter")
         {
-            auto fake_user_value_sp = seg.items().front();
-            auto uv = kv_user_value::parse(fake_user_value_sp);
+            auto fake_user_value_sp_with_seq = seg.items().front();
+            auto uv = kv_user_value::parse(fake_user_value_sp_with_seq.subspan(sizeof(sequence_number_t)));
             m_filter_rep = uv.value();
             break; // Until now, there should be only one segment, only one element in segment.
         }
@@ -95,10 +94,10 @@ koios::task<bool> sstable::generate_block_offsets()
     co_return true;
 }
 
-koios::task<::std::optional<block>> 
+koios::task<::std::optional<sstable::block_with_storage>> 
 sstable::get_block(uintmax_t offset, btl_t btl)
 {
-    ::std::optional<block> result{};
+    ::std::optional<sstable::block_with_storage> result{};
 
     m_buffer.clear();
     m_buffer.resize(btl, 0);
@@ -112,16 +111,18 @@ sstable::get_block(uintmax_t offset, btl_t btl)
 
     if (block_content_was_comprssed(bs))
     {
-        m_buffer = block_decompress(bs, m_compressor);
-        bs = { ::std::as_bytes(::std::span{m_buffer}) };
+        auto new_storage = block_decompress(bs, m_compressor);
+        bs = { ::std::as_bytes(::std::span{new_storage}) };
+        result.emplace(block(bs), ::std::move(new_storage));
+        co_return result;
     }
     
-    result.emplace(bs);
+    result.emplace(block(bs), ::std::string());
     co_return result;
 }
 
 koios::task<::std::optional<block_segment>> 
-sstable::get(const_bspan user_key)
+sstable::get_segment(const_bspan user_key)
 {
     if (!m_meta_data_parsed)
         co_await parse_meta_data();
@@ -137,6 +138,8 @@ sstable::get(const_bspan user_key)
 
     auto blk_aws = m_block_offsets
         | rv::transform([this](auto&& pair){ 
+              // TODO: This function will rewrite the m_buffer, 
+              // not friendly to slide view.
               return this->get_block(pair.first, pair.second);
           });
 
@@ -150,17 +153,19 @@ sstable::get(const_bspan user_key)
         assert(blk1_opt.has_value());
 
         // Shot!
-        if (blk0_opt->larger_equal_than_this_first_segment_public_prefix(user_key)
-           && blk1_opt->less_than_this_first_segment_public_prefix(user_key))
+        if (blk0_opt->b.larger_equal_than_this_first_segment_public_prefix(user_key)
+           && blk1_opt->b.less_than_this_first_segment_public_prefix(user_key))
         {
-            co_return blk0_opt->get(user_key);
+            if (auto& ss = blk0_opt->s; !ss.empty())
+                m_buffer = ::std::move(ss); // TODO Cause UB?
+            co_return blk0_opt->b.get(user_key);
         }
         
         last_block_opt = ::std::move(blk1_opt);
     }
-    if (last_block_opt->larger_equal_than_this_first_segment_public_prefix(user_key))
+    if (last_block_opt->b.larger_equal_than_this_first_segment_public_prefix(user_key))
     {
-        co_return last_block_opt->get(user_key);
+        co_return last_block_opt->b.get(user_key);
     }
 
     co_return {};

@@ -42,9 +42,8 @@ class sstable
 {
 public:
     sstable(const kvdb_deps& deps, 
-            ::std::unique_ptr<random_readable> file, 
-            ::std::unique_ptr<filter_policy> filter,
-            ::std::shared_ptr<compressor_policy> compessor);
+            ::std::unique_ptr<filter_policy> filter, 
+            ::std::unique_ptr<random_readable> file);
 
     /*! \brief Searching specific user key from this memtable
      *  
@@ -59,7 +58,7 @@ public:
      *              `block_segment` object are XXX undefined behaviour.
      */
     koios::task<::std::optional<block_segment>> 
-    get(const_bspan user_key);
+    get_segment(const_bspan user_key);
 
     /*! \brief Searching specific user key from this memtable
      *  
@@ -74,9 +73,9 @@ public:
      *              `block_segment` object are XXX undefined behaviour.
      */
     koios::task<::std::optional<block_segment>>
-    get(::std::string_view user_key) 
+    get_segment(::std::string_view user_key) 
     {
-        return get(::std::as_bytes(::std::span{user_key}));
+        return get_segment(::std::as_bytes(::std::span{user_key}));
     }
 
 private:
@@ -84,8 +83,21 @@ private:
     koios::task<btl_t>  btl_value(uintmax_t offset);    // Required by `generate_block_offsets()`
     koios::task<bool>   generate_block_offsets();       // Required by `parse_meta_data()`
 
-    koios::task<::std::optional<block>> 
-    get_block(uintmax_t offset, btl_t btl);             // Required by `get()`
+    struct block_with_storage
+    {
+        block_with_storage(block bb, ::std::string sto) noexcept
+            : b{ ::std::move(bb) }, s{ ::std::move(sto) }
+        {
+        }
+
+        block b;
+
+        // Iff s.empty(), then the block uses sstable::s_storage
+        ::std::string s; 
+    };
+
+    koios::task<::std::optional<block_with_storage>> 
+    get_block(uintmax_t offset, btl_t btl);             // Required by `get_segment()`
     
 private:
     const kvdb_deps* m_deps{};

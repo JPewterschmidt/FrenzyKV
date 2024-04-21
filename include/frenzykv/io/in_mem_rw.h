@@ -20,7 +20,7 @@ class in_mem_rw final
       public seq_readable_context
 {
 public:
-    in_mem_rw(size_t block_size) 
+    in_mem_rw(size_t block_size = 4096) 
         : m_block_size{ block_size }
     {
         m_blocks.emplace_back(m_block_size);
@@ -59,6 +59,15 @@ public:
     constexpr bool is_buffering() const noexcept override { return true; }
 
     uintmax_t file_size() const noexcept override;
+
+    const ::std::vector<buffer<>>& storage() const noexcept { return m_blocks; }
+    ::std::vector<buffer<>>& storage() noexcept { return m_blocks; }
+
+    void clone_from(::std::vector<buffer<>> blocks, size_t block_size)
+    {
+        m_blocks = ::std::move(blocks);
+        m_block_size = block_size;
+    }
 
 private:
     koios::generator<::std::span<const ::std::byte>> 

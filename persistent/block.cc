@@ -330,7 +330,7 @@ bool block::larger_equal_than_this_first_segment_public_prefix(const_bspan cb) c
 bool block::less_than_this_first_segment_public_prefix(const_bspan user_prefix) const noexcept
 {
     auto fspp = first_segment_public_prefix();
-    auto comp_ret = memcmp_comparator{}(cb, fspp);
+    auto comp_ret = memcmp_comparator{}(user_prefix, fspp);
     return comp_ret == ::std::strong_ordering::less;
 }
 

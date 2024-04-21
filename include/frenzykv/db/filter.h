@@ -21,7 +21,8 @@ public:
 
     virtual bool append_new_filter(const_bspan key, ::std::string& dst) const
     {
-        return append_new_filter(::std::span{ key }, dst);
+        ::std::array<const_bspan, 1> buffer{ key };
+        return append_new_filter(buffer, dst);
     }
 
     bool append_new_filter(::std::string_view sv, ::std::string& dst) const
