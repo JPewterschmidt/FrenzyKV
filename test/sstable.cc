@@ -51,7 +51,7 @@ public:
         auto file = ::std::make_unique<in_mem_rw>(4096);
         m_file_storage = &file->storage();
         m_builder = ::std::make_unique<sstable_builder>(
-            m_deps, make_bloom_filter(64), ::std::move(file)
+            m_deps, 4096 * 1024 * 100 /*400MB*/, make_bloom_filter(64), ::std::move(file)
         );
         m_table = nullptr;
     }

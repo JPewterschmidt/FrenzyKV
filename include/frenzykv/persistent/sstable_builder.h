@@ -44,6 +44,7 @@ class sstable_builder
 {
 public:
     sstable_builder(const kvdb_deps& deps, 
+                    uintmax_t size_limit,
                     ::std::unique_ptr<filter_policy> filter, 
                     ::std::unique_ptr<seq_writable> file);
     
@@ -51,13 +52,17 @@ public:
     koios::task<bool> add(const kv_entry& kv) { return add(kv.key(), kv.value()); }
     bool was_finish() const noexcept { return m_finish; }
     koios::task<bool> finish();
+    bool reach_the_size_limit() const noexcept { return m_size_wrote >= m_size_limit; }
+    uintmax_t size_limit() const noexcept { return m_size_limit; }
 
 private:
     koios::task<bool> flush_current_block(bool need_flush = true);
 
 private:
-    bool m_finish{};
     const kvdb_deps* m_deps;
+    bool m_finish{};
+    uintmax_t m_size_limit{};
+    uintmax_t m_size_wrote{};
     ::std::unique_ptr<filter_policy> m_filter{};
     ::std::string_view m_last_uk{};
     ::std::string m_filter_rep{};

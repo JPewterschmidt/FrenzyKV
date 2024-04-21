@@ -1,3 +1,5 @@
+#include <cassert>
+
 #include "frenzykv/persistent/sstable_builder.h"
 #include "frenzykv/util/serialize_helper.h"
 
@@ -13,13 +15,16 @@ mgn_t magic_number_value() noexcept
 
 sstable_builder::sstable_builder(
         const kvdb_deps& deps, 
+        uintmax_t size_limit,
         ::std::unique_ptr<filter_policy> filter, 
         ::std::unique_ptr<seq_writable> file)
     : m_deps{ &deps }, 
+      m_size_limit{ size_limit },
       m_filter{ ::std::move(filter) }, 
       m_block_builder{ *m_deps, get_compressor(*m_deps->opt(), "zstd") },
       m_file{ ::std::move(file) }
 {
+    assert(m_size_limit != 0);
 }
 
 koios::task<bool> sstable_builder::add(
@@ -27,6 +32,11 @@ koios::task<bool> sstable_builder::add(
 {
     assert(!was_finish());
     assert(m_filter != nullptr);
+    if (reach_the_size_limit())
+    {
+        co_return false;
+    }
+    
     if (::std::string_view uk = key.user_key(); uk != m_last_uk)
     {
         m_filter->append_new_filter(uk, m_filter_rep);
@@ -43,6 +53,7 @@ koios::task<bool> sstable_builder::add(
     {
         bool ret = co_await flush_current_block();
         if (!ret) co_return false;
+        m_size_wrote += m_block_builder.bytes_size();
     }
 
     co_return true;
