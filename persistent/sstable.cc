@@ -1,5 +1,6 @@
 #include <string>
 #include <iterator>
+#include <ranges>
 
 #include "toolpex/exceptions.h"
 #include "frenzykv/persistent/sstable.h"
@@ -8,6 +9,8 @@
 
 namespace frenzykv
 {
+
+namespace rv = ::std::ranges::views;
 
 sstable::sstable(const kvdb_deps& deps, 
                  ::std::unique_ptr<random_readable> file, 
@@ -133,43 +136,24 @@ sstable::get(const_bspan user_key)
     {
         m_buffer = {};
     }
-    
-    for (auto iter = m_block_offsets.begin(); iter != m_block_offsets.end(); ++iter)
+
+    // TODO: change to slide view
+
+    auto blk_aws = m_block_offsets
+        | rv::transform([this](auto&& pair){ 
+              return this->get_block(pair.first, pair.second);
+          });
+
+    auto last_block_opt = co_await *begin(blk_aws);
+    for (auto window : blk_aws | rv::slide(2))
     {
-        const uintmax_t cur_offset = iter->first;
-        const btl_t cur_btl = iter->second;
-        const auto next_iter = ::std::next(iter);
-        [[maybe_unused]] uintmax_t next_offset{};
-        [[maybe_unused]] btl_t next_btl{};
-
-        if (next_iter != m_block_offsets.end())
-        {
-            next_offset = next_iter->first;
-            next_btl = next_iter->second;
-        }
-
-        auto cur_blk_opt = co_await get_block(cur_offset, cur_btl);
-        if (!cur_blk_opt) co_return {};
-
-        auto cur_uk = cur_blk_opt->first_segment_public_prefix();
-
-        // TODO: After you fount out some block might be the one, 
-        // we should be able to call a function like this one 
-        // to retrive a optional<block_segment> to get the final result.
-
-        // means the current iter is the last iter
-        // we need go through this block
-        if (next_offset == 0) 
-        {
-            // TODO           
-        }
-        else
-        {
-            auto next_blk_opt = co_await get_block(next_offset, next_btl);
-            assert(next_blk_opt);
-            // TODO
-        }
+        auto blk0_opt = co_await window[0];
+        auto blk1_opt = co_await window[1];
+        
+        //TODO
+        last_block_opt = ::std::move(blk1_opt);
     }
+
 
     co_return result;
 }

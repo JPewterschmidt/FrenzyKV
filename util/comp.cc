@@ -10,6 +10,11 @@ operator()(::std::span<const ::std::byte> lhs,
            ::std::span<const ::std::byte> rhs) const noexcept 
 {
     const size_t min_len = ::std::min(lhs.size(), rhs.size());
+    if (min_len == 0)
+    {
+        return lhs.size() <=> rhs.size();
+    }
+
     if (int indicator = ::std::memcmp(lhs.data(), rhs.data(), min_len); 
         indicator == 0)
     {

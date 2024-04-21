@@ -93,8 +93,8 @@ public:
     const_bspan storage() const noexcept { return m_storage; }
 
     bool fit_public_prefix(const_bspan user_prefix) const noexcept;
-    bool larger_equal_public_prefix(const_bspan user_prefix) const noexcept;
-    bool lesser_public_prefix(const_bspan user_prefix) const noexcept;
+    bool larger_equal_than_this_public_prefix(const_bspan user_prefix) const noexcept;
+    bool less_than_this_public_prefix(const_bspan user_prefix) const noexcept;
 
 private:
     parse_result_t parse();
@@ -112,6 +112,8 @@ private:
 class block
 {
 public:
+    constexpr block() noexcept = default;
+
     /*! \param  Uncompressed block storage
      *
      *  Wont check the CRC32 checksum, since the value of checksum 
@@ -137,7 +139,7 @@ public:
 
     const auto& special_segment_ptrs() { return m_special_segs; }
     const_bspan first_segment_public_prefix() const noexcept { return m_first_seg_public_prefix; }
-    bool larger_equal_first_segment_public_prefix(const_bspan cb) const noexcept;
+    bool larger_equal_than_this_first_segment_public_prefix(const_bspan cb) const noexcept;
 
     ::std::optional<block_segment> get(const_bspan public_prefix) const;
 
