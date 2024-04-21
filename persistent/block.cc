@@ -14,18 +14,6 @@ namespace frenzykv
 
 namespace rv = ::std::ranges::views;
 
-/*  block segment format
- *
- *  PP:         string      public prefix
- *  PPL:    2B  uint16_t    public prefix length
- *  RIL:    4B  uint32_t    rest item length
- *  RI:         string      rest item
- *
- *  | PPL |      PP      | RIL |      RI       | RIL |     RI     | ... | 4B Zero EOF (RIL) |
- *
- *
- */
-
 using ppl_t = uint16_t;
 using ril_t = uint32_t;
 static constexpr size_t bs_ppl = sizeof(ppl_t);
