@@ -12,6 +12,7 @@
 #include "frenzykv/types.h"
 #include "frenzykv/persistent/block.h"
 #include "frenzykv/util/compressor.h"
+#include "frenzykv/io/inner_buffer.h"
 
 namespace frenzykv
 {

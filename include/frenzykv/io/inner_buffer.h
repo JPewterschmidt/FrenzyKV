@@ -67,6 +67,7 @@ public:
         return *this;
     }
 
+    bool empty() const noexcept { return size() == 0; }
     size_t capacity() const noexcept { return m_capa; }
     size_t left() const noexcept { return m_left; }
     size_t size() const noexcept { return capacity() - left(); }
