@@ -127,7 +127,7 @@ public:
     auto sequence_number() const noexcept { return m_seq; }
     void set_sequence_number(sequence_number_t num) noexcept { m_seq = num; }
     void set_user_key(::std::string v) noexcept { m_user_key = ::std::move(v); }
-    const auto& user_key() const noexcept { return m_user_key; }
+    ::std::string_view user_key() const noexcept { return m_user_key; }
 
     size_t serialize_to(::std::span<::std::byte> buffer) const noexcept;
     size_t serialize_to(::std::span<char> buffer) const noexcept

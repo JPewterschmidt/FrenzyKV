@@ -15,6 +15,16 @@
 
 namespace frenzykv
 {
+/*  block segment format
+ *
+ *  PP:         string      public prefix
+ *  PPL:    2B  uint16_t    public prefix length
+ *  RIL:    4B  uint32_t    rest item length
+ *  RI:         string      rest item
+ *
+ *  | PPL |      PP      | RIL |      RI       | RIL |     RI     | ... | 4B Zero EOF (RIL) |
+ */
+
 
 /*
  *  |-------------------------------------------------------------------|
@@ -105,6 +115,8 @@ private:
     ::std::vector<const_bspan> m_items;
     parse_result_t m_parse_result;
 };
+
+koios::generator<kv_entry> entries_from_block_segment(const block_segment& seg);
 
 /*! \brief  Block obejct
  *  Lazy evaluation. But it will parse the meta data during construction.

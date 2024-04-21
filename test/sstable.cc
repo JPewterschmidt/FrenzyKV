@@ -9,7 +9,9 @@
 
 #include "frenzykv/io/in_mem_rw.h"
 #include "frenzykv/db/filter.h"
+#include "frenzykv/util/comp.h"
 
+#include "frenzykv/persistent/block.h"
 #include "frenzykv/persistent/sstable.h"
 #include "frenzykv/persistent/sstable_builder.h"
 
@@ -92,7 +94,17 @@ public:
 
         if (!opt->fit_public_prefix(user_key)) 
             co_return false;
-        
+
+        for (auto entry : entries_from_block_segment(*opt))
+        {
+            if (memcmp_comparator{}(entry.key().user_key(), as_string_view(user_key)) != ::std::strong_ordering::equal)
+                co_return false;
+            if (entry.value().is_tomb_stone())
+                co_return false;
+            if (entry.value().value() != user_value)
+                co_return false;
+        }
+               
         co_return true;      
     }
 
