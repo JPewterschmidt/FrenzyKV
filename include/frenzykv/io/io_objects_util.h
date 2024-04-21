@@ -11,8 +11,7 @@
 namespace frenzykv
 {
 
-koios::task<::std::unique_ptr<in_mem_rw>>
-disk_to_mem(::std::unique_ptr<random_readable> file);
+koios::task<in_mem_rw> to_in_mem_rw(random_readable& file);
 
 } // namespace frenzykv
 
