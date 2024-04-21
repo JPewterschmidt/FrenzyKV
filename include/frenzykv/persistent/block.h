@@ -73,6 +73,7 @@ bool block_content_was_comprssed(const_bspan storage);
 const_bspan undecompressed_block_content(const_bspan storage);
 crc32_t embeded_crc32_value(const_bspan storage);
 ::std::string block_decompress(const_bspan storage, ::std::shared_ptr<compressor_policy> compressor);
+bool block_decompress_to(const_bspan storage, bspan& dst, ::std::shared_ptr<compressor_policy> compressor);
 
 size_t approx_block_decompress_size(
     const_bspan storage, 

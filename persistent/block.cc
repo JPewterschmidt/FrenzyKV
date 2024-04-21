@@ -154,6 +154,15 @@ wc_t wc_value(const_bspan storage)
     return result;
 }
 
+bool block_decompress_to(
+    const_bspan storage, 
+    bspan& dst, 
+    ::std::shared_ptr<compressor_policy> compressor)
+{
+    assert(compressor);
+    return !compressor->decompress(storage, dst);
+}
+
 size_t approx_block_decompress_size(
     const_bspan storage, 
     ::std::shared_ptr<compressor_policy> compressor)
