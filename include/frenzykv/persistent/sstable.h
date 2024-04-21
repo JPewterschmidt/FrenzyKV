@@ -58,7 +58,7 @@ public:
      *              `block_segment` object are XXX undefined behaviour.
      */
     koios::task<::std::optional<block_segment>> 
-    get(const_bspan user_key);
+    get_segment(const_bspan user_key);
 
     /*! \brief Searching specific user key from this memtable
      *  
@@ -73,9 +73,9 @@ public:
      *              `block_segment` object are XXX undefined behaviour.
      */
     koios::task<::std::optional<block_segment>>
-    get(::std::string_view user_key) 
+    get_segment(::std::string_view user_key) 
     {
-        return get(::std::as_bytes(::std::span{user_key}));
+        return get_segment(::std::as_bytes(::std::span{user_key}));
     }
 
 private:
@@ -97,7 +97,7 @@ private:
     };
 
     koios::task<::std::optional<block_with_storage>> 
-    get_block(uintmax_t offset, btl_t btl);             // Required by `get()`
+    get_block(uintmax_t offset, btl_t btl);             // Required by `get_segment()`
     
 private:
     const kvdb_deps* m_deps{};

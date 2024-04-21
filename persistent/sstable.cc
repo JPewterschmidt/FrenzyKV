@@ -122,7 +122,7 @@ sstable::get_block(uintmax_t offset, btl_t btl)
 }
 
 koios::task<::std::optional<block_segment>> 
-sstable::get(const_bspan user_key)
+sstable::get_segment(const_bspan user_key)
 {
     if (!m_meta_data_parsed)
         co_await parse_meta_data();

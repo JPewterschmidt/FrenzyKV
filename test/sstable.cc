@@ -21,6 +21,8 @@ namespace rv = ::std::ranges::views;
 namespace
 {
 
+const ::std::string user_value = "WilsonAlinaWilsonAlinaWilsonAlinaWilsonAlina";
+
 ::std::vector<kv_entry> make_kvs()
 {
     ::std::vector<kv_entry> kvs{};
@@ -34,10 +36,7 @@ namespace
             key = ::std::string{ begin(newkview), end(newkview) };
         }
 
-        kvs.emplace_back(
-            (sequence_number_t)i, 
-            key, "WilsonAlinaWilsonAlinaWilsonAlinaWilsonAlina"
-        );
+        kvs.emplace_back((sequence_number_t)i, key, user_value);
     }
     return kvs;
 }
@@ -88,10 +87,13 @@ public:
     koios::task<bool> get(const_bspan user_key)
     {
         if (!m_table) co_return false;
-        auto opt = co_await m_table->get(user_key);
+        auto opt = co_await m_table->get_segment(user_key);
         if (!opt) co_return false;
 
-        co_return opt->fit_public_prefix(user_key);
+        if (!opt->fit_public_prefix(user_key)) 
+            co_return false;
+        
+        co_return true;      
     }
 
 private:
@@ -115,6 +117,8 @@ TEST_F(sstable_test, get)
 {
     reset();
     ASSERT_TRUE(make_table().result());
-    ::std::span cb{ "dddeeefff"sv };
-    ASSERT_TRUE(get(::std::as_bytes(cb)).result());
+    ::std::span cb1{ "dddeeefff"sv };
+    ::std::span cb2{ "ggghhhiii"sv };
+    ASSERT_TRUE(get(::std::as_bytes(cb1)).result());
+    ASSERT_TRUE(get(::std::as_bytes(cb2)).result());
 }
