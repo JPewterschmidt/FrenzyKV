@@ -1,4 +1,5 @@
 #include "frenzykv/util/compressor.h"
+#include "frenzykv/error_category.h"
 #include "zstd.h"
 
 namespace frenzykv
@@ -55,6 +56,49 @@ public:
     }
 
     ::std::error_code 
+    compress(const_bspan original, bspan& compressed_dst) const override
+    {
+        const size_t space_need = compressed_minimum_size(original);
+        if (compressed_dst.size() < space_need)
+            return make_frzkv_out_of_range();
+
+        const size_t sz_compressed = ::ZSTD_compress(
+            compressed_dst.data(), compressed_dst.size(), 
+            original.data(), original.size(), 
+            compress_level()
+        );
+
+        if (::ZSTD_isError(sz_compressed))
+        {
+            return { static_cast<int>(sz_compressed), zstd_category() };
+        }
+
+        compressed_dst = compressed_dst.subspan(0, sz_compressed);
+        return {};
+    }
+
+    ::std::error_code 
+    decompress(const_bspan compressed_src, bspan& decompressed_dst) const override
+    {
+        const size_t space_need = decompressed_minimum_size(compressed_src);
+        if (decompressed_dst.size() < space_need)
+            return make_frzkv_out_of_range();
+
+        const size_t sz_decompr = ::ZSTD_decompress(
+            decompressed_dst.data(), decompressed_dst.size(),
+            compressed_src.data(), compressed_src.size()
+        );
+
+        if (::ZSTD_isError(sz_decompr))
+        {
+            return { static_cast<int>(sz_decompr), zstd_category() };
+        }
+        
+        decompressed_dst = decompressed_dst.subspan(0, sz_decompr);
+        return {};
+    }
+
+    ::std::error_code 
     compress_append_to(
         const_bspan original, 
         ::std::string& compressed_dst) const override
@@ -73,8 +117,8 @@ public:
         {
             return { static_cast<int>(sz_compressed), zstd_category() };
         }
-        compressed_dst.resize(old_size + sz_compressed);
 
+        compressed_dst.resize(old_size + sz_compressed);
         return {};
     }
 
@@ -84,9 +128,7 @@ public:
         ::std::string& decompressed_dst) const override
     {
         const size_t old_size = decompressed_dst.size();
-        const size_t decompression_need_sz = ::ZSTD_getFrameContentSize(
-            compressed_src.data(), compressed_src.size()
-        );
+        const size_t decompression_need_sz = decompressed_minimum_size(compressed_src);
         decompressed_dst.resize(old_size + decompression_need_sz);
 
         const size_t sz_decompr = ::ZSTD_decompress(
@@ -101,6 +143,16 @@ public:
         decompressed_dst.resize(old_size + sz_decompr);
 
         return {};
+    }
+
+    size_t decompressed_minimum_size(const_bspan original) const override
+    {
+        return ::ZSTD_getFrameContentSize(original.data(), original.size());
+    }
+
+    size_t compressed_minimum_size(const_bspan original) const override
+    {
+        return ::ZSTD_compressBound(original.size());
     }
 };
 
@@ -140,6 +192,36 @@ public:
         ::std::string& decompressed_dst) const override
     {
         decompressed_dst.append(as_string_view(compressed_src));
+        return {};
+    }
+
+    size_t decompressed_minimum_size(const_bspan original) const noexcept override
+    {
+        return original.size();
+    }
+
+    size_t compressed_minimum_size(const_bspan original) const noexcept override
+    {
+        return original.size();
+    }
+
+    ::std::error_code 
+    compress(const_bspan original, bspan& compressed_dst) const override
+    {
+        if (compressed_dst.size() < original.size()) [[unlikely]]
+            return make_frzkv_out_of_range();
+        ::std::memcpy(compressed_dst.data(), original.data(), original.size());
+        compressed_dst = compressed_dst.subspan(0, original.size());
+        return {};
+    }
+
+    ::std::error_code 
+    decompress(const_bspan compressed_src, bspan& decompressed_dst) const override
+    {
+        if (decompressed_dst.size() < compressed_src.size()) [[unlikely]]
+            return make_frzkv_out_of_range();
+        ::std::memcpy(decompressed_dst.data(), compressed_src.data(), compressed_src.size());
+        decompressed_dst = decompressed_dst.subspan(0, compressed_src.size());
         return {};
     }
 };

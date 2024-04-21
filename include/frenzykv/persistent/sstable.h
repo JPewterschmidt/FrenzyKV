@@ -104,6 +104,7 @@ private:
 
         // Iff s.empty(), then the block uses sstable::s_storage
         ::std::string s; 
+        //buffer<> s;
     };
 
     koios::task<::std::optional<block_with_storage>> 
