@@ -138,8 +138,6 @@ sstable::get_segment(const_bspan user_key)
 
     auto blk_aws = m_block_offsets
         | rv::transform([this](auto&& pair){ 
-              // TODO: This function will rewrite the m_buffer, 
-              // not friendly to slide view.
               return this->get_block(pair.first, pair.second);
           });
 
@@ -157,7 +155,7 @@ sstable::get_segment(const_bspan user_key)
            && blk1_opt->b.less_than_this_first_segment_public_prefix(user_key))
         {
             if (auto& ss = blk0_opt->s; !ss.empty())
-                m_buffer = ::std::move(ss); // TODO Cause UB?
+                m_buffer = ::std::move(ss);
             co_return blk0_opt->b.get(user_key);
         }
         
