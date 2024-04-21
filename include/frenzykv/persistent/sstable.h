@@ -78,6 +78,15 @@ public:
         return get_segment(::std::as_bytes(::std::span{user_key}));
     }
 
+    koios::task<::std::optional<kv_entry>>
+    get_kv_entry(sequence_number_t seq, const_bspan user_key);
+
+    koios::task<::std::optional<kv_entry>>
+    get_kv_entry(sequence_number_t seq, ::std::string_view user_key)
+    {
+        return get_kv_entry(seq, ::std::as_bytes(::std::span{user_key}));
+    }
+
 private:
     koios::task<bool>   parse_meta_data();
     koios::task<btl_t>  btl_value(uintmax_t offset);    // Required by `generate_block_offsets()`

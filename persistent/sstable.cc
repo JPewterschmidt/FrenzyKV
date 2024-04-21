@@ -171,4 +171,21 @@ sstable::get_segment(const_bspan user_key)
     co_return {};
 }
 
+koios::task<::std::optional<kv_entry>>
+sstable::
+get_kv_entry(sequence_number_t seq, const_bspan user_key)
+{
+    auto seg_opt = co_await get_segment(user_key);
+    if (!seg_opt) co_return {};
+    const auto& seg = *seg_opt;
+    
+    for (kv_entry entry : entries_from_block_segment(seg))
+    {
+        if (entry.key().sequence_number() >= seq) 
+            co_return entry;
+    }
+
+    co_return {};
+}
+
 } // namespace frenzykv
