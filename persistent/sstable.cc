@@ -123,8 +123,6 @@ sstable::get_block(uintmax_t offset, btl_t btl)
 koios::task<::std::optional<block_segment>> 
 sstable::get(const_bspan user_key)
 {
-    ::std::optional<block_segment> result{};
-
     if (!m_meta_data_parsed)
         co_await parse_meta_data();
 
@@ -137,8 +135,6 @@ sstable::get(const_bspan user_key)
         m_buffer = {};
     }
 
-    // TODO: change to slide view
-
     auto blk_aws = m_block_offsets
         | rv::transform([this](auto&& pair){ 
               return this->get_block(pair.first, pair.second);
@@ -149,13 +145,25 @@ sstable::get(const_bspan user_key)
     {
         auto blk0_opt = co_await window[0];
         auto blk1_opt = co_await window[1];
+
+        assert(blk0_opt.has_value());
+        assert(blk1_opt.has_value());
+
+        // Shot!
+        if (blk0_opt->larger_equal_than_this_first_segment_public_prefix(user_key)
+           && blk1_opt->less_than_this_first_segment_public_prefix(user_key))
+        {
+            co_return blk0_opt->get(user_key);
+        }
         
-        //TODO
         last_block_opt = ::std::move(blk1_opt);
     }
+    if (last_block_opt->larger_equal_than_this_first_segment_public_prefix(user_key))
+    {
+        co_return last_block_opt->get(user_key);
+    }
 
-
-    co_return result;
+    co_return {};
 }
 
 } // namespace frenzykv
