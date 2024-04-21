@@ -37,11 +37,11 @@ public:
     size_t serialize_to(bspan dst) const noexcept;
     bool parse_from(const_bspan src) noexcept;
     
-    koios::task<> start() const noexcept;
-    koios::task<> finish() const noexcept;
+    koios::task<> start() noexcept;
+    koios::task<> finish() noexcept;
 
 private:
-    file_id_t allocate_file_id();
+    koios::task<file_id_t> allocate_file_id();
     bool working() const noexcept;
 
 private:
@@ -51,7 +51,7 @@ private:
     ::std::atomic<file_id_t> m_latest_unused_id{};
     moodycamel::ConcurrentQueue<file_id_t> m_id_recycled;
 
-    mutable koios::coroutine_shared_mutex m_mutex;
+    mutable koios::shared_mutex m_mutex;
 };
 
 } // namespace frenzykv

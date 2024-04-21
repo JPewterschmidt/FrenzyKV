@@ -1,6 +1,8 @@
 #include <format>
 #include <cassert>
 
+#include "koios/iouring_awaitables.h"
+
 #include "frenzykv/env.h"
 #include "frenzykv/persistent/level.h"
 
@@ -21,13 +23,13 @@ koios::task<file_id_t> level::allocate_file_id()
         result = m_latest_unused_id.fetch_add(1);
     }
 
-    return result;
+    co_return result;
 }
 
 koios::task<file_id_t> level::create_file(level_t level)
 {
     assert(working());
-    file_id_t id = allocate_file_id();
+    file_id_t id = co_await allocate_file_id();
     auto name = name_a_file(level, id);
     
     co_return id;
@@ -37,20 +39,20 @@ koios::task<> level::delete_file(level_t level, file_id_t id)
 {
     assert(working());
     auto lk = co_await m_mutex.acquire();
-    co_await uring::unlink(sstables_dir()/m_id_name.at(id));
+    co_await m_deps->env()->delete_file(sstables_path()/m_id_name.at(id));
 
     // Recycle file id;
     m_id_recycled.enqueue(id);
 }
 
-koios::task<> level::finish() const noexcept
+koios::task<> level::finish() noexcept
 {
     int val = m_working.load();
     if (val == 2) co_return;
     else if (val == 0) 
         throw koios::exception{"level: you can not finish a unstarted level object"};
 
-    auto lk = co_await m_mutex.acqiure();
+    auto lk = co_await m_mutex.acquire();
     
     // TODO
 
@@ -58,7 +60,7 @@ koios::task<> level::finish() const noexcept
     co_return;
 }
 
-koios::task<> level::start() const noexcept
+koios::task<> level::start() noexcept
 {
     int val = m_working.load();
     if (val == 1) co_return;
@@ -69,7 +71,7 @@ koios::task<> level::start() const noexcept
 
     // TODO
 
-    m_working.fetch_add();
+    m_working.fetch_add(1);
     co_return;
 }
 
