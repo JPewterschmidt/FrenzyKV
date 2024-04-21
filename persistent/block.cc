@@ -154,6 +154,34 @@ wc_t wc_value(const_bspan storage)
     return result;
 }
 
+bool block_decompress_to(
+    const_bspan storage, 
+    bspan& dst, 
+    ::std::shared_ptr<compressor_policy> compressor)
+{
+    assert(compressor);
+    bspan for_block_content = dst.subspan(sizeof(btl_t));
+    const bool result = !compressor->decompress(undecompressed_block_content(storage), for_block_content);
+    const size_t decompressed_bc_sz = for_block_content.size();
+    const size_t new_btl = sizeof(btl_t) + decompressed_bc_sz + sizeof(wc_t) + sizeof(crc32_t);
+    assert(new_btl <= ::std::numeric_limits<btl_t>::max());
+    btl_t new_btl_value = static_cast<btl_t>(new_btl);
+    encode_int_to<sizeof(btl_t)>(new_btl_value, dst.subspan(0, sizeof(btl_t)));
+    dst = dst.subspan(0, new_btl);
+
+    return result;
+}
+
+size_t approx_block_decompress_size(
+    const_bspan storage, 
+    ::std::shared_ptr<compressor_policy> compressor)
+{
+    assert(compressor);
+    return compressor->decompressed_minimum_size(
+               undecompressed_block_content(storage)) 
+        + sizeof(btl_t) + sizeof(crc32_t) + sizeof(wc_t);
+}
+
 static btl_t btl_value(const_bspan storage)
 {
     btl_t result{};

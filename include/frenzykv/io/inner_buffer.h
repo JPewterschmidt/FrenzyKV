@@ -20,6 +20,8 @@ public:
     using const_pointer = typename ::std::allocator_traits<allocator>::const_pointer;
 
 public:
+    constexpr buffer() noexcept = default;
+
     buffer(size_t capacity)
         : m_capa{ capacity }, m_left{ capacity }
     {
@@ -41,7 +43,9 @@ public:
     {
     }
 
-    ~buffer() noexcept
+    ~buffer() noexcept { release(); }
+
+    void release() noexcept
     {
         if (!valid()) return;
         ::std::allocator_traits<Alloc>::deallocate(
@@ -59,6 +63,7 @@ public:
 
     buffer& operator = (buffer&& other) noexcept
     {
+        release();
         m_alloc = ::std::move(other.m_alloc);
         m_storage = ::std::exchange(other.m_storage, nullptr);
         m_capa = other.m_capa;
@@ -67,6 +72,7 @@ public:
         return *this;
     }
 
+    bool empty() const noexcept { return size() == 0; }
     size_t capacity() const noexcept { return m_capa; }
     size_t left() const noexcept { return m_left; }
     size_t size() const noexcept { return capacity() - left(); }
