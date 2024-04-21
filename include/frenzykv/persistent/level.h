@@ -6,11 +6,13 @@
 #include <queue>
 #include <atomic>
 
-#include "frenzykv/kvdb_deps.h"
-#include "frenzykv/io/writable.h"
-#include "frenzykv/io/readable.h"
 #undef BLOCK_SIZE
 #include "concurrentqueue/concurrentqueue.h"
+
+#include "frenzykv/kvdb_deps.h"
+#include "frenzykv/types.h"
+#include "frenzykv/io/writable.h"
+#include "frenzykv/io/readable.h"
 
 namespace frenzykv
 {

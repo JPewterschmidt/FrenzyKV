@@ -41,11 +41,13 @@ void level::delete_file(level_t level, file_id_t id)
 size_t level::serialize_to(bspan dst) const noexcept
 {
     // TODO
+    return {};
 }
 
 bool level::parse_from(const_bspan src) noexcept
 {
     // TODO
+    return {};
 }
 
 } // namespace frenzykv
