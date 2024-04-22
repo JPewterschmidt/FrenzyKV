@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 #include "frenzykv/db/kv_entry.h"
+#include "frenzykv/util/comp.h"
 #include <string>
 #include <functional>
 
@@ -7,9 +8,9 @@ using namespace frenzykv;
 
 static auto get_data_sameuk_diffsn()
 {
-    sequenced_key key1{15, "xxxxxxxxx"}, key2{16, "xxxxxxxxx"};
+    sequenced_key key1{15, "xxxxxxxxx"}, key2{270, "xxxxxxxxx"};
     // we need make sure the lexicgraphical order are satisfied with this manner.
-    sequenced_key key3{128+15, "xxxxxxxxx"}, key4{128+16, "xxxxxxxxx"};
+    sequenced_key key3{271+15, "xxxxxxxxx"}, key4{271+16, "xxxxxxxxx"};
                                  // Thus key3 < key4 is considerable.
 
     return ::std::tuple{ 

@@ -21,9 +21,7 @@ static constexpr size_t bs_ril = sizeof(ril_t);
 
 static ril_t read_ril(const ::std::byte* cur)
 {
-    ril_t result{};
-    ::std::memcpy(&result, cur, bs_ril);
-    return result;
+    return decode_int_from<ril_t>({ cur, bs_ril });
 }
 
 template<::std::size_t Len>
@@ -39,8 +37,7 @@ parse_result_t block_segment::parse()
     const ::std::byte* current = m_storage.data();
     const ::std::byte* sentinal = current + m_storage.size();
 
-    ppl_t ppl{};
-    ::std::memcpy(&ppl, current, bs_ppl);
+    ppl_t ppl = decode_int_from<ppl_t>({ current, bs_ppl });
     if (ppl == 0) return parse_result_t::error;
     current += bs_ppl;
     
@@ -105,8 +102,8 @@ entries_from_block_segment(const block_segment& seg)
     auto uk_from_seg = seg.public_prefix();
     for (const auto& item : seg.items())
     {
-        sequence_number_t seq{};
-        ::std::memcpy(&seq, item.data(), sizeof(seq));
+        ::std::span seq_buffer{ item.data(), sizeof(sequence_number_t) };
+        sequence_number_t seq = decode_int_from<sequence_number_t>(::std::as_bytes(seq_buffer));
         auto uv_with_len = item.subspan(sizeof(seq));
         uv_with_len = serialized_user_value_from_value_len(uv_with_len);
         co_yield kv_entry{ seq, uk_from_seg, kv_user_value::parse(uv_with_len) };
@@ -117,8 +114,7 @@ entries_from_block_segment(const block_segment& seg)
 
 static const ::std::byte* crc32_beg_ptr(const_bspan storage)
 {
-    btl_t btl{};
-    ::std::memcpy(&btl, storage.data(), sizeof(btl_t));
+    btl_t btl = decode_int_from<btl_t>(storage);
     return storage.data() + btl - sizeof(crc32_t);
 }
 
@@ -129,10 +125,7 @@ static const ::std::byte* wc_beg_ptr(const_bspan storage)
 
 wc_t wc_value(const_bspan storage)
 {
-    wc_t result{};
-    const ::std::byte* wcp = wc_beg_ptr(storage);
-    ::std::memcpy(&result, wcp, sizeof(wc_t));
-    return result;
+    return decode_int_from<wc_t>({ wc_beg_ptr(storage), sizeof(wc_t) });
 }
 
 ::std::string block_decompress(
@@ -149,7 +142,8 @@ wc_t wc_value(const_bspan storage)
     result.resize(result.size() + sizeof(wc_t) + sizeof(crc32_t), 0);
     // Re-calculate BTL
     btl_t newbtl = static_cast<btl_t>(result.size());
-    ::std::memcpy(result.data(), &newbtl, sizeof(btl_t));
+    ::std::span btl_buffer{ result.data(), sizeof(btl_t) };
+    encode_int_to<sizeof(btl_t)>(newbtl, ::std::as_writable_bytes(btl_buffer));
 
     return result;
 }
@@ -184,8 +178,7 @@ size_t approx_block_decompress_size(
 
 static btl_t btl_value(const_bspan storage)
 {
-    btl_t result{};
-    ::std::memcpy(&result, storage.data(), sizeof(btl_t));
+    btl_t result = decode_int_from<btl_t>(storage);
     assert(result != 0);
     return result;
 }
@@ -203,9 +196,7 @@ const_bspan undecompressed_block_content(const_bspan storage)
 crc32_t embeded_crc32_value(const_bspan storage)
 {
     const ::std::byte* crc32beg = crc32_beg_ptr(storage);
-    crc32_t result{};
-    ::std::memcpy(&result, crc32beg, sizeof(crc32_t));
-    return result;
+    return decode_int_from<crc32_t>({ crc32beg, sizeof(crc32_t) });
 }
 
 static crc32_t calculate_block_content_crc32(const_bspan bc)
@@ -223,8 +214,7 @@ bool block_integrity_check(const_bspan storage)
 
 bool block_content_was_comprssed(const_bspan storage)
 {
-    wc_t wc{};
-    ::std::memcpy(&wc, wc_beg_ptr(storage), sizeof(wc));
+    wc_t wc = decode_int_from<wc_t>({ wc_beg_ptr(storage), sizeof(wc_t) });
     assert(wc == 1 || wc == 0);
     return wc == 1;
 }
@@ -239,19 +229,13 @@ static const ::std::byte* nsbs_beg_ptr(const_bspan s)
 // UnCompressed data only
 static nsbs_t nsbs_value(const_bspan s)
 {
-    nsbs_t result{};
-    const auto* p = nsbs_beg_ptr(s);
-    ::std::memcpy(&result, p, sizeof(nsbs_t));
-
-    return result;
+    return decode_int_from<nsbs_t>({ nsbs_beg_ptr(s), sizeof(nsbs_t) });
 }
 
 // UnCompressed data only
 static sbso_t sbso_value(const ::std::byte* sbso_ptr)
 {
-    sbso_t result{};
-    ::std::memcpy(&result, sbso_ptr, sizeof(sbso_t));
-    return result;
+    return decode_int_from<sbso_t>({ sbso_ptr, sizeof(sbso_t) });
 }
 
 // UnCompressed data only
