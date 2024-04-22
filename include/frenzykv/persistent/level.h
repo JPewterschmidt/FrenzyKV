@@ -34,9 +34,6 @@ public:
     koios::task<::std::unique_ptr<seq_writable>> open_write(level_t level, file_id_t id);
     koios::task<::std::unique_ptr<random_readable>> open_read(level_t level, file_id_t id);
 
-    size_t serialize_to(bspan dst) const noexcept;
-    bool parse_from(const_bspan src) noexcept;
-    
     koios::task<> start() noexcept;
     koios::task<> finish() noexcept;
 
@@ -49,7 +46,7 @@ private:
     ::std::atomic_int m_working{};
     ::std::unordered_map<file_id_t, ::std::string> m_id_name;
     ::std::atomic<file_id_t> m_latest_unused_id{};
-    moodycamel::ConcurrentQueue<file_id_t> m_id_recycled;
+    ::std::queue<file_id_t> m_id_recycled; 
 
     mutable koios::shared_mutex m_mutex;
 };
