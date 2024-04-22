@@ -313,11 +313,9 @@ segments_in_single_interval(::std::vector<const ::std::byte*>::const_iterator in
           });
 
     block_segment last_seg = *begin(sp_seg);
-    for (auto curwin : sp_seg | rv::slide(2))
-    {
-        block_segment seg1 = curwin[0];
-        block_segment seg2 = curwin[1];
 
+    for (auto [seg1, seg2] : sp_seg | rv::adjacent<2>)
+    {
         // Shot!
         if (seg1.larger_equal_than_this_public_prefix(user_prefix) 
             && seg2.less_than_this_public_prefix(user_prefix))

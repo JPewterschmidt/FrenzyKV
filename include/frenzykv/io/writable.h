@@ -7,10 +7,12 @@
 #include <string_view>
 #include <ostream>
 
+#include "frenzykv/io/file.h"
+
 namespace frenzykv
 {
 
-class seq_writable : public toolpex::move_only
+class seq_writable : public toolpex::move_only, virtual public file
 {
 public:
     virtual ~seq_writable() noexcept {}
@@ -25,7 +27,6 @@ public:
     virtual koios::task<size_t> append(::std::span<const ::std::byte> buffer) = 0;
     virtual koios::task<> sync() = 0;
     virtual koios::task<> flush() = 0;
-    virtual koios::task<> close() = 0;
     
     // The following 2 methods support users to get a writable range of memory to write.
     // But the users must inform the actual number of bytes they want to commit.

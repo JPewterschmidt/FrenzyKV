@@ -34,6 +34,8 @@ public:
     koios::task<size_t> 
     read(::std::span<::std::byte>, size_t offset) const override;
 
+    koios::task<> close() noexcept override { co_return; }
+
     constexpr bool is_buffering() const noexcept override { return false; }
 
     uintmax_t file_size() const override { return m_filesize; }

@@ -10,6 +10,8 @@ namespace frenzykv
 
 using namespace koios;
 
+static toolpex::errret_thrower et;
+
 static toolpex::unique_posix_fd
 open_helper(const auto& opts, const ::std::string& pathstr, mode_t create_mode)
 {
@@ -18,7 +20,6 @@ open_helper(const auto& opts, const ::std::string& pathstr, mode_t create_mode)
                          | O_APPEND 
                          | (opts.sync_write ? O_DSYNC : 0);
 
-    toolpex::errret_thrower et;
     return { et << ::open(pathstr.c_str(), open_flags, create_mode) };
 }
 
@@ -39,6 +40,18 @@ iouring_writable(toolpex::unique_posix_fd fd, const kvdb_deps& deps) noexcept
       m_buffer{ buffer_size_nbytes() }, 
       m_streambuf{ m_buffer }
 {
+}
+
+uintmax_t iouring_writable::file_size() const
+{
+    typename ::stat st{};
+    et << ::fstat(fd(), &st);
+    return st.st_size;
+}
+
+bool iouring_writable::is_buffering() const noexcept
+{
+    return need_buffered();
 }
 
 koios::task<>

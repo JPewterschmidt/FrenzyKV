@@ -8,10 +8,12 @@
 #include <memory>
 #include <cstddef>
 
+#include "frenzykv/io/file.h"
+
 namespace frenzykv
 {
 
-class seq_readable
+class seq_readable : virtual public file
 {
 public:
     using uptr = ::std::unique_ptr<seq_readable>;
@@ -21,8 +23,6 @@ public:
     read(::std::span<::std::byte> dest) = 0;
 
     virtual ~seq_readable() noexcept {}
-    virtual bool is_buffering() const = 0;
-    virtual uintmax_t file_size() const = 0;
 };
 
 class random_readable : public seq_readable

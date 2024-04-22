@@ -140,10 +140,10 @@ sstable::get_segment(const_bspan user_key)
           });
 
     auto last_block_opt = co_await *begin(blk_aws);
-    for (auto window : blk_aws | rv::slide(2))
+    for (auto [blk0aw, blk1aw] : blk_aws | rv::adjacent<2>)
     {
-        auto blk0_opt = co_await window[0];
-        auto blk1_opt = co_await window[1];
+        auto blk0_opt = co_await blk0aw;
+        auto blk1_opt = co_await blk1aw;
 
         assert(blk0_opt.has_value());
         assert(blk1_opt.has_value());
