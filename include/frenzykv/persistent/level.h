@@ -5,9 +5,8 @@
 #include <unordered_map>
 #include <queue>
 #include <atomic>
-
-#undef BLOCK_SIZE
-#include "concurrentqueue/concurrentqueue.h"
+#include <memory>
+#include <utility>
 
 #include "koios/task.h"
 #include "koios/coroutine_shared_mutex.h"
@@ -28,7 +27,9 @@ class level
 public:
     level(const kvdb_deps& deps);
 
-    koios::task<file_id_t> create_file(level_t level);
+    koios::task<::std::pair<file_id_t, ::std::unique_ptr<seq_writable>>> 
+    create_file(level_t level);
+
     koios::task<> delete_file(level_t level, file_id_t id);
 
     koios::task<::std::unique_ptr<seq_writable>> open_write(level_t level, file_id_t id);
