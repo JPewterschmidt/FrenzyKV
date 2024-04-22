@@ -6,8 +6,6 @@
 namespace frenzykv
 {
 
-using namespace toolpex;
-
 static constexpr mgn_t magic_number = 0x47d6ddc3;
 
 mgn_t magic_number_value() noexcept
@@ -100,8 +98,8 @@ koios::task<bool> sstable_builder::finish()
     co_await flush_current_block(false);
 
     ::std::array<::std::byte, sizeof(mbo) + sizeof(magic_number)> mbo_and_magic_number_buffer{};
-    encode_big_endian_to(mbo, mbo_and_magic_number_buffer);
-    encode_big_endian_to(magic_number, ::std::span{mbo_and_magic_number_buffer}.subspan(sizeof(mbo)));
+    toolpex::encode_big_endian_to(mbo, mbo_and_magic_number_buffer);
+    toolpex::encode_big_endian_to(magic_number, ::std::span{mbo_and_magic_number_buffer}.subspan(sizeof(mbo)));
 
     co_await m_file->append(mbo_and_magic_number_buffer);
     co_await m_file->close();
