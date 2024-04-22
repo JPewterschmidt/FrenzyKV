@@ -13,6 +13,7 @@ namespace frenzykv
 {
 
 namespace rv = ::std::ranges::views;
+using namespace toolpex;
 
 using ppl_t = uint16_t;
 using ril_t = uint32_t;
@@ -21,7 +22,7 @@ static constexpr size_t bs_ril = sizeof(ril_t);
 
 static ril_t read_ril(const ::std::byte* cur)
 {
-    return decode_int_from<ril_t>({ cur, bs_ril });
+    return decode_big_endian_from<ril_t>({ cur, bs_ril });
 }
 
 template<::std::size_t Len>
@@ -37,7 +38,7 @@ parse_result_t block_segment::parse()
     const ::std::byte* current = m_storage.data();
     const ::std::byte* sentinal = current + m_storage.size();
 
-    ppl_t ppl = decode_int_from<ppl_t>({ current, bs_ppl });
+    ppl_t ppl = decode_big_endian_from<ppl_t>({ current, bs_ppl });
     if (ppl == 0) return parse_result_t::error;
     current += bs_ppl;
     
@@ -103,7 +104,7 @@ entries_from_block_segment(const block_segment& seg)
     for (const auto& item : seg.items())
     {
         ::std::span seq_buffer{ item.data(), sizeof(sequence_number_t) };
-        sequence_number_t seq = decode_int_from<sequence_number_t>(::std::as_bytes(seq_buffer));
+        sequence_number_t seq = decode_big_endian_from<sequence_number_t>(::std::as_bytes(seq_buffer));
         auto uv_with_len = item.subspan(sizeof(seq));
         uv_with_len = serialized_user_value_from_value_len(uv_with_len);
         co_yield kv_entry{ seq, uk_from_seg, kv_user_value::parse(uv_with_len) };
@@ -114,7 +115,7 @@ entries_from_block_segment(const block_segment& seg)
 
 static const ::std::byte* crc32_beg_ptr(const_bspan storage)
 {
-    btl_t btl = decode_int_from<btl_t>(storage);
+    btl_t btl = decode_big_endian_from<btl_t>(storage);
     return storage.data() + btl - sizeof(crc32_t);
 }
 
@@ -125,7 +126,7 @@ static const ::std::byte* wc_beg_ptr(const_bspan storage)
 
 wc_t wc_value(const_bspan storage)
 {
-    return decode_int_from<wc_t>({ wc_beg_ptr(storage), sizeof(wc_t) });
+    return decode_big_endian_from<wc_t>({ wc_beg_ptr(storage), sizeof(wc_t) });
 }
 
 ::std::string block_decompress(
@@ -143,7 +144,7 @@ wc_t wc_value(const_bspan storage)
     // Re-calculate BTL
     btl_t newbtl = static_cast<btl_t>(result.size());
     ::std::span btl_buffer{ result.data(), sizeof(btl_t) };
-    encode_int_to<sizeof(btl_t)>(newbtl, ::std::as_writable_bytes(btl_buffer));
+    encode_big_endian_to(newbtl, btl_buffer);
 
     return result;
 }
@@ -160,7 +161,7 @@ bool block_decompress_to(
     const size_t new_btl = sizeof(btl_t) + decompressed_bc_sz + sizeof(wc_t) + sizeof(crc32_t);
     assert(new_btl <= ::std::numeric_limits<btl_t>::max());
     btl_t new_btl_value = static_cast<btl_t>(new_btl);
-    encode_int_to<sizeof(btl_t)>(new_btl_value, dst.subspan(0, sizeof(btl_t)));
+    encode_big_endian_to(new_btl_value, dst.subspan(0, sizeof(btl_t)));
     dst = dst.subspan(0, new_btl);
 
     return result;
@@ -178,7 +179,7 @@ size_t approx_block_decompress_size(
 
 static btl_t btl_value(const_bspan storage)
 {
-    btl_t result = decode_int_from<btl_t>(storage);
+    btl_t result = decode_big_endian_from<btl_t>(storage);
     assert(result != 0);
     return result;
 }
@@ -196,7 +197,7 @@ const_bspan undecompressed_block_content(const_bspan storage)
 crc32_t embeded_crc32_value(const_bspan storage)
 {
     const ::std::byte* crc32beg = crc32_beg_ptr(storage);
-    return decode_int_from<crc32_t>({ crc32beg, sizeof(crc32_t) });
+    return decode_big_endian_from<crc32_t>({ crc32beg, sizeof(crc32_t) });
 }
 
 static crc32_t calculate_block_content_crc32(const_bspan bc)
@@ -214,7 +215,7 @@ bool block_integrity_check(const_bspan storage)
 
 bool block_content_was_comprssed(const_bspan storage)
 {
-    wc_t wc = decode_int_from<wc_t>({ wc_beg_ptr(storage), sizeof(wc_t) });
+    wc_t wc = decode_big_endian_from<wc_t>({ wc_beg_ptr(storage), sizeof(wc_t) });
     assert(wc == 1 || wc == 0);
     return wc == 1;
 }
@@ -229,13 +230,13 @@ static const ::std::byte* nsbs_beg_ptr(const_bspan s)
 // UnCompressed data only
 static nsbs_t nsbs_value(const_bspan s)
 {
-    return decode_int_from<nsbs_t>({ nsbs_beg_ptr(s), sizeof(nsbs_t) });
+    return decode_big_endian_from<nsbs_t>({ nsbs_beg_ptr(s), sizeof(nsbs_t) });
 }
 
 // UnCompressed data only
 static sbso_t sbso_value(const ::std::byte* sbso_ptr)
 {
-    return decode_int_from<sbso_t>({ sbso_ptr, sizeof(sbso_t) });
+    return decode_big_endian_from<sbso_t>({ sbso_ptr, sizeof(sbso_t) });
 }
 
 // UnCompressed data only
@@ -352,7 +353,7 @@ block_segment_builder(::std::string& dst, ::std::string_view public_prefix) noex
 {
     // Serialize PPL and PP
     ppl_t ppl = static_cast<ppl_t>(public_prefix.size());
-    append_encode_int_to<sizeof(ppl)>(ppl, m_storage);
+    append_encode_big_endian_to(ppl, m_storage);
     m_storage.append(public_prefix);
 }
 
@@ -368,7 +369,7 @@ bool block_segment_builder::add(const sequenced_key& key, const kv_user_value& v
 
     // Serialize RIL and RI
     ril_t ril = (ril_t)(sizeof(sequence_number_t) + value.serialized_bytes_size());
-    append_encode_int_to<sizeof(ril)>(ril, m_storage);
+    append_encode_big_endian_to(ril, m_storage);
     key.serialize_sequence_number_append_to(m_storage);
     value.serialize_append_to_string(m_storage);
 
@@ -468,9 +469,9 @@ static ::std::span<char> block_content(::std::string& storage)
     // Serialize Meta data area.
     for (sbso_t sbso : m_sbsos)
     {
-        append_encode_int_to<sizeof(sbso_t)>(sbso, m_storage);
+        append_encode_big_endian_to(sbso, m_storage);
     }
-    append_encode_int_to<sizeof(nsbs_t)>(static_cast<nsbs_t>(m_sbsos.size()), m_storage);
+    append_encode_big_endian_to(static_cast<nsbs_t>(m_sbsos.size()), m_storage);
 
     auto b_content = block_content(m_storage);
 
@@ -499,24 +500,24 @@ static ::std::span<char> block_content(::std::string& storage)
         m_storage = ::std::move(new_storage);
         // WC Only 1 byte
         wc_t wc{ 1 };
-        append_encode_int_to<sizeof(uint8_t)>(wc, m_storage);
+        append_encode_big_endian_to(wc, m_storage);
     }
     else
     {
         // WC Only 1 byte
         wc_t wc{ 0 };
-        append_encode_int_to<sizeof(uint8_t)>(wc, m_storage);
+        append_encode_big_endian_to(wc, m_storage);
     }
 
     // Calculate and append CRC value
     const crc32_t crc = calculate_block_content_crc32(::std::as_bytes(b_content));
-    append_encode_int_to<sizeof(crc32_t)>(crc, m_storage);
+    append_encode_big_endian_to(crc, m_storage);
 
     // Serialize BTL
     assert(m_storage.size() <= ::std::numeric_limits<btl_t>::max());
 
     btl_t btl = static_cast<btl_t>(m_storage.size());
-    encode_int_to<sizeof(btl_t)>(btl, ::std::as_writable_bytes(::std::span{ m_storage.data(), sizeof(btl) }));
+    encode_big_endian_to(btl, { m_storage.data(), sizeof(btl) });
 
     return ::std::move(m_storage);
 }

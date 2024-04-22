@@ -13,7 +13,7 @@ namespace frenzykv
 db_impl::db_impl(::std::string dbname, const options& opt)
     : m_dbname{ ::std::move(dbname) }, 
       m_deps{ opt },
-      m_log{ m_deps, prewrite_log_dir().path()/"0001-test.frzkvlog" }, 
+      m_log{ m_deps, m_deps.env()->get_seq_writable(prewrite_log_dir().path()/"0001-test.frzkvlog") }, 
       m_memset{ m_deps }
 {
 }

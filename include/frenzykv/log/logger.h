@@ -17,17 +17,13 @@ namespace frenzykv
 class logger
 {
 public:
-    logger(const kvdb_deps& deps, ::std::filesystem::path path)
+    logger(const kvdb_deps& deps, ::std::unique_ptr<seq_writable> file)
         : m_deps{ &deps }, 
-          m_filepath{ ::std::move(path) }, 
-          m_log_file{ m_deps->env()->get_seq_writable(m_filepath) }, 
+          m_log_file{ ::std::move(file) }, 
           m_level{ m_deps->opt()->log_level }
     {
     }
 
-    ::std::string to_string() const;
-    ::std::string filename() const noexcept { return m_filepath.filename(); }
-    ::std::filesystem::path filepath() const { return m_filepath; }
     koios::task<> write(const write_batch& b);
 
     logging_level level() const noexcept { return m_level; }
@@ -36,7 +32,6 @@ public:
     
 private:
     const kvdb_deps* m_deps{};
-    ::std::filesystem::path m_filepath;
     ::std::unique_ptr<seq_writable> m_log_file;
     logging_level m_level;
 };

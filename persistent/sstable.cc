@@ -12,6 +12,7 @@ namespace frenzykv
 {
 
 namespace rv = ::std::ranges::views;
+using namespace toolpex;
 
 sstable::sstable(const kvdb_deps& deps, 
                  ::std::unique_ptr<filter_policy> filter, 
@@ -32,8 +33,8 @@ koios::task<bool> sstable::parse_meta_data()
     ::std::string buffer(footer_sz, 0);
     co_await m_file->read({ buffer.data(), buffer.size() }, filesz - footer_sz);
     const ::std::byte* buffer_beg = reinterpret_cast<::std::byte*>(buffer.data());
-    mbo_t mbo = decode_int_from<mbo_t>({ buffer_beg, sizeof(mbo_t) });
-    mgn_t magic_num = decode_int_from<mgn_t>({ buffer_beg + sizeof(mbo_t), sizeof(magic_num) });
+    mbo_t mbo = decode_big_endian_from<mbo_t>({ buffer_beg, sizeof(mbo_t) });
+    mgn_t magic_num = decode_big_endian_from<mgn_t>({ buffer_beg + sizeof(mbo_t), sizeof(magic_num) });
 
     // file integrity check
     if (magic_number_value() != magic_num)
@@ -72,7 +73,7 @@ koios::task<btl_t> sstable::btl_value(uintmax_t offset)
     if (!co_await m_file->read(buffer, offset))
         co_return 0;
 
-    co_return decode_int_from<btl_t>({ buffer.data(), sizeof(btl_t) });
+    co_return decode_big_endian_from<btl_t>({ buffer.data(), sizeof(btl_t) });
 }
 
 koios::task<bool> sstable::generate_block_offsets()

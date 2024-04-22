@@ -10,6 +10,8 @@
 namespace frenzykv
 {
 
+using namespace toolpex;
+
 koios::generator<kv_entry> kv_entries_from_buffer(const_bspan buffer)
 {
     const ::std::byte* sentinal = buffer.data() + buffer.size();
@@ -27,12 +29,12 @@ sequenced_key::sequenced_key(const_bspan serialized_seq_key)
 {
     if (serialized_seq_key.empty()) return;
 
-    uint16_t userkey_len = decode_int_from<uint16_t>(serialized_seq_key.subspan(0, sizeof(uint16_t)));
+    uint16_t userkey_len = decode_big_endian_from<uint16_t>(serialized_seq_key.subspan(0, sizeof(uint16_t)));
 
     serialized_seq_key = serialized_seq_key.subspan(user_key_length_bytes_size);
     auto userkey = serialized_seq_key.subspan(0, userkey_len);
     auto seq_number_bytes = serialized_seq_key.subspan(userkey_len, seq_bytes_size);
-    m_seq = decode_int_from<sequence_number_t>(seq_number_bytes);
+    m_seq = decode_big_endian_from<sequence_number_t>(seq_number_bytes);
     m_user_key = ::std::string{ reinterpret_cast<const char*>(userkey.data()), userkey.size() };
 }
 
@@ -53,12 +55,12 @@ serialize_to(::std::span<::std::byte> buffer) const noexcept
 
     size_t cursor{};
     const uint16_t user_key_len = static_cast<uint16_t>(m_user_key.size());
-    encode_int_to<sizeof(uint16_t)>(user_key_len, ::std::as_writable_bytes(::std::span{buffer.data(), user_key_length_bytes_size}));
+    encode_big_endian_to(user_key_len, buffer);
     cursor += user_key_length_bytes_size;
     ::std::copy(m_user_key.begin(), m_user_key.end(), 
                 reinterpret_cast<char*>(buffer.data() + cursor));
     cursor += m_user_key.size();
-    encode_int_to<sizeof(sequence_number_t)>(m_seq, ::std::as_writable_bytes(::std::span{buffer.data() + cursor, seq_bytes_size}));
+    encode_big_endian_to(m_seq, { buffer.data() + cursor, seq_bytes_size});
 
     return serialized_sz;
 }
@@ -81,7 +83,7 @@ size_t kv_user_value::serialize_to(bspan buffer) const noexcept
     if (buffer.size() < serialized_bytes_size())
         return 0;
     uint32_t value_len = static_cast<uint32_t>(size());
-    encode_int_to<sizeof(value_len)>(value_len, ::std::as_writable_bytes(::std::span{buffer.data(), user_value_length_bytes_size}));
+    encode_big_endian_to(value_len, {buffer.data(), user_value_length_bytes_size});
     
     if (value_len)
     {
@@ -101,7 +103,7 @@ serialize_to(::std::span<::std::byte> dst) const noexcept
     
     size_t cursor{};
     ::std::span total_len_buffer{ dst.data(), total_length_bytes_size };
-    encode_int_to<sizeof(total_len)>(total_len, ::std::as_writable_bytes(total_len_buffer));
+    encode_big_endian_to(total_len, total_len_buffer);
     cursor += total_length_bytes_size;
     m_key.serialize_to(dst.subspan(cursor));
     cursor += m_key.serialized_bytes_size();
@@ -156,7 +158,7 @@ parse(const_bspan serialized_value)
     if (serialized_value.empty()) return {};
     uint32_t value_len{};
     ::std::span value_len_buf{ serialized_value.data(), user_value_length_bytes_size };
-    value_len = decode_int_from<uint32_t>(::std::as_bytes(value_len_buf));
+    value_len = decode_big_endian_from<uint32_t>(value_len_buf);
     if (value_len == 0) return {};
     
     return {::std::string{reinterpret_cast<const char*>(serialized_value.data() + user_value_length_bytes_size), value_len}};
@@ -229,19 +231,19 @@ size_t sequenced_key::serialize_to(::std::string& str) const
 
 size_t serialized_entry_size(const ::std::byte* beg)
 {
-    return decode_int_from<uint32_t>({ beg, total_length_bytes_size });
+    return decode_big_endian_from<uint32_t>({ beg, total_length_bytes_size });
 }
 
 const_bspan serialized_sequenced_key(const ::std::byte* entry_beg)
 {
     const ::std::byte* userkey_len_beg = entry_beg + total_length_bytes_size;
-    uint16_t userkey_len = decode_int_from<uint16_t>({userkey_len_beg, user_key_length_bytes_size});
+    uint16_t userkey_len = decode_big_endian_from<uint16_t>({userkey_len_beg, user_key_length_bytes_size});
     return { userkey_len_beg, user_key_length_bytes_size + userkey_len + seq_bytes_size };
 }
 
 const_bspan serialized_user_value_from_value_len(const ::std::byte* value_len_beg)
 {
-    uint32_t value_len = decode_int_from<uint32_t>({ value_len_beg, user_value_length_bytes_size });
+    uint32_t value_len = decode_big_endian_from<uint32_t>({ value_len_beg, user_value_length_bytes_size });
 
     // Including the value len buffer itself
     return { value_len_beg, user_value_length_bytes_size + value_len };
@@ -272,7 +274,7 @@ size_t sequenced_key::serialize_sequence_number_append_to(::std::string& dst) co
 {
     ::std::array<char, sizeof(sequence_number_t)> buffer{};
     ::std::span seq_buffer{ buffer.data(), sizeof(m_seq) };
-    encode_int_to<sizeof(sequence_number_t)>(m_seq, ::std::as_writable_bytes(seq_buffer));
+    encode_big_endian_to(m_seq, seq_buffer);
     dst.append(buffer.data(), buffer.size());
     return buffer.size();
 }
@@ -282,7 +284,7 @@ size_t sequenced_key::serialize_user_key_append_to(::std::string& dst) const
     ::std::array<char, sizeof(sequence_number_t)> ukl_buffer{};
     uint16_t ukl = static_cast<uint16_t>(m_user_key.size());
     ::std::span ukl_buffer_p{ ukl_buffer.data(), sizeof(ukl) };
-    encode_int_to<sizeof(ukl)>(ukl, ::std::as_writable_bytes(ukl_buffer_p));
+    encode_big_endian_to(ukl, ukl_buffer_p);
     dst.append(ukl_buffer.data(), ukl_buffer.size());
     dst.append(m_user_key);
     return user_key_length_bytes_size + m_user_key.size();
