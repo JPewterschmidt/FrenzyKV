@@ -22,6 +22,7 @@ public:
         co_return co_await append(as_bytes(temp));
     }
 
+    virtual uintmax_t file_size() const = 0;
     virtual koios::task<size_t> append(::std::span<const ::std::byte> buffer) = 0;
     virtual koios::task<> sync() = 0;
     virtual koios::task<> flush() = 0;
