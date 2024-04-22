@@ -57,7 +57,7 @@ koios::task<bool> sstable::parse_meta_data()
         }
     }
 
-    if (!co_await generate_block_offsets()) 
+    if (!co_await generate_block_offsets(mbo)) 
         co_return false;
 
     m_meta_data_parsed = true;
@@ -75,12 +75,11 @@ koios::task<btl_t> sstable::btl_value(uintmax_t offset)
     co_return toolpex::decode_big_endian_from<btl_t>({ buffer.data(), sizeof(btl_t) });
 }
 
-koios::task<bool> sstable::generate_block_offsets()
+koios::task<bool> sstable::generate_block_offsets(mbo_t mbo)
 {
     btl_t current_btl{};
     uintmax_t offset{};
-    const uintmax_t filesz = m_file->file_size();
-    while (offset < filesz)
+    while (offset < mbo)
     {
         current_btl = co_await btl_value(offset);
         if (current_btl == 0)
@@ -92,17 +91,18 @@ koios::task<bool> sstable::generate_block_offsets()
     co_return true;
 }
 
-koios::task<::std::optional<sstable::block_with_storage>> 
+koios::task<::std::optional<block_with_storage>> 
 sstable::get_block(uintmax_t offset, btl_t btl)
 {
-    ::std::optional<sstable::block_with_storage> result{};
+    ::std::optional<block_with_storage> result{};
 
-    m_buffer = {btl};
-    size_t readed = co_await m_file->read(m_buffer.writable_span(), offset);
+    buffer<> buff{btl + 10};
+    
+    size_t readed = co_await m_file->read(buff.writable_span().subspan(0, btl), offset);
     assert(readed == btl);
-    m_buffer.commit(readed);
+    buff.commit(readed);
 
-    const_bspan bs = m_buffer.valid_span();
+    const_bspan bs = buff.valid_span();
 
     if (!block_integrity_check(bs))
         co_return result;
@@ -121,11 +121,11 @@ sstable::get_block(uintmax_t offset, btl_t btl)
         co_return result;
     }
     
-    result.emplace(block(bs));
+    result.emplace(block(bs), ::std::move(buff));
     co_return result;
 }
 
-koios::task<::std::optional<block_segment>> 
+koios::task<::std::optional<::std::pair<block_segment, block_with_storage>>> 
 sstable::get_segment(const_bspan user_key)
 {
     if (!m_meta_data_parsed)
@@ -152,16 +152,23 @@ sstable::get_segment(const_bspan user_key)
         if (blk0_opt->b.larger_equal_than_this_first_segment_public_prefix(user_key)
            && blk1_opt->b.less_than_this_first_segment_public_prefix(user_key))
         {
-            if (auto& ss = blk0_opt->s; !ss.empty())
-                m_buffer = ::std::move(ss);
-            co_return blk0_opt->b.get(user_key);
+            auto seg_opt = blk0_opt->b.get(user_key);
+            if (seg_opt)
+            {
+                co_return ::std::pair{ ::std::move(*seg_opt), ::std::move(*blk0_opt) };
+            }
+            else co_return {};
         }
         
         last_block_opt = ::std::move(blk1_opt);
     }
     if (last_block_opt->b.larger_equal_than_this_first_segment_public_prefix(user_key))
     {
-        co_return last_block_opt->b.get(user_key);
+        auto seg_opt = last_block_opt->b.get(user_key);
+        if (seg_opt) 
+        {
+            co_return ::std::pair{ ::std::move(*seg_opt), ::std::move(*last_block_opt) };
+        }
     }
 
     co_return {};
@@ -173,7 +180,7 @@ get_kv_entry(sequence_number_t seq, const_bspan user_key)
 {
     auto seg_opt = co_await get_segment(user_key);
     if (!seg_opt) co_return {};
-    const auto& seg = *seg_opt;
+    const auto& seg = seg_opt->first;
     
     for (kv_entry entry : entries_from_block_segment(seg))
     {

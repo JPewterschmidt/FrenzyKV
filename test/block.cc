@@ -120,14 +120,34 @@ public:
 
         const auto& ssps = b.special_segment_ptrs();
         
-        for (auto iter = ssps.cbegin(); iter != ssps.cend(); ++iter)
+        if (ssps.size() == 1)
         {
-            for (block_segment seg : b.segments_in_single_interval(iter))
+            for (block_segment seg : b.segments_in_single_interval())
             {
                 for (auto seg : entries_from_block_segment(seg))
                     kvs2.push_back(::std::move(seg));
             }
         }
+        else
+        {
+            for (auto [beg, end] : ssps | rv::adjacent<2>)
+            {
+                for (block_segment seg : b.segments_in_single_interval(beg, end))
+                {
+                    for (auto seg : entries_from_block_segment(seg))
+                        kvs2.push_back(::std::move(seg));
+                }
+            }
+        }
+
+        //for (auto iter = ssps.cbegin(); iter != ssps.cend(); ++iter)
+        //{
+        //    for (block_segment seg : b.segments_in_single_interval(iter))
+        //    {
+        //        for (auto seg : entries_from_block_segment(seg))
+        //            kvs2.push_back(::std::move(seg));
+        //    }
+        //}
 
         result &= (kvs2 == kvs);
         return result;

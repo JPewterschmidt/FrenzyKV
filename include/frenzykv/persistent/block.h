@@ -148,12 +148,8 @@ public:
     /*! \brief Get segments from speficied position
      *  \param from A pointer point to a block segment, usually an element of `m_special_segs`.
      */
-    koios::generator<block_segment> segments_in_single_interval(::std::vector<const ::std::byte*>::const_iterator from);
-
-    koios::generator<block_segment> segments_in_single_interval()
-    {
-        return segments_in_single_interval(m_special_segs.begin());
-    }
+    koios::generator<block_segment> segments_in_single_interval(const ::std::byte* beg, const ::std::byte* end) const;
+    koios::generator<block_segment> segments_in_single_interval() const;
 
     const auto& special_segment_ptrs() { return m_special_segs; }
     const_bspan first_segment_public_prefix() const noexcept { return m_first_seg_public_prefix; }

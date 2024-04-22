@@ -19,42 +19,17 @@ class logger
 public:
     logger(const kvdb_deps& deps, ::std::unique_ptr<seq_writable> file)
         : m_deps{ &deps }, 
-          m_log_file{ ::std::move(file) }, 
-          m_level{ m_deps->opt()->log_level }
+          m_log_file{ ::std::move(file) }
     {
     }
 
     koios::task<> write(const write_batch& b);
-
-    logging_level level() const noexcept { return m_level; }
 
     koios::task<> may_flush(bool force = false) noexcept;
     
 private:
     const kvdb_deps* m_deps{};
     ::std::unique_ptr<seq_writable> m_log_file;
-    logging_level m_level;
-};
-
-template<logging_level Level>
-class logging_record_writer
-{
-public:
-    logging_record_writer(logger& parent) noexcept
-        : m_parent{ &parent }
-    {
-    }
-
-    koios::task<> write(const write_batch& batch)
-    {
-        if (level() >= m_parent->level())
-            co_await m_parent->write(batch);
-    }
-
-    static constexpr logging_level level() noexcept { return Level; }
-
-private:
-    logger* m_parent{};
 };
 
 } // namespace frenzykv

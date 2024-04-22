@@ -272,16 +272,9 @@ parse_result_t block::parse_meta_data()
 }
 
 koios::generator<block_segment> block::
-segments_in_single_interval(::std::vector<const ::std::byte*>::const_iterator insert_iter)
+segments_in_single_interval(const ::std::byte* from, const ::std::byte* sentinal) const
 {
-    const ::std::byte* from = *insert_iter;
     const ::std::byte* current = from;
-    
-    auto parsing_end_iter = ::std::next(insert_iter);
-
-    const ::std::byte* const sentinal = 
-        (parsing_end_iter == m_special_segs.end()) ? meta_data_beg_ptr(m_storage) : *parsing_end_iter;
-
     while (current < sentinal)
     {
         block_segment seg{ { current, static_cast<size_t>(sentinal - current) } };
@@ -302,31 +295,45 @@ segments_in_single_interval(::std::vector<const ::std::byte*>::const_iterator in
     }
 }
 
+koios::generator<block_segment> block::segments_in_single_interval() const
+{
+    const auto* potiential_end = meta_data_beg_ptr(m_storage);
+    return segments_in_single_interval(m_special_segs[0], m_special_segs.size() > 1 ? m_special_segs[1]: potiential_end);
+}
+
 ::std::optional<block_segment> block::get(const_bspan user_prefix) const
 {
     if (!larger_equal_than_this_first_segment_public_prefix(user_prefix))
         return {};
 
-    auto sp_seg = m_special_segs
-        | rv::transform([this](auto&& ptr){
-              return block_segment{ { ptr, m_storage.data() + m_storage.size() } };
-          });
-
-    block_segment last_seg = *begin(sp_seg);
-
-    for (auto [seg1, seg2] : sp_seg | rv::adjacent<2>)
+    auto last_segp = m_special_segs.front();
+    for (auto [seg1p, seg2p] : m_special_segs | rv::adjacent<2>)
     {
+        block_segment seg1{ { seg1p, m_storage.data() + m_storage.size() } };
+        block_segment seg2{ { seg2p, m_storage.data() + m_storage.size() } };
+
         // Shot!
         if (seg1.larger_equal_than_this_public_prefix(user_prefix) 
             && seg2.less_than_this_public_prefix(user_prefix))
         {
-            return seg1;
+            for (auto s : segments_in_single_interval(seg1p, seg2p))
+            {
+                if (s.fit_public_prefix(user_prefix))
+                    return s;
+            }
         }
-        last_seg = ::std::move(seg2);
+        last_segp = seg2p;
     }
 
+    block_segment last_seg{ { last_segp, m_storage.data() + m_storage.size() } };
     if (last_seg.larger_equal_than_this_public_prefix(user_prefix))
-        return last_seg;
+    {
+        for (auto s : segments_in_single_interval(last_segp, meta_data_beg_ptr(m_storage)))
+        {
+            if (s.fit_public_prefix(user_prefix))
+                return s;
+        }
+    }
 
     return {};
 }

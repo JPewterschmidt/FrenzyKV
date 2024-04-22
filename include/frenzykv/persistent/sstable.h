@@ -3,6 +3,7 @@
 
 #include <optional>
 #include <vector>
+#include <utility>
 
 #include "koios/task.h"
 
@@ -13,9 +14,28 @@
 #include "frenzykv/persistent/block.h"
 #include "frenzykv/util/compressor.h"
 #include "frenzykv/io/inner_buffer.h"
+#include "frenzykv/persistent/sstable_builder.h"
 
 namespace frenzykv
 {
+
+struct block_with_storage
+{
+    block_with_storage(block bb, buffer<> sto) noexcept
+        : b{ ::std::move(bb) }, s{ ::std::move(sto) }
+    {
+    }
+
+    block_with_storage(block bb) noexcept
+        : b{ ::std::move(bb) }
+    {
+    }
+
+    block b;
+
+    // Iff s.empty(), then the block uses sstable::s_storage
+    buffer<> s;
+};
 
 /*
  *      |-------------------|
@@ -58,7 +78,7 @@ public:
      *              any access to the previously returned 
      *              `block_segment` object are XXX undefined behaviour.
      */
-    koios::task<::std::optional<block_segment>> 
+    koios::task<::std::optional<::std::pair<block_segment, block_with_storage>>> 
     get_segment(const_bspan user_key);
 
     /*! \brief Searching specific user key from this memtable
@@ -73,7 +93,7 @@ public:
      *              any access to the previously returned 
      *              `block_segment` object are XXX undefined behaviour.
      */
-    koios::task<::std::optional<block_segment>>
+    koios::task<::std::optional<::std::pair<block_segment, block_with_storage>>>
     get_segment(::std::string_view user_key) 
     {
         return get_segment(::std::as_bytes(::std::span{user_key}));
@@ -91,25 +111,8 @@ public:
 private:
     koios::task<bool>   parse_meta_data();
     koios::task<btl_t>  btl_value(uintmax_t offset);    // Required by `generate_block_offsets()`
-    koios::task<bool>   generate_block_offsets();       // Required by `parse_meta_data()`
+    koios::task<bool>   generate_block_offsets(mbo_t mbo);       // Required by `parse_meta_data()`
 
-    struct block_with_storage
-    {
-        block_with_storage(block bb, buffer<> sto) noexcept
-            : b{ ::std::move(bb) }, s{ ::std::move(sto) }
-        {
-        }
-
-        block_with_storage(block bb) noexcept
-            : b{ ::std::move(bb) }
-        {
-        }
-
-        block b;
-
-        // Iff s.empty(), then the block uses sstable::s_storage
-        buffer<> s;
-    };
 
     koios::task<::std::optional<block_with_storage>> 
     get_block(uintmax_t offset, btl_t btl);             // Required by `get_segment()`

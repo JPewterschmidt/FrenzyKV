@@ -127,7 +127,7 @@ public:
     auto sequence_number() const noexcept { return m_seq; }
     void set_sequence_number(sequence_number_t num) noexcept { m_seq = num; }
     void set_user_key(::std::string v) noexcept { m_user_key = ::std::move(v); }
-    ::std::string_view user_key() const noexcept { return m_user_key; }
+    const ::std::string& user_key() const noexcept { return m_user_key; }
 
     size_t serialize_to(::std::span<::std::byte> buffer) const noexcept;
     size_t serialize_to(::std::span<char> buffer) const noexcept
@@ -144,6 +144,7 @@ public:
 
     ::std::string to_string_debug() const;
     bool operator==(const sequenced_key& other) const noexcept;
+    bool operator<(const sequenced_key& other) const noexcept;
 
     size_t serialize_sequence_number_append_to(::std::string& dst) const;
     size_t serialize_user_key_append_to(::std::string& dst) const;
@@ -263,6 +264,11 @@ public:
     {
         return key() == other.key() && value() == other.value();
     }
+
+    bool operator<(const kv_entry& other) const noexcept
+    {
+        return key() < other.key();
+    }
     
 private:
     sequenced_key m_key;
@@ -296,28 +302,5 @@ public:
 };
 
 } // namespace frenzykv
-
-template<>
-class std::less<frenzykv::sequenced_key>
-{
-public:
-    bool operator()(const frenzykv::sequenced_key& lhs, 
-                    const frenzykv::sequenced_key& rhs) const noexcept
-    {
-        // See also KV entry definition
-        const auto& lk = lhs.user_key();
-        const auto& rk = rhs.user_key();
-        const auto  ls = lhs.sequence_number();
-        const auto  rs = rhs.sequence_number();
-
-        // Simulate lexicgraphical order after serialized.
-        const bool key_less = lk.size() < rk.size() || lk < rk;
-
-        // Simulate lexicgraphical order involving a bytes array and a integer.
-        if (key_less) return true;
-        else if (lk == rk) return ls < rs;
-        return false;
-    }
-};
 
 #endif
