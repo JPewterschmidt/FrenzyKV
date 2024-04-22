@@ -96,8 +96,6 @@ koios::task<> level::finish() noexcept
 
     auto lk = co_await m_mutex.acquire();
     
-    // TODO
-
     m_working = false;
     co_return;
 }
