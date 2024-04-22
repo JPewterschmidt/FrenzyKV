@@ -38,6 +38,9 @@ public:
     virtual koios::task<> commit(size_t len) noexcept override;
     virtual outbuf_adapter* streambuf() noexcept override { return &m_streambuf; }
 
+    uintmax_t file_size() const override;
+    bool is_buffering() const noexcept override;
+
 private:
     koios::task<> sync_impl();
 
