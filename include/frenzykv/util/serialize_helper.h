@@ -54,6 +54,14 @@ void encode_int_to(::std::integral auto i, ::std::span<char> buffer)
     encode_int_to<intsize>(i, ::std::as_writable_bytes(buffer));
 }
 
+template<::std::integral IntT>
+IntT decode_int_from(::std::span<const ::std::byte> buffer)
+{
+    IntT result{};
+    ::std::memcpy(&result, buffer.data(), sizeof(IntT));
+    return big_endian_encode(result);
+}
+
 } // namespace frenzykv
 
 #endif

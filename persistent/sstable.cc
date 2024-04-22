@@ -6,6 +6,7 @@
 #include "frenzykv/persistent/sstable.h"
 #include "frenzykv/persistent/sstable_builder.h"
 #include "frenzykv/util/comp.h"
+#include "frenzykv/util/serialize_helper.h"
 
 namespace frenzykv
 {
@@ -30,10 +31,9 @@ koios::task<bool> sstable::parse_meta_data()
     const size_t footer_sz = sizeof(mbo_t) + sizeof(mgn_t);
     ::std::string buffer(footer_sz, 0);
     co_await m_file->read({ buffer.data(), buffer.size() }, filesz - footer_sz);
-    mbo_t mbo{};
-    mgn_t magic_num{};
-    ::std::memcpy(&mbo, buffer.data(), sizeof(mbo));
-    ::std::memcpy(&magic_num, buffer.data() + sizeof(mbo), sizeof(magic_num));
+    const ::std::byte* buffer_beg = reinterpret_cast<::std::byte*>(buffer.data());
+    mbo_t mbo = decode_int_from<mbo_t>({ buffer_beg, sizeof(mbo_t) });
+    mgn_t magic_num = decode_int_from<mgn_t>({ buffer_beg + sizeof(mbo_t), sizeof(magic_num) });
 
     // file integrity check
     if (magic_number_value() != magic_num)
@@ -67,14 +67,12 @@ koios::task<bool> sstable::parse_meta_data()
 koios::task<btl_t> sstable::btl_value(uintmax_t offset)
 {
     static ::std::array<::std::byte, sizeof(btl_t)> buffer{};
-    btl_t result{};
     ::std::memset(buffer.data(), 0, buffer.size());
 
     if (!co_await m_file->read(buffer, offset))
         co_return 0;
 
-    ::std::memcpy(&result, buffer.data(), sizeof(btl_t));
-    co_return result;
+    co_return decode_int_from<btl_t>({ buffer.data(), sizeof(btl_t) });
 }
 
 koios::task<bool> sstable::generate_block_offsets()
