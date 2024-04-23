@@ -194,4 +194,9 @@ const auto& level::level_file_ids(level_t l) const noexcept
     return m_levels_file_id[l];
 }
 
+size_t level::level_number() const noexcept
+{
+    return m_levels_file_id.size();
+}
+
 } // namespace frenzykv

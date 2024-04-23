@@ -109,7 +109,7 @@ koios::task<> db_impl::flush_imm_to_sstable()
 
 koios::task<> db_impl::may_compact()
 {
-    
+       
     co_return;
 }
 

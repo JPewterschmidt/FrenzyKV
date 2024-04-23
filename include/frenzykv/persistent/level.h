@@ -56,6 +56,8 @@ public:
 
     const auto& level_file_ids(level_t l) const noexcept;
 
+    size_t level_number() const noexcept;
+
 private:
     koios::task<file_id_t> allocate_file_id();
     bool working() const noexcept;
