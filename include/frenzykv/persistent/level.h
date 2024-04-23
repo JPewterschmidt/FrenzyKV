@@ -42,13 +42,17 @@ public:
      *  \retval 0   There's no exact restriction of file number.
      *  \retval !=0 the max number of files.
      */
-    size_t allowed_file_number(level_t l);
+    size_t allowed_file_number(level_t l) const noexcept;
 
     /*! \brief Return the max bytes size each SSTable of specific level
      *  \retval 0   There's no exact restriction of file number.
      *  \retval !=0 the max size of a sstable.
      */
-    size_t allowed_file_size(level_t l);
+    size_t allowed_file_size(level_t l) const noexcept;
+    
+    bool need_to_comapct(level_t l) const noexcept;
+
+    size_t actual_file_number(level_t l) const noexcept;
 
 private:
     koios::task<file_id_t> allocate_file_id();

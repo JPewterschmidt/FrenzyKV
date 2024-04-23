@@ -74,7 +74,7 @@ koios::task<file_id_t> level::allocate_file_id()
     co_return result;
 }
 
-size_t level::allowed_file_number(level_t l)
+size_t level::allowed_file_number(level_t l) const noexcept
 {
     auto opt = m_deps->opt();
     const auto& number_vec = opt->level_file_number;
@@ -82,7 +82,7 @@ size_t level::allowed_file_number(level_t l)
     return number_vec[l];
 }
 
-size_t level::allowed_file_size(level_t l)
+size_t level::allowed_file_size(level_t l) const noexcept
 {
     auto opt = m_deps->opt();
     const auto& number_vec = opt->level_file_size;
@@ -175,6 +175,17 @@ koios::task<> level::start() noexcept
 bool level::working() const noexcept
 {
     return m_working.load() == 1;
+}
+
+size_t level::actual_file_number(level_t l) const noexcept
+{
+    assert(l < m_levels_file_id.size());
+    return m_levels_file_id[l].size();
+}
+
+bool level::need_to_comapct(level_t l) const noexcept
+{
+    return (actual_file_number(l) >= allowed_file_number(l));
 }
 
 } // namespace frenzykv
