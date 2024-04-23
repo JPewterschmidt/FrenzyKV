@@ -38,6 +38,24 @@ public:
     koios::task<> start() noexcept;
     koios::task<> finish() noexcept;
 
+    /*! \brief Return the max number of SSTable of specific level
+     *  \retval 0   There's no exact restriction of file number.
+     *  \retval !=0 the max number of files.
+     */
+    size_t allowed_file_number(level_t l) const noexcept;
+
+    /*! \brief Return the max bytes size each SSTable of specific level
+     *  \retval 0   There's no exact restriction of file number.
+     *  \retval !=0 the max size of a sstable.
+     */
+    size_t allowed_file_size(level_t l) const noexcept;
+    
+    bool need_to_comapct(level_t l) const noexcept;
+
+    size_t actual_file_number(level_t l) const noexcept;
+
+    const auto& level_file_ids(level_t l) const noexcept;
+
 private:
     koios::task<file_id_t> allocate_file_id();
     bool working() const noexcept;
@@ -47,7 +65,9 @@ private:
     ::std::atomic_int m_working{};
     ::std::unordered_map<file_id_t, ::std::string> m_id_name;
     ::std::atomic<file_id_t> m_latest_unused_id{};
-    ::std::queue<file_id_t> m_id_recycled; 
+    ::std::queue<file_id_t> m_id_recycled;
+
+    ::std::vector<::std::vector<file_id_t>> m_levels_file_id;
 
     mutable koios::shared_mutex m_mutex;
 };
