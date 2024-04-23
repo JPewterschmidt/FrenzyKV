@@ -59,7 +59,9 @@ private:
     ::std::atomic_int m_working{};
     ::std::unordered_map<file_id_t, ::std::string> m_id_name;
     ::std::atomic<file_id_t> m_latest_unused_id{};
-    ::std::queue<file_id_t> m_id_recycled; 
+    ::std::queue<file_id_t> m_id_recycled;
+
+    ::std::vector<::std::vector<file_id_t>> m_levels_file_id;
 
     mutable koios::shared_mutex m_mutex;
 };

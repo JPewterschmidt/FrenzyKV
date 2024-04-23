@@ -52,7 +52,8 @@ retrive_level_and_id_from_name(const ::std::string& name)
 }
 
 level::level(const kvdb_deps& deps) 
-    : m_deps{ &deps }
+   : m_deps{ &deps }, 
+     m_levels_file_id(m_deps->opt()->max_level)
 {
 }
 
@@ -92,6 +93,7 @@ size_t level::allowed_file_size(level_t l)
 koios::task<::std::pair<file_id_t, ::std::unique_ptr<seq_writable>>> 
 level::create_file(level_t level)
 {
+    assert(level < m_levels_file_id.size());
     assert(working());
     file_id_t id = co_await allocate_file_id();
     auto name = name_a_file(level, id);
@@ -99,6 +101,7 @@ level::create_file(level_t level)
     auto file = m_deps->env()->get_seq_writable(sstables_path()/name);
 
     m_id_name[id] = ::std::move(name);
+    m_levels_file_id[level].push_back(id);
     
     co_return { id, ::std::move(file) };
 }
@@ -109,6 +112,7 @@ koios::task<> level::delete_file(level_t level, file_id_t id)
     auto lk = co_await m_mutex.acquire();
     co_await m_deps->env()->delete_file(sstables_path()/m_id_name.at(id));
     m_id_name.erase(id);
+    ::std::erase(m_levels_file_id[level], id);
 
     // Recycle file id;
     m_id_recycled.push(id);
@@ -146,6 +150,10 @@ koios::task<> level::start() noexcept
         if (!level_and_id_opt) 
             continue;
         m_id_name[level_and_id_opt->second] = name;
+
+        m_levels_file_id[level_and_id_opt->first]
+            .push_back(level_and_id_opt->second);
+
         id_used.push_back(level_and_id_opt->second);
     }
 
