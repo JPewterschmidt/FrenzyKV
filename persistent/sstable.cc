@@ -205,4 +205,13 @@ get_kv_entry(const sequenced_key& user_key)
     co_return {};
 }
 
+sequenced_key sstable::last_user_key_without_seq() const noexcept
+{
+    ::std::string temp = m_last_uk;
+    temp.resize(temp.size() + 8);
+    auto tempb = ::std::span{ temp };
+    sequenced_key result(::std::as_bytes(tempb));
+    return result;
+}
+
 } // namespace frenzykv
