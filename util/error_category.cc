@@ -55,4 +55,14 @@ const ::std::error_category& kvdb_category() noexcept
     return { FRZ_KVDB_EXCEPTION_CATCHED, kvdb_category() };
 }
 
+bool is_frzkv_out_of_range(::std::error_code ec) noexcept
+{
+    return ec == make_frzkv_out_of_range();
+}
+
+bool is_frzkv_exception_catched(::std::error_code ec) noexcept
+{
+    return ec == make_frzkv_exception_catched();
+}
+
 } // namespace frenzykv

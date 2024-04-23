@@ -14,11 +14,11 @@ namespace frenzykv
 namespace rv = ::std::ranges::views;
 
 sstable::sstable(const kvdb_deps& deps, 
-                 ::std::unique_ptr<filter_policy> filter, 
+                 filter_policy* filter, 
                  ::std::unique_ptr<random_readable> file)
     : m_deps{ &deps }, 
       m_file{ ::std::move(file) }, 
-      m_filter{ ::std::move(filter) },
+      m_filter{ filter },
       m_compressor{ get_compressor(*m_deps->opt(), m_deps->opt()->compressor_name) }
 {
     assert(m_compressor);

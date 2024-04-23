@@ -15,7 +15,6 @@ write_batch make_batch()
     result.write("abc1", ::std::string(1024, 'x'));
     result.write("abc2", ::std::string(1024, 'x'));
     result.write("abc3", ::std::string(1024, 'x'));
-    result.write("abc4", ::std::string(1024, 'x'));
     result.set_first_sequence_num(0);
     return result;
 }

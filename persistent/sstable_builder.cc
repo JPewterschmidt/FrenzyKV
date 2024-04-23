@@ -16,11 +16,11 @@ mgn_t magic_number_value() noexcept
 sstable_builder::sstable_builder(
         const kvdb_deps& deps, 
         uintmax_t size_limit,
-        ::std::unique_ptr<filter_policy> filter, 
+        filter_policy* filter, 
         ::std::unique_ptr<seq_writable> file)
     : m_deps{ &deps }, 
       m_size_limit{ size_limit },
-      m_filter{ ::std::move(filter) }, 
+      m_filter{ filter }, 
       m_block_builder{ *m_deps, get_compressor(*m_deps->opt(), "zstd") },
       m_file{ ::std::move(file) }
 {

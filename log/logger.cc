@@ -6,7 +6,7 @@
 namespace frenzykv
 {
 
-koios::task<> logger::write(const write_batch& b)
+koios::task<> logger::insert(const write_batch& b)
 {
     co_await koios::this_task::turn_into_scheduler();
 
