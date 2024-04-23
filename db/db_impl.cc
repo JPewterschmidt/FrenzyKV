@@ -1,4 +1,5 @@
 #include <cassert>
+#include <ranges>
 
 #include "frenzykv/statistics.h"
 #include "frenzykv/error_category.h"
@@ -12,6 +13,8 @@
 #include "frenzykv/db/db_impl.h"
 
 #include "frenzykv/persistent/sstable_builder.h"
+
+namespace rv = ::std::ranges::views;
 
 namespace frenzykv
 {
@@ -107,10 +110,26 @@ koios::task<> db_impl::flush_imm_to_sstable()
     co_return;
 }
 
-koios::task<> db_impl::compact_files(sstable lowlevelt, const ::std::vector<file_id_t>& files)
+koios::task<> 
+db_impl::
+compact_files(sstable lowlevelt, level_t nextl)
 {
+    [[maybe_unused]] auto merging_tables = m_level.level_file_ids(nextl)
+        | rv::transform(
+            [this, nextl](auto&& id){ 
+                return m_level.open_read(nextl, id); 
+            })
+        | rv::transform(
+            [this](auto&& filep){ 
+                return sstable{ m_deps, m_filter_policy.get(), ::std::move(filep) }; 
+            })
+        | rv::filter(
+            [&lowlevelt](auto&& tab){ 
+                return lowlevelt.overlapped(tab); 
+            })
+        ;
+
     // TODO
-    
 
     co_return;
 }
@@ -123,15 +142,9 @@ koios::task<> db_impl::may_compact()
         if (m_level.need_to_comapct(l))
         {
             const file_id_t target_file = m_level.oldest_file(l);
-            sstable target_ss{ 
-                m_deps, 
-                m_filter_policy.get(), 
-                co_await m_level.open_read(l, target_file) 
-            };
-            co_await compact_files(
-                ::std::move(target_ss), 
-                m_level.level_file_ids(l)
-            );
+            auto file = m_level.open_read(l, target_file);
+            assert(file);
+            co_await compact_files({ m_deps, m_filter_policy.get(), ::std::move(file) }, l);
         }
     }
     co_return;

@@ -32,8 +32,8 @@ public:
 
     koios::task<> delete_file(level_t level, file_id_t id);
 
-    koios::task<::std::unique_ptr<seq_writable>> open_write(level_t l, file_id_t id);
-    koios::task<::std::unique_ptr<random_readable>> open_read(level_t l, file_id_t id);
+    ::std::unique_ptr<seq_writable> open_write(level_t l, file_id_t id);
+    ::std::unique_ptr<random_readable> open_read(level_t l, file_id_t id);
 
     koios::task<> start() noexcept;
     koios::task<> finish() noexcept;
