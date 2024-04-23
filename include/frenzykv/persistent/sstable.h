@@ -91,6 +91,11 @@ public:
     bool overlapped(const sstable& other) const noexcept;
     bool disjoint(const sstable& other) const noexcept;
 
+    bool operator<(const sstable& other) const noexcept
+    {
+        return first_user_key_without_seq() < other.first_user_key_without_seq();
+    }
+
 private:
     koios::task<bool>   parse_meta_data();
     koios::task<btl_t>  btl_value(uintmax_t offset);    // Required by `generate_block_offsets()`

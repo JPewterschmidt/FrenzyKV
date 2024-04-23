@@ -110,26 +110,49 @@ koios::task<> db_impl::flush_imm_to_sstable()
     co_return;
 }
 
-koios::task<> 
+koios::task<>
+db_impl::
+merge_tables(const ::std::vector<sstable> tables, level_t target_l)
+{
+    file_id_t builder_file = m_level.create_file(target_l);
+    sstable_builder builder{ 
+        m_deps, m_level.allowed_file_size(target_l), 
+        m_filter_policy.get(), m_level.open_write(builder_file) 
+    };
+
+    while (!builder.reach_the_size_limit())
+    {
+        for (const auto& table : tables)
+        {
+            // TODO
+        }
+    }
+
+    co_return;
+}
+
+koios::eager_task<> 
 db_impl::
 compact_files(sstable lowlevelt, level_t nextl)
 {
-    [[maybe_unused]] auto merging_tables = m_level.level_file_ids(nextl)
+    auto merging_tables = m_level.level_file_ids(nextl)
         | rv::transform(
-            [this, nextl](auto&& id){ 
+            [this, nextl](auto&& id) noexcept { 
                 return m_level.open_read(nextl, id); 
             })
         | rv::transform(
-            [this](auto&& filep){ 
+            [this](auto&& filep) { 
+                assert(filep);
                 return sstable{ m_deps, m_filter_policy.get(), ::std::move(filep) }; 
             })
         | rv::filter(
-            [&lowlevelt](auto&& tab){ 
+            [&lowlevelt](auto&& tab) { 
                 return lowlevelt.overlapped(tab); 
             })
         ;
 
-    // TODO
+    [[maybe_unused]] ::std::vector<sstable> tables(begin(merging_tables), end(merging_tables));
+    ::std::sort(tables.begin(), tables.end());
 
     co_return;
 }
