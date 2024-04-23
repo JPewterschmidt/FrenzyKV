@@ -232,4 +232,27 @@ sequenced_key sstable::first_user_key_without_seq() const noexcept
     return result;
 }
 
+bool sstable::overlapped(const sstable& other) const noexcept
+{
+    return !disjoint(other);
+}
+
+bool sstable::disjoint(const sstable& other) const noexcept
+{
+    /*
+     *        A               B
+     *   al|-----|ar    bl|-------|br
+     *
+     *         B               A     
+     *   bl|-------|br    al|-----|ar
+     *
+     */
+    const sequenced_key al = first_user_key_without_seq();
+    const sequenced_key ar = last_user_key_without_seq();
+    const sequenced_key bl = other.first_user_key_without_seq();
+    const sequenced_key br = other.last_user_key_without_seq();
+
+    return (al < bl && ar < bl) || (bl < al && br < al);
+}
+
 } // namespace frenzykv
