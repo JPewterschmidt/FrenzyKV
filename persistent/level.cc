@@ -199,6 +199,11 @@ size_t level::level_number() const noexcept
     return m_levels_file_id.size();
 }
 
+file_id_t level::oldest_file(level_t l) const
+{
+    return oldest_file(level_file_ids(l));
+}
+
 file_id_t level::oldest_file(const ::std::vector<file_id_t>& files) const
 {
     ::std::pair<fs::file_time_type, file_id_t> oldest;
@@ -214,7 +219,7 @@ file_id_t level::oldest_file(const ::std::vector<file_id_t>& files) const
     oldest = *begin(tfps);
     for (auto p : tfps)
     {
-        if (p.first > oldest.first)
+        if (p.first < oldest.first)
             oldest = p;
     }
 

@@ -59,6 +59,7 @@ public:
     size_t level_number() const noexcept;
 
     file_id_t oldest_file(const ::std::vector<file_id_t>& files) const;
+    file_id_t oldest_file(level_t l) const;
 
 private:
     koios::task<file_id_t> allocate_file_id();
