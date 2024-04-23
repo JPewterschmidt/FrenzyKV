@@ -48,6 +48,7 @@ public:
     koios::task<bool> full() const;
     koios::task<size_t> bound_size_bytes() const;
     koios::task<size_t> size_bytes() const;
+    koios::task<bool> could_fit_in(const write_batch& batch) const noexcept;
 
     const auto& storage() const noexcept { return m_list; }
     const kvdb_deps& deps() const noexcept { return *m_deps; }
@@ -65,6 +66,7 @@ private:
     bool full_impl() const;
     size_t bound_size_bytes_impl() const;
     size_t size_bytes_impl() const;
+    bool could_fit_in_impl(const write_batch& batch) const noexcept;
     
 private:
     const kvdb_deps* m_deps{};

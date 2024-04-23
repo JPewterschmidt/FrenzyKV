@@ -26,6 +26,9 @@ enum status_t : int
 ::std::error_code make_frzkv_out_of_range() noexcept;
 ::std::error_code make_frzkv_exception_catched() noexcept;
 
+bool is_frzkv_out_of_range(::std::error_code ec) noexcept;
+bool is_frzkv_exception_catched(::std::error_code ec) noexcept;
+
 } // namespace frenzykv
 
 

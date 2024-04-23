@@ -34,9 +34,12 @@ write(write_options write_opt, write_batch batch) override
     
     // Not doing mem-imm trasformation, only need shared lock
     auto shah = co_await m_mem_mutex.acquire_shared();
-    if (!m_mem.insert(batch))
+    if (auto ec = co_await m_mem.insert(batch); 
+        is_frzkv_out_of_range(ec)) // Means you need do memtable transformation
     {
-               
+        shah.unlock();
+        co_await m_mem_mutex.acquire();
+        // TODO
     }
 
     co_return total_count;
