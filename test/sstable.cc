@@ -112,6 +112,18 @@ public:
         co_return true;      
     }
 
+    bool last_uk_exists() const
+    {
+        sequenced_key key = m_table->last_user_key_without_seq();
+        return key.user_key().size() == "aaabbbccc"sv.size();
+    }
+
+    bool first_uk_right() const
+    {
+        sequenced_key key = m_table->first_user_key_without_seq();
+        return key.user_key() == "bbbcccddd"sv;
+    }
+
 private:
     kvdb_deps m_deps{};
     ::std::vector<buffer<>>* m_file_storage{};
@@ -136,6 +148,8 @@ TEST_F(sstable_test, get)
     ASSERT_TRUE(make_table().result());
     ASSERT_TRUE(get({0, "dddeeefff"}).result());
     ASSERT_TRUE(get({0, "ggghhhiii"}).result());
+    ASSERT_TRUE(last_uk_exists());
+    ASSERT_TRUE(first_uk_right());
 }
 
 TEST_F(sstable_test, find_tomb_stone)

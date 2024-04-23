@@ -36,6 +36,11 @@ koios::task<bool> sstable_builder::add(
     {
         co_return false;
     }
+
+    if (m_first_uk.empty())
+    {
+        m_first_uk = key.serialize_user_key_as_string();
+    }
     
     // Including the length encoded part at the begging of the key_rep
     auto key_rep = key.serialize_user_key_as_string();
@@ -93,6 +98,8 @@ koios::task<bool> sstable_builder::finish()
     
     // Build meta block
     block_builder meta_builder{ *m_deps };
+    meta_builder.add({0, "last_uk"}, m_last_uk);
+    meta_builder.add({0, "first_uk"}, m_first_uk);
     meta_builder.add({0, "bloom_filter"}, m_filter_rep);
     m_block_builder = ::std::move(meta_builder);
 

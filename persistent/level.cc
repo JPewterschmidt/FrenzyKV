@@ -188,10 +188,42 @@ bool level::need_to_comapct(level_t l) const noexcept
     return (actual_file_number(l) >= allowed_file_number(l));
 }
 
-const auto& level::level_file_ids(level_t l) const noexcept
+const ::std::vector<file_id_t>& level::level_file_ids(level_t l) const noexcept
 {
     assert(l < m_levels_file_id.size());
     return m_levels_file_id[l];
+}
+
+size_t level::level_number() const noexcept
+{
+    return m_levels_file_id.size();
+}
+
+file_id_t level::oldest_file(level_t l) const
+{
+    return oldest_file(level_file_ids(l));
+}
+
+file_id_t level::oldest_file(const ::std::vector<file_id_t>& files) const
+{
+    ::std::pair<fs::file_time_type, file_id_t> oldest;
+    auto tfps = files 
+        | rv::transform([this](auto&& id){ 
+              return ::std::pair{ m_id_name.at(id), id }; 
+          })
+        | rv::transform([](auto&& nameid) { 
+              return ::std::pair{ 
+                  fs::last_write_time(nameid.first), nameid.second 
+              }; 
+          });
+    oldest = *begin(tfps);
+    for (auto p : tfps)
+    {
+        if (p.first < oldest.first)
+            oldest = p;
+    }
+
+    return oldest.second;
 }
 
 } // namespace frenzykv

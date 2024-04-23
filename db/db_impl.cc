@@ -107,9 +107,24 @@ koios::task<> db_impl::flush_imm_to_sstable()
     co_return;
 }
 
+koios::task<> db_impl::compact_files(const ::std::vector<file_id_t>& files)
+{
+    // TODO
+    // Need version supports.
+
+    co_return;
+}
+
 koios::task<> db_impl::may_compact()
 {
-    
+    const size_t level_num = m_level.level_number();
+    for (level_t l{}; l < level_num; ++l)
+    {
+        if (m_level.need_to_comapct(l))
+        {
+            co_await compact_files(m_level.level_file_ids(l));
+        }
+    }
     co_return;
 }
 

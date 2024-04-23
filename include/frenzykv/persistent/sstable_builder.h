@@ -64,6 +64,7 @@ private:
     uintmax_t m_size_limit{};
     uintmax_t m_size_wrote{};
     filter_policy* m_filter{};
+    ::std::string m_first_uk{};
     ::std::string m_last_uk{};
     ::std::string m_filter_rep{};
     block_builder m_block_builder;

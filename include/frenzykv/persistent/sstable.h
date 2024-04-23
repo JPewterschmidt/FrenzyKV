@@ -85,11 +85,13 @@ public:
     koios::task<::std::optional<kv_entry>>
     get_kv_entry(const sequenced_key& user_key);
 
+    sequenced_key last_user_key_without_seq() const noexcept;
+    sequenced_key first_user_key_without_seq() const noexcept;
+
 private:
     koios::task<bool>   parse_meta_data();
     koios::task<btl_t>  btl_value(uintmax_t offset);    // Required by `generate_block_offsets()`
     koios::task<bool>   generate_block_offsets(mbo_t mbo);       // Required by `parse_meta_data()`
-
 
     koios::task<::std::optional<block_with_storage>> 
     get_block(uintmax_t offset, btl_t btl);             // Required by `get_segment()`
@@ -99,6 +101,8 @@ private:
     bool m_meta_data_parsed{};
     ::std::unique_ptr<random_readable> m_file;
     ::std::string m_filter_rep;
+    ::std::string m_first_uk;
+    ::std::string m_last_uk;
     filter_policy* m_filter;
     ::std::shared_ptr<compressor_policy> m_compressor;
     ::std::vector<::std::pair<uintmax_t, btl_t>> m_block_offsets;
