@@ -12,6 +12,7 @@
 
 #include "log/logging_level.h"
 #include "frenzykv/statistics.h"
+#include "frenzykv/types.h"
 
 namespace frenzykv
 {
@@ -39,11 +40,6 @@ struct options
 options get_global_options() noexcept;
 void set_global_options(nlohmann::json j);
 void set_global_options(const ::std::filesystem::path& filepath);
-
-struct write_options
-{
-    bool sync_write = false;
-};
 
 }
 

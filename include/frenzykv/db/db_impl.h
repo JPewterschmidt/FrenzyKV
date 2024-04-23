@@ -28,7 +28,6 @@ public:
     get(const_bspan key, ::std::error_code& ec_out) noexcept override;
 
 private:
-    koios::task<> may_prepare_space(const write_batch& b);
     koios::task<sequenced_key> make_query_key(const_bspan userkey);
 
 private:
