@@ -51,10 +51,11 @@ class sstable_test : public ::testing::Test
 public:
     void reset()
     {
+        m_filter = make_bloom_filter(64);
         auto file = ::std::make_unique<in_mem_rw>(4096);
         m_file_storage = &file->storage();
         m_builder = ::std::make_unique<sstable_builder>(
-            m_deps, 4096 * 1024 * 100 /*400MB*/, make_bloom_filter(64), ::std::move(file)
+            m_deps, 4096 * 1024 * 100 /*400MB*/, m_filter.get(), ::std::move(file)
         );
         m_table = nullptr;
     }
@@ -83,7 +84,7 @@ public:
         m_file_storage = &file->storage();
 
         m_table = ::std::make_unique<sstable>(
-            m_deps, make_bloom_filter(64), ::std::move(file)
+            m_deps, m_filter.get(), ::std::move(file)
         );
         
         co_return true;
@@ -116,6 +117,7 @@ private:
     ::std::vector<buffer<>>* m_file_storage{};
     ::std::unique_ptr<sstable_builder> m_builder;
     ::std::unique_ptr<sstable> m_table;
+    ::std::unique_ptr<filter_policy> m_filter;
     bool m_built{};
 };
 
