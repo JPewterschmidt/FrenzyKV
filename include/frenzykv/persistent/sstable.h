@@ -86,6 +86,7 @@ public:
     get_kv_entry(const sequenced_key& user_key);
 
     sequenced_key last_user_key_without_seq() const noexcept;
+    sequenced_key first_user_key_without_seq() const noexcept;
 
 private:
     koios::task<bool>   parse_meta_data();
@@ -100,6 +101,7 @@ private:
     bool m_meta_data_parsed{};
     ::std::unique_ptr<random_readable> m_file;
     ::std::string m_filter_rep;
+    ::std::string m_first_uk;
     ::std::string m_last_uk;
     filter_policy* m_filter;
     ::std::shared_ptr<compressor_policy> m_compressor;
