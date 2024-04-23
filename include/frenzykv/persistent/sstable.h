@@ -3,6 +3,7 @@
 
 #include <optional>
 #include <vector>
+#include <utility>
 
 #include "koios/task.h"
 
@@ -13,9 +14,28 @@
 #include "frenzykv/persistent/block.h"
 #include "frenzykv/util/compressor.h"
 #include "frenzykv/io/inner_buffer.h"
+#include "frenzykv/persistent/sstable_builder.h"
 
 namespace frenzykv
 {
+
+struct block_with_storage
+{
+    block_with_storage(block bb, buffer<> sto) noexcept
+        : b{ ::std::move(bb) }, s{ ::std::move(sto) }
+    {
+    }
+
+    block_with_storage(block bb) noexcept
+        : b{ ::std::move(bb) }
+    {
+    }
+
+    block b;
+
+    // Iff s.empty(), then the block uses sstable::s_storage
+    buffer<> s;
+};
 
 /*
  *      |-------------------|
@@ -57,59 +77,19 @@ public:
      *              So after a call of this function, 
      *              any access to the previously returned 
      *              `block_segment` object are XXX undefined behaviour.
+     *  \param  user_key_ignore_seq Only take the serialized user key part, ignore the seq part
      */
-    koios::task<::std::optional<block_segment>> 
-    get_segment(const_bspan user_key);
-
-    /*! \brief Searching specific user key from this memtable
-     *  
-     *  \return A ::std::optional<block_segment> 
-     *          represents a block segment that all elements 
-     *          has the same public prefix (user key for data block).
-     *
-     *  \attention  `block_segment` only borrow bytes contents 
-     *              from some RAII object that actually hold the memory.
-     *              So after a call of this function, 
-     *              any access to the previously returned 
-     *              `block_segment` object are XXX undefined behaviour.
-     */
-    koios::task<::std::optional<block_segment>>
-    get_segment(::std::string_view user_key) 
-    {
-        return get_segment(::std::as_bytes(::std::span{user_key}));
-    }
+    koios::task<::std::optional<::std::pair<block_segment, block_with_storage>>> 
+    get_segment(const sequenced_key& user_key_ignore_seq);
 
     koios::task<::std::optional<kv_entry>>
-    get_kv_entry(sequence_number_t seq, const_bspan user_key);
-
-    koios::task<::std::optional<kv_entry>>
-    get_kv_entry(sequence_number_t seq, ::std::string_view user_key)
-    {
-        return get_kv_entry(seq, ::std::as_bytes(::std::span{user_key}));
-    }
+    get_kv_entry(const sequenced_key& user_key);
 
 private:
     koios::task<bool>   parse_meta_data();
     koios::task<btl_t>  btl_value(uintmax_t offset);    // Required by `generate_block_offsets()`
-    koios::task<bool>   generate_block_offsets();       // Required by `parse_meta_data()`
+    koios::task<bool>   generate_block_offsets(mbo_t mbo);       // Required by `parse_meta_data()`
 
-    struct block_with_storage
-    {
-        block_with_storage(block bb, buffer<> sto) noexcept
-            : b{ ::std::move(bb) }, s{ ::std::move(sto) }
-        {
-        }
-
-        block_with_storage(block bb) noexcept
-            : b{ ::std::move(bb) }
-        {
-        }
-
-        block b;
-
-        // Iff s.empty(), then the block uses sstable::s_storage
-        buffer<> s;
-    };
 
     koios::task<::std::optional<block_with_storage>> 
     get_block(uintmax_t offset, btl_t btl);             // Required by `get_segment()`

@@ -24,15 +24,17 @@ namespace
 {
 
 const ::std::string user_value = "WilsonAlinaWilsonAlinaWilsonAlinaWilsonAlina";
+const ::std::string tomb_stone_key = "bbbdddccc";
 
 ::std::vector<kv_entry> make_kvs()
 {
     ::std::vector<kv_entry> kvs{};
     ::std::string key = "aaabbbccc";
 
-    for (size_t i{}; i < 10000; ++i)
+    kvs.emplace_back(0, tomb_stone_key);
+    for (size_t i{}; i < 1000; ++i)
     {
-        if (i % 200 == 0)
+        if (i % 20 == 0)
         {
             auto newkview = key | rv::transform([](auto&& ch){ return ch + 1; });
             key = ::std::string{ begin(newkview), end(newkview) };
@@ -40,6 +42,7 @@ const ::std::string user_value = "WilsonAlinaWilsonAlinaWilsonAlinaWilsonAlina";
 
         kvs.emplace_back((sequence_number_t)i, key, user_value);
     }
+    ::std::sort(kvs.begin(), kvs.end());
     return kvs;
 }
     
@@ -86,22 +89,22 @@ public:
         co_return true;
     }
 
-    koios::task<bool> get(const_bspan user_key)
+    koios::task<bool> get(sequenced_key user_key)
     {
         if (!m_table) co_return false;
         auto opt = co_await m_table->get_segment(user_key);
         if (!opt) co_return false;
 
-        if (!opt->fit_public_prefix(user_key)) 
+        auto user_key_rep = user_key.serialize_user_key_as_string();
+        auto user_key_rep_b = ::std::as_bytes(::std::span{ user_key_rep });
+        if (!opt->first.fit_public_prefix(user_key_rep_b)) 
             co_return false;
 
-        for (auto entry : entries_from_block_segment(*opt))
+        for (auto entry : entries_from_block_segment(opt->first))
         {
-            if (memcmp_comparator{}(entry.key().user_key(), as_string_view(user_key)) != ::std::strong_ordering::equal)
+            if (entry.key().user_key() != user_key.user_key())
                 co_return false;
-            if (entry.value().is_tomb_stone())
-                co_return false;
-            if (entry.value().value() != user_value)
+            if (!entry.is_tomb_stone() && entry.value().value() != user_value)
                 co_return false;
         }
                
@@ -129,8 +132,13 @@ TEST_F(sstable_test, get)
 {
     reset();
     ASSERT_TRUE(make_table().result());
-    ::std::span cb1{ "dddeeefff"sv };
-    ::std::span cb2{ "ggghhhiii"sv };
-    ASSERT_TRUE(get(::std::as_bytes(cb1)).result());
-    ASSERT_TRUE(get(::std::as_bytes(cb2)).result());
+    ASSERT_TRUE(get({0, "dddeeefff"}).result());
+    ASSERT_TRUE(get({0, "ggghhhiii"}).result());
+}
+
+TEST_F(sstable_test, find_tomb_stone)
+{
+    reset();
+    ASSERT_TRUE(make_table().result());
+    ASSERT_TRUE(get({0, tomb_stone_key}).result());
 }

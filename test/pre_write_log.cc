@@ -69,7 +69,7 @@ koios::eager_task<> clean()
 TEST(pre_write_log, basic)
 {
     kvdb_deps deps;
-    logger l(deps, "pre_write_test.txt");
+    logger l(deps, deps.env()->get_seq_writable("pre_write_test.txt"));
     ASSERT_TRUE(write(l).result());
     ASSERT_TRUE(read().result());
 

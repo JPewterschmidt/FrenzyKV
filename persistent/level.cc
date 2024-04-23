@@ -68,13 +68,18 @@ koios::task<file_id_t> level::allocate_file_id()
     co_return result;
 }
 
-koios::task<file_id_t> level::create_file(level_t level)
+koios::task<::std::pair<file_id_t, ::std::unique_ptr<seq_writable>>> 
+level::create_file(level_t level)
 {
     assert(working());
     file_id_t id = co_await allocate_file_id();
     auto name = name_a_file(level, id);
+
+    auto file = m_deps->env()->get_seq_writable(sstables_path()/name);
+
+    m_id_name[id] = ::std::move(name);
     
-    co_return id;
+    co_return { id, ::std::move(file) };
 }
 
 koios::task<> level::delete_file(level_t level, file_id_t id)
@@ -82,6 +87,7 @@ koios::task<> level::delete_file(level_t level, file_id_t id)
     assert(working());
     auto lk = co_await m_mutex.acquire();
     co_await m_deps->env()->delete_file(sstables_path()/m_id_name.at(id));
+    m_id_name.erase(id);
 
     // Recycle file id;
     m_id_recycled.push(id);

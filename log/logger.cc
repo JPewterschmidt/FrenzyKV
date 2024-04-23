@@ -6,12 +6,6 @@
 namespace frenzykv
 {
 
-::std::string logger::to_string() const
-{
-    return ::std::format("logger: name = {}, path = {}", 
-        filename(), filepath().string());
-}
-
 koios::task<> logger::write(const write_batch& b)
 {
     co_await koios::this_task::turn_into_scheduler();

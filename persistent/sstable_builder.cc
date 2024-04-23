@@ -37,10 +37,12 @@ koios::task<bool> sstable_builder::add(
         co_return false;
     }
     
-    if (::std::string_view uk = key.user_key(); uk != m_last_uk)
+    // Including the length encoded part at the begging of the key_rep
+    auto key_rep = key.serialize_user_key_as_string();
+    if (key_rep != m_last_uk)
     {
-        m_filter->append_new_filter(uk, m_filter_rep);
-        m_last_uk = uk;
+        m_filter->append_new_filter(key_rep, m_filter_rep);
+        m_last_uk = key_rep;
     }
 
     if (!m_block_builder.add(key, value))
@@ -96,10 +98,12 @@ koios::task<bool> sstable_builder::finish()
 
     const mbo_t mbo = m_bytes_appended_to_file;
     co_await flush_current_block(false);
-    ::std::string mbo_and_magic_number_buffer;
-    append_encode_int_to<sizeof(mbo)>(mbo, mbo_and_magic_number_buffer);
-    append_encode_int_to<sizeof(magic_number)>(magic_number, mbo_and_magic_number_buffer);
-    co_await m_file->append(::std::as_bytes(::std::span{mbo_and_magic_number_buffer}));
+
+    ::std::array<::std::byte, sizeof(mbo) + sizeof(magic_number)> mbo_and_magic_number_buffer{};
+    toolpex::encode_big_endian_to(mbo, mbo_and_magic_number_buffer);
+    toolpex::encode_big_endian_to(magic_number, ::std::span{mbo_and_magic_number_buffer}.subspan(sizeof(mbo)));
+
+    co_await m_file->append(mbo_and_magic_number_buffer);
     co_await m_file->close();
     co_return true;
 }

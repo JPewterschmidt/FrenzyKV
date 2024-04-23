@@ -21,7 +21,7 @@ static constexpr size_t bs_ril = sizeof(ril_t);
 
 static ril_t read_ril(const ::std::byte* cur)
 {
-    return decode_int_from<ril_t>({ cur, bs_ril });
+    return toolpex::decode_big_endian_from<ril_t>({ cur, bs_ril });
 }
 
 template<::std::size_t Len>
@@ -37,7 +37,7 @@ parse_result_t block_segment::parse()
     const ::std::byte* current = m_storage.data();
     const ::std::byte* sentinal = current + m_storage.size();
 
-    ppl_t ppl = decode_int_from<ppl_t>({ current, bs_ppl });
+    ppl_t ppl = toolpex::decode_big_endian_from<ppl_t>({ current, bs_ppl });
     if (ppl == 0) return parse_result_t::error;
     current += bs_ppl;
     
@@ -99,11 +99,13 @@ bool block_segment::less_than_this_public_prefix(const_bspan user_prefix) const 
 koios::generator<kv_entry> 
 entries_from_block_segment(const block_segment& seg)
 {
+    // including 2 bytes of user key len
     auto uk_from_seg = seg.public_prefix();
+    uk_from_seg = uk_from_seg.subspan(user_key_length_bytes_size);
     for (const auto& item : seg.items())
     {
         ::std::span seq_buffer{ item.data(), sizeof(sequence_number_t) };
-        sequence_number_t seq = decode_int_from<sequence_number_t>(::std::as_bytes(seq_buffer));
+        sequence_number_t seq = toolpex::decode_big_endian_from<sequence_number_t>(::std::as_bytes(seq_buffer));
         auto uv_with_len = item.subspan(sizeof(seq));
         uv_with_len = serialized_user_value_from_value_len(uv_with_len);
         co_yield kv_entry{ seq, uk_from_seg, kv_user_value::parse(uv_with_len) };
@@ -114,7 +116,7 @@ entries_from_block_segment(const block_segment& seg)
 
 static const ::std::byte* crc32_beg_ptr(const_bspan storage)
 {
-    btl_t btl = decode_int_from<btl_t>(storage);
+    btl_t btl = toolpex::decode_big_endian_from<btl_t>(storage);
     return storage.data() + btl - sizeof(crc32_t);
 }
 
@@ -125,7 +127,7 @@ static const ::std::byte* wc_beg_ptr(const_bspan storage)
 
 wc_t wc_value(const_bspan storage)
 {
-    return decode_int_from<wc_t>({ wc_beg_ptr(storage), sizeof(wc_t) });
+    return toolpex::decode_big_endian_from<wc_t>({ wc_beg_ptr(storage), sizeof(wc_t) });
 }
 
 ::std::string block_decompress(
@@ -143,7 +145,7 @@ wc_t wc_value(const_bspan storage)
     // Re-calculate BTL
     btl_t newbtl = static_cast<btl_t>(result.size());
     ::std::span btl_buffer{ result.data(), sizeof(btl_t) };
-    encode_int_to<sizeof(btl_t)>(newbtl, ::std::as_writable_bytes(btl_buffer));
+    toolpex::encode_big_endian_to(newbtl, btl_buffer);
 
     return result;
 }
@@ -160,7 +162,7 @@ bool block_decompress_to(
     const size_t new_btl = sizeof(btl_t) + decompressed_bc_sz + sizeof(wc_t) + sizeof(crc32_t);
     assert(new_btl <= ::std::numeric_limits<btl_t>::max());
     btl_t new_btl_value = static_cast<btl_t>(new_btl);
-    encode_int_to<sizeof(btl_t)>(new_btl_value, dst.subspan(0, sizeof(btl_t)));
+    toolpex::encode_big_endian_to(new_btl_value, dst.subspan(0, sizeof(btl_t)));
     dst = dst.subspan(0, new_btl);
 
     return result;
@@ -178,7 +180,7 @@ size_t approx_block_decompress_size(
 
 static btl_t btl_value(const_bspan storage)
 {
-    btl_t result = decode_int_from<btl_t>(storage);
+    btl_t result = toolpex::decode_big_endian_from<btl_t>(storage);
     assert(result != 0);
     return result;
 }
@@ -196,7 +198,7 @@ const_bspan undecompressed_block_content(const_bspan storage)
 crc32_t embeded_crc32_value(const_bspan storage)
 {
     const ::std::byte* crc32beg = crc32_beg_ptr(storage);
-    return decode_int_from<crc32_t>({ crc32beg, sizeof(crc32_t) });
+    return toolpex::decode_big_endian_from<crc32_t>({ crc32beg, sizeof(crc32_t) });
 }
 
 static crc32_t calculate_block_content_crc32(const_bspan bc)
@@ -214,7 +216,7 @@ bool block_integrity_check(const_bspan storage)
 
 bool block_content_was_comprssed(const_bspan storage)
 {
-    wc_t wc = decode_int_from<wc_t>({ wc_beg_ptr(storage), sizeof(wc_t) });
+    wc_t wc = toolpex::decode_big_endian_from<wc_t>({ wc_beg_ptr(storage), sizeof(wc_t) });
     assert(wc == 1 || wc == 0);
     return wc == 1;
 }
@@ -229,13 +231,13 @@ static const ::std::byte* nsbs_beg_ptr(const_bspan s)
 // UnCompressed data only
 static nsbs_t nsbs_value(const_bspan s)
 {
-    return decode_int_from<nsbs_t>({ nsbs_beg_ptr(s), sizeof(nsbs_t) });
+    return toolpex::decode_big_endian_from<nsbs_t>({ nsbs_beg_ptr(s), sizeof(nsbs_t) });
 }
 
 // UnCompressed data only
 static sbso_t sbso_value(const ::std::byte* sbso_ptr)
 {
-    return decode_int_from<sbso_t>({ sbso_ptr, sizeof(sbso_t) });
+    return toolpex::decode_big_endian_from<sbso_t>({ sbso_ptr, sizeof(sbso_t) });
 }
 
 // UnCompressed data only
@@ -272,16 +274,9 @@ parse_result_t block::parse_meta_data()
 }
 
 koios::generator<block_segment> block::
-segments_in_single_interval(::std::vector<const ::std::byte*>::const_iterator insert_iter)
+segments_in_single_interval(const ::std::byte* from, const ::std::byte* sentinal) const
 {
-    const ::std::byte* from = *insert_iter;
     const ::std::byte* current = from;
-    
-    auto parsing_end_iter = ::std::next(insert_iter);
-
-    const ::std::byte* const sentinal = 
-        (parsing_end_iter == m_special_segs.end()) ? meta_data_beg_ptr(m_storage) : *parsing_end_iter;
-
     while (current < sentinal)
     {
         block_segment seg{ { current, static_cast<size_t>(sentinal - current) } };
@@ -302,31 +297,45 @@ segments_in_single_interval(::std::vector<const ::std::byte*>::const_iterator in
     }
 }
 
+koios::generator<block_segment> block::segments_in_single_interval() const
+{
+    const auto* potiential_end = meta_data_beg_ptr(m_storage);
+    return segments_in_single_interval(m_special_segs[0], m_special_segs.size() > 1 ? m_special_segs[1]: potiential_end);
+}
+
 ::std::optional<block_segment> block::get(const_bspan user_prefix) const
 {
     if (!larger_equal_than_this_first_segment_public_prefix(user_prefix))
         return {};
 
-    auto sp_seg = m_special_segs
-        | rv::transform([this](auto&& ptr){
-              return block_segment{ { ptr, m_storage.data() + m_storage.size() } };
-          });
-
-    block_segment last_seg = *begin(sp_seg);
-
-    for (auto [seg1, seg2] : sp_seg | rv::adjacent<2>)
+    auto last_segp = m_special_segs.front();
+    for (auto [seg1p, seg2p] : m_special_segs | rv::adjacent<2>)
     {
+        block_segment seg1{ { seg1p, m_storage.data() + m_storage.size() } };
+        block_segment seg2{ { seg2p, m_storage.data() + m_storage.size() } };
+
         // Shot!
         if (seg1.larger_equal_than_this_public_prefix(user_prefix) 
             && seg2.less_than_this_public_prefix(user_prefix))
         {
-            return seg1;
+            for (auto s : segments_in_single_interval(seg1p, seg2p))
+            {
+                if (s.fit_public_prefix(user_prefix))
+                    return s;
+            }
         }
-        last_seg = ::std::move(seg2);
+        last_segp = seg2p;
     }
 
+    block_segment last_seg{ { last_segp, m_storage.data() + m_storage.size() } };
     if (last_seg.larger_equal_than_this_public_prefix(user_prefix))
-        return last_seg;
+    {
+        for (auto s : segments_in_single_interval(last_segp, meta_data_beg_ptr(m_storage)))
+        {
+            if (s.fit_public_prefix(user_prefix))
+                return s;
+        }
+    }
 
     return {};
 }
@@ -352,7 +361,7 @@ block_segment_builder(::std::string& dst, ::std::string_view public_prefix) noex
 {
     // Serialize PPL and PP
     ppl_t ppl = static_cast<ppl_t>(public_prefix.size());
-    append_encode_int_to<sizeof(ppl)>(ppl, m_storage);
+    toolpex::append_encode_big_endian_to(ppl, m_storage);
     m_storage.append(public_prefix);
 }
 
@@ -363,12 +372,13 @@ bool block_segment_builder::add(const kv_entry& kv)
 
 bool block_segment_builder::add(const sequenced_key& key, const kv_user_value& value)
 {
-    if (key.user_key() != m_public_prefix)
+    auto key_rep = key.serialize_user_key_as_string();
+    if (key_rep != m_public_prefix)
         return false;
 
     // Serialize RIL and RI
     ril_t ril = (ril_t)(sizeof(sequence_number_t) + value.serialized_bytes_size());
-    append_encode_int_to<sizeof(ril)>(ril, m_storage);
+    toolpex::append_encode_big_endian_to(ril, m_storage);
     key.serialize_sequence_number_append_to(m_storage);
     value.serialize_append_to_string(m_storage);
 
@@ -388,6 +398,8 @@ void block_segment_builder::finish()
 block_builder::block_builder(const kvdb_deps& deps, ::std::shared_ptr<compressor_policy> compressor) 
     : m_deps{ &deps }, m_compressor{ ::std::move(compressor) }
 {
+    // Typical block size is 4K
+    m_storage.reserve(4096);
     // Prepare BTL space
     m_storage.resize(sizeof(btl_t), 0);
 }
@@ -407,7 +419,7 @@ bool block_builder::add(const sequenced_key& key, const kv_user_value& value)
     if (!m_current_seg_builder)
     {
         ++m_seg_count;
-        m_current_seg_builder = ::std::make_unique<block_segment_builder>(m_storage, key.user_key());
+        m_current_seg_builder = ::std::make_unique<block_segment_builder>(m_storage, key.serialize_user_key_as_string());
         m_sbsos.push_back(sizeof(btl_t));
     }
 
@@ -421,8 +433,8 @@ bool block_builder::add(const sequenced_key& key, const kv_user_value& value)
         // You have to make sure that the following key are strictly larger the the last one.
         // Only in the manner, the public prefix compression could give a best performance.
         [[maybe_unused]] auto last_prefix = m_current_seg_builder->public_prefix();
-        [[maybe_unused]] auto user_key = key.user_key();
-        assert(memcmp_comparator{}(user_key, last_prefix) == ::std::strong_ordering::greater);
+        [[maybe_unused]] auto user_key_rep = key.serialize_user_key_as_string();
+        assert(memcmp_comparator{}(user_key_rep, last_prefix) == ::std::strong_ordering::greater);
         
         ++m_seg_count;
         if ((m_seg_count + 1) % interval_sz == 0)
@@ -440,7 +452,7 @@ bool block_builder::add(const sequenced_key& key, const kv_user_value& value)
 
         // The block_segment_builder won't allocate any space, just simply append new stuff to `m_storage`
         // so there won't be any problem invovlved with the memory management.
-        m_current_seg_builder = ::std::make_unique<block_segment_builder>(m_storage, key.user_key());
+        m_current_seg_builder = ::std::make_unique<block_segment_builder>(m_storage, key.serialize_user_key_as_string());
 
         [[maybe_unused]] bool add_result = m_current_seg_builder->add(key, value);
         assert(add_result);
@@ -468,9 +480,9 @@ static ::std::span<char> block_content(::std::string& storage)
     // Serialize Meta data area.
     for (sbso_t sbso : m_sbsos)
     {
-        append_encode_int_to<sizeof(sbso_t)>(sbso, m_storage);
+        toolpex::append_encode_big_endian_to(sbso, m_storage);
     }
-    append_encode_int_to<sizeof(nsbs_t)>(static_cast<nsbs_t>(m_sbsos.size()), m_storage);
+    toolpex::append_encode_big_endian_to(static_cast<nsbs_t>(m_sbsos.size()), m_storage);
 
     auto b_content = block_content(m_storage);
 
@@ -499,24 +511,24 @@ static ::std::span<char> block_content(::std::string& storage)
         m_storage = ::std::move(new_storage);
         // WC Only 1 byte
         wc_t wc{ 1 };
-        append_encode_int_to<sizeof(uint8_t)>(wc, m_storage);
+        toolpex::append_encode_big_endian_to(wc, m_storage);
     }
     else
     {
         // WC Only 1 byte
         wc_t wc{ 0 };
-        append_encode_int_to<sizeof(uint8_t)>(wc, m_storage);
+        toolpex::append_encode_big_endian_to(wc, m_storage);
     }
 
     // Calculate and append CRC value
     const crc32_t crc = calculate_block_content_crc32(::std::as_bytes(b_content));
-    append_encode_int_to<sizeof(crc32_t)>(crc, m_storage);
+    toolpex::append_encode_big_endian_to(crc, m_storage);
 
     // Serialize BTL
     assert(m_storage.size() <= ::std::numeric_limits<btl_t>::max());
 
     btl_t btl = static_cast<btl_t>(m_storage.size());
-    encode_int_to<sizeof(btl_t)>(btl, ::std::as_writable_bytes(::std::span{ m_storage.data(), sizeof(btl) }));
+    toolpex::encode_big_endian_to(btl, { m_storage.data(), sizeof(btl) });
 
     return ::std::move(m_storage);
 }
