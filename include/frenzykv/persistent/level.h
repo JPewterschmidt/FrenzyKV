@@ -44,6 +44,12 @@ public:
      */
     size_t allowed_file_number(level_t l);
 
+    /*! \brief Return the max bytes size each SSTable of specific level
+     *  \retval 0   There's no exact restriction of file number.
+     *  \retval !=0 the max size of a sstable.
+     */
+    size_t allowed_file_size(level_t l);
+
 private:
     koios::task<file_id_t> allocate_file_id();
     bool working() const noexcept;
