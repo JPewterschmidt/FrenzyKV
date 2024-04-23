@@ -188,4 +188,10 @@ bool level::need_to_comapct(level_t l) const noexcept
     return (actual_file_number(l) >= allowed_file_number(l));
 }
 
+const auto& level::level_file_ids(level_t l) const noexcept
+{
+    assert(l < m_levels_file_id.size());
+    return m_levels_file_id[l];
+}
+
 } // namespace frenzykv
