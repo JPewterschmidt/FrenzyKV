@@ -1,4 +1,5 @@
 #include <cassert>
+#include <ranges>
 
 #include "frenzykv/statistics.h"
 #include "frenzykv/error_category.h"
@@ -12,6 +13,8 @@
 #include "frenzykv/db/db_impl.h"
 
 #include "frenzykv/persistent/sstable_builder.h"
+
+namespace rv = ::std::ranges::views;
 
 namespace frenzykv
 {
@@ -107,10 +110,50 @@ koios::task<> db_impl::flush_imm_to_sstable()
     co_return;
 }
 
-koios::task<> db_impl::compact_files(const ::std::vector<file_id_t>& files)
+koios::task<>
+db_impl::
+merge_tables(const ::std::vector<sstable>& tables, level_t target_l)
 {
-    // TODO
-    // Need version supports.
+    [[maybe_unused]] auto [id, file] = co_await m_level.create_file(target_l);
+    sstable_builder builder{ 
+        m_deps, m_level.allowed_file_size(target_l), 
+        m_filter_policy.get(), ::std::move(file)
+    };
+
+    while (!builder.reach_the_size_limit())
+    {
+        for ([[maybe_unused]] const auto& table : tables)
+        {
+            // TODO
+        }
+    }
+
+    co_return;
+}
+
+koios::eager_task<> 
+db_impl::
+compact_files(sstable lowlevelt, level_t nextl)
+{
+    auto merging_tables = m_level.level_file_ids(nextl)
+        | rv::transform(
+            [this, nextl](auto&& id) noexcept { 
+                return m_level.open_read(nextl, id); 
+            })
+        | rv::transform(
+            [this](auto&& filep) { 
+                assert(filep);
+                return sstable{ m_deps, m_filter_policy.get(), ::std::move(filep) }; 
+            })
+        | rv::filter(
+            [&lowlevelt](auto&& tab) { 
+                return lowlevelt.overlapped(tab); 
+            })
+        ;
+
+    ::std::vector<sstable> tables(begin(merging_tables), end(merging_tables));
+    ::std::sort(tables.begin(), tables.end());
+    co_await merge_tables(tables, nextl);
 
     co_return;
 }
@@ -122,7 +165,10 @@ koios::task<> db_impl::may_compact()
     {
         if (m_level.need_to_comapct(l))
         {
-            co_await compact_files(m_level.level_file_ids(l));
+            const file_id_t target_file = m_level.oldest_file(l);
+            auto file = m_level.open_read(l, target_file);
+            assert(file);
+            co_await compact_files({ m_deps, m_filter_policy.get(), ::std::move(file) }, l);
         }
     }
     co_return;

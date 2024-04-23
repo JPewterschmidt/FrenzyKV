@@ -33,7 +33,7 @@ public:
 	}
 
     ::std::unique_ptr<random_readable>
-    get_ramdom_readable(const ::std::filesystem::path& p) override
+    get_random_readable(const ::std::filesystem::path& p) override
 	{
         return ::std::make_unique<iouring_readable>(p, *m_opt);
 	}
