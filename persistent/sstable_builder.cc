@@ -37,10 +37,12 @@ koios::task<bool> sstable_builder::add(
         co_return false;
     }
     
-    if (::std::string_view uk = key.user_key(); uk != m_last_uk)
+    // Including the length encoded part at the begging of the key_rep
+    auto key_rep = key.serialize_user_key_as_string();
+    if (key_rep != m_last_uk)
     {
-        m_filter->append_new_filter(uk, m_filter_rep);
-        m_last_uk = uk;
+        m_filter->append_new_filter(key_rep, m_filter_rep);
+        m_last_uk = key_rep;
     }
 
     if (!m_block_builder.add(key, value))

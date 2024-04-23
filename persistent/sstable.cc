@@ -48,7 +48,9 @@ koios::task<bool> sstable::parse_meta_data()
     assert(meta_block.special_segments_count() == 1);
     for (block_segment seg : meta_block.segments_in_single_interval())
     {
-        if (as_string_view(seg.public_prefix()) == "bloom_filter")
+        sequenced_key filter_key{ 0, "bloom_filter" };
+        auto filter_key_rep = filter_key.serialize_user_key_as_string();
+        if (as_string_view(seg.public_prefix()) == filter_key_rep)
         {
             auto fake_user_value_sp_with_seq = seg.items().front();
             auto uv = kv_user_value::parse(fake_user_value_sp_with_seq.subspan(sizeof(sequence_number_t)));
@@ -57,6 +59,7 @@ koios::task<bool> sstable::parse_meta_data()
         }
     }
 
+    assert(m_filter_rep.size() != 0);
     if (!co_await generate_block_offsets(mbo)) 
         co_return false;
 
@@ -96,7 +99,7 @@ sstable::get_block(uintmax_t offset, btl_t btl)
 {
     ::std::optional<block_with_storage> result{};
 
-    buffer<> buff{btl + 10};
+    buffer<> buff{btl + 10}; // extra bytes to avoid unknow reason buffer overflow.
     
     size_t readed = co_await m_file->read(buff.writable_span().subspan(0, btl), offset);
     assert(readed == btl);
@@ -126,12 +129,15 @@ sstable::get_block(uintmax_t offset, btl_t btl)
 }
 
 koios::task<::std::optional<::std::pair<block_segment, block_with_storage>>> 
-sstable::get_segment(const_bspan user_key)
+sstable::
+get_segment(const sequenced_key& user_key_ignore_seq)
 {
     if (!m_meta_data_parsed)
         co_await parse_meta_data();
 
-    if (!m_filter->may_match(user_key, m_filter_rep))
+    auto user_key_rep = user_key_ignore_seq.serialize_user_key_as_string();
+    auto user_key_rep_b = ::std::as_bytes(::std::span{ user_key_rep });
+    if (!m_filter->may_match(user_key_rep_b, m_filter_rep))
         co_return {};
 
     auto blk_aws = m_block_offsets
@@ -149,10 +155,10 @@ sstable::get_segment(const_bspan user_key)
         assert(blk1_opt.has_value());
 
         // Shot!
-        if (blk0_opt->b.larger_equal_than_this_first_segment_public_prefix(user_key)
-           && blk1_opt->b.less_than_this_first_segment_public_prefix(user_key))
+        if (blk0_opt->b.larger_equal_than_this_first_segment_public_prefix(user_key_rep_b)
+           && blk1_opt->b.less_than_this_first_segment_public_prefix(user_key_rep_b))
         {
-            auto seg_opt = blk0_opt->b.get(user_key);
+            auto seg_opt = blk0_opt->b.get(user_key_rep_b);
             if (seg_opt)
             {
                 co_return ::std::pair{ ::std::move(*seg_opt), ::std::move(*blk0_opt) };
@@ -162,9 +168,9 @@ sstable::get_segment(const_bspan user_key)
         
         last_block_opt = ::std::move(blk1_opt);
     }
-    if (last_block_opt->b.larger_equal_than_this_first_segment_public_prefix(user_key))
+    if (last_block_opt->b.larger_equal_than_this_first_segment_public_prefix(user_key_rep_b))
     {
-        auto seg_opt = last_block_opt->b.get(user_key);
+        auto seg_opt = last_block_opt->b.get(user_key_rep_b);
         if (seg_opt) 
         {
             co_return ::std::pair{ ::std::move(*seg_opt), ::std::move(*last_block_opt) };
@@ -176,7 +182,7 @@ sstable::get_segment(const_bspan user_key)
 
 koios::task<::std::optional<kv_entry>>
 sstable::
-get_kv_entry(sequence_number_t seq, const_bspan user_key)
+get_kv_entry(const sequenced_key& user_key)
 {
     auto seg_opt = co_await get_segment(user_key);
     if (!seg_opt) co_return {};
@@ -184,7 +190,7 @@ get_kv_entry(sequence_number_t seq, const_bspan user_key)
     
     for (kv_entry entry : entries_from_block_segment(seg))
     {
-        if (entry.key().sequence_number() >= seq) 
+        if (entry.key().sequence_number() >= user_key.sequence_number()) 
             co_return entry;
     }
 

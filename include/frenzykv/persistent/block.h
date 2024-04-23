@@ -184,7 +184,7 @@ public:
      */
     block_segment_builder(::std::string& dst, ::std::string_view userkey) noexcept;
 
-    auto public_prefix() const noexcept { return m_public_prefix; }
+    ::std::string_view public_prefix() const noexcept { return m_public_prefix; }
 
     /*! \param kv A new kv entry which the user key value and `public_prefix()` are equal.
      *
@@ -205,7 +205,7 @@ public:
     
 private:
     ::std::string& m_storage;
-    ::std::string_view m_public_prefix;
+    ::std::string m_public_prefix;
     bool m_finish{};
 };
 

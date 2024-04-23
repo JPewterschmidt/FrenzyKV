@@ -307,4 +307,24 @@ size_t sequenced_key::serialize_user_key_append_to(::std::string& dst) const
     return user_key_length_bytes_size + m_user_key.size();
 }
 
+::std::string sequenced_key::serialize_as_string() const
+{
+    ::std::string result(serialized_bytes_size(), 0);
+    ::std::span b{ result };
+    serialize_to(::std::as_writable_bytes(b));
+    return result;
+}
+
+::std::string sequenced_key::serialize_user_key_as_string() const
+{
+    ::std::string result(serialized_user_key_bytes_size(), 0);
+    ::std::span b{ result };
+    uint16_t ukl = static_cast<uint16_t>(m_user_key.size());
+    toolpex::encode_big_endian_to(ukl, b);
+    b = b.subspan(sizeof(ukl));
+    ::std::memcpy(b.data(), m_user_key.data(), m_user_key.size());
+
+    return result;
+}
+
 } // namespace frenzykv

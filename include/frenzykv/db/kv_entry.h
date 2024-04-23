@@ -1,6 +1,7 @@
 #ifndef FRENZYKV_KV_ENTRY_H
 #define FRENZYKV_KV_ENTRY_H
 
+#include <span>
 #include <string>
 #include <memory>
 #include <string_view>
@@ -8,6 +9,7 @@
 #include "koios/generator.h"
 #include "frenzykv/types.h"
 #include "toolpex/functional.h"
+#include "frenzykv/util/comp.h"
 
 /*      ----------------------------------------------------------------------------|--------------|
  *      |4B           |2B              |var length  |4B  |4B           |var length  |              |
@@ -137,9 +139,14 @@ public:
 
     size_t serialize_to(::std::string& str) const;
     ::std::string serialize_as_string() const;
+    ::std::string serialize_user_key_as_string() const;
     size_t serialized_bytes_size() const noexcept
     {
         return seq_bytes_size + user_key_length_bytes_size + m_user_key.size();
+    }
+    size_t serialized_user_key_bytes_size() const noexcept
+    {
+        return user_key_length_bytes_size + m_user_key.size();
     }
 
     ::std::string to_string_debug() const;
@@ -298,6 +305,26 @@ public:
     bool operator()(::std::string_view lhs, ::std::string_view rhs) const noexcept
     {
         return lhs < rhs;
+    }
+};
+
+class user_key_less
+{
+public:
+    bool operator()(const_bspan lhs, const_bspan rhs) const noexcept
+    {
+        if (lhs.size() != rhs.size())
+        {
+            return lhs.size() < rhs.size();
+        }
+        return memcmp_comparator{}(lhs, rhs) == ::std::strong_ordering::less;
+    }
+
+    bool operator()(::std::string_view lhs, ::std::string_view rhs) const noexcept
+    {
+        ::std::span lhsb{ lhs.data(), lhs.size() };
+        ::std::span rhsb{ rhs.data(), rhs.size() };
+        return operator()(::std::as_bytes(lhsb), ::std::as_bytes(rhsb));
     }
 };
 

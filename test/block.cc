@@ -124,8 +124,8 @@ public:
         {
             for (block_segment seg : b.segments_in_single_interval())
             {
-                for (auto seg : entries_from_block_segment(seg))
-                    kvs2.push_back(::std::move(seg));
+                for (auto entry : entries_from_block_segment(seg))
+                    kvs2.push_back(::std::move(entry));
             }
         }
         else
@@ -134,20 +134,11 @@ public:
             {
                 for (block_segment seg : b.segments_in_single_interval(beg, end))
                 {
-                    for (auto seg : entries_from_block_segment(seg))
-                        kvs2.push_back(::std::move(seg));
+                    for (auto entry : entries_from_block_segment(seg))
+                        kvs2.push_back(::std::move(entry));
                 }
             }
         }
-
-        //for (auto iter = ssps.cbegin(); iter != ssps.cend(); ++iter)
-        //{
-        //    for (block_segment seg : b.segments_in_single_interval(iter))
-        //    {
-        //        for (auto seg : entries_from_block_segment(seg))
-        //            kvs2.push_back(::std::move(seg));
-        //    }
-        //}
 
         result &= (kvs2 == kvs);
         return result;
@@ -215,8 +206,10 @@ TEST_F(block_test, get)
     generate_serialized_storage(make_kvs());
     auto bc = ::std::as_bytes(::std::span{storage()});
     block b(bc);
-    const_bspan key = ::std::as_bytes(::std::span{"dddeeefff"sv});
-    auto seg_opt = b.get(key);
+    sequenced_key key{0, "dddeeefff"};
+    auto key_rep = key.serialize_user_key_as_string();
+    auto key_rep_b = ::std::as_bytes(::std::span{ key_rep });
+    auto seg_opt = b.get(key_rep_b);
     ASSERT_TRUE(seg_opt.has_value());
-    ASSERT_TRUE(seg_opt->larger_equal_than_this_public_prefix(key));
+    ASSERT_TRUE(seg_opt->larger_equal_than_this_public_prefix(key_rep_b));
 }

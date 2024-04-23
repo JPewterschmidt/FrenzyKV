@@ -99,7 +99,9 @@ bool block_segment::less_than_this_public_prefix(const_bspan user_prefix) const 
 koios::generator<kv_entry> 
 entries_from_block_segment(const block_segment& seg)
 {
+    // including 2 bytes of user key len
     auto uk_from_seg = seg.public_prefix();
+    uk_from_seg = uk_from_seg.subspan(user_key_length_bytes_size);
     for (const auto& item : seg.items())
     {
         ::std::span seq_buffer{ item.data(), sizeof(sequence_number_t) };
@@ -370,7 +372,8 @@ bool block_segment_builder::add(const kv_entry& kv)
 
 bool block_segment_builder::add(const sequenced_key& key, const kv_user_value& value)
 {
-    if (key.user_key() != m_public_prefix)
+    auto key_rep = key.serialize_user_key_as_string();
+    if (key_rep != m_public_prefix)
         return false;
 
     // Serialize RIL and RI
@@ -395,6 +398,8 @@ void block_segment_builder::finish()
 block_builder::block_builder(const kvdb_deps& deps, ::std::shared_ptr<compressor_policy> compressor) 
     : m_deps{ &deps }, m_compressor{ ::std::move(compressor) }
 {
+    // Typical block size is 4K
+    m_storage.reserve(4096);
     // Prepare BTL space
     m_storage.resize(sizeof(btl_t), 0);
 }
@@ -414,7 +419,7 @@ bool block_builder::add(const sequenced_key& key, const kv_user_value& value)
     if (!m_current_seg_builder)
     {
         ++m_seg_count;
-        m_current_seg_builder = ::std::make_unique<block_segment_builder>(m_storage, key.user_key());
+        m_current_seg_builder = ::std::make_unique<block_segment_builder>(m_storage, key.serialize_user_key_as_string());
         m_sbsos.push_back(sizeof(btl_t));
     }
 
@@ -428,8 +433,8 @@ bool block_builder::add(const sequenced_key& key, const kv_user_value& value)
         // You have to make sure that the following key are strictly larger the the last one.
         // Only in the manner, the public prefix compression could give a best performance.
         [[maybe_unused]] auto last_prefix = m_current_seg_builder->public_prefix();
-        [[maybe_unused]] auto user_key = key.user_key();
-        assert(memcmp_comparator{}(user_key, last_prefix) == ::std::strong_ordering::greater);
+        [[maybe_unused]] auto user_key_rep = key.serialize_user_key_as_string();
+        assert(memcmp_comparator{}(user_key_rep, last_prefix) == ::std::strong_ordering::greater);
         
         ++m_seg_count;
         if ((m_seg_count + 1) % interval_sz == 0)
@@ -447,7 +452,7 @@ bool block_builder::add(const sequenced_key& key, const kv_user_value& value)
 
         // The block_segment_builder won't allocate any space, just simply append new stuff to `m_storage`
         // so there won't be any problem invovlved with the memory management.
-        m_current_seg_builder = ::std::make_unique<block_segment_builder>(m_storage, key.user_key());
+        m_current_seg_builder = ::std::make_unique<block_segment_builder>(m_storage, key.serialize_user_key_as_string());
 
         [[maybe_unused]] bool add_result = m_current_seg_builder->add(key, value);
         assert(add_result);
