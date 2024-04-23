@@ -226,4 +226,44 @@ file_id_t level::oldest_file(const ::std::vector<file_id_t>& files) const
     return oldest.second;
 }
 
+koios::task<::std::unique_ptr<seq_writable>> 
+level::
+open_write(level_t l, file_id_t id)
+{
+    assert(l < m_levels_file_id.size());
+    if (!level_contains(l, id)) [[unlikely]]
+    {
+        co_return nullptr;
+    }
+    auto result = m_deps->env()->get_seq_writable(
+        sstables_path()/m_id_name[id]
+    );
+    assert(result->file_size() == 0);
+    co_return result;
+}
+
+koios::task<::std::unique_ptr<random_readable>> 
+level::
+open_read(level_t l, file_id_t id)
+{
+    assert(l < m_levels_file_id.size());
+    if (!level_contains(l, id)) [[unlikely]]
+    {
+        co_return nullptr;
+    }
+    auto result = m_deps->env()->get_random_readable(
+        sstables_path()/m_id_name[id]
+    );
+    assert(result->file_size() > 0);
+    co_return result;
+}
+
+bool level::level_contains(level_t l, file_id_t file) const
+{
+    assert(l < m_levels_file_id.size());
+    const auto& vec = m_levels_file_id[l];
+    const auto iter = ::std::find(vec.begin(), vec.end(), file);
+    return iter != vec.end();
+}
+
 } // namespace frenzykv

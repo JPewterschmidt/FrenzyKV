@@ -107,10 +107,10 @@ koios::task<> db_impl::flush_imm_to_sstable()
     co_return;
 }
 
-koios::task<> db_impl::compact_files(const ::std::vector<file_id_t>& files)
+koios::task<> db_impl::compact_files(sstable lowlevelt, const ::std::vector<file_id_t>& files)
 {
     // TODO
-    // Need version supports.
+    
 
     co_return;
 }
@@ -122,7 +122,16 @@ koios::task<> db_impl::may_compact()
     {
         if (m_level.need_to_comapct(l))
         {
-            co_await compact_files(m_level.level_file_ids(l));
+            const file_id_t target_file = m_level.oldest_file(l);
+            sstable target_ss{ 
+                m_deps, 
+                m_filter_policy.get(), 
+                co_await m_level.open_read(l, target_file) 
+            };
+            co_await compact_files(
+                ::std::move(target_ss), 
+                m_level.level_file_ids(l)
+            );
         }
     }
     co_return;
