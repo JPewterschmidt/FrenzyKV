@@ -42,6 +42,7 @@ private:
     koios::task<> flush_imm_to_sstable();
     koios::task<> may_compact();
     koios::eager_task<> compact_files(sstable lowlevelt, level_t nextl);
+    koios::task<> merge_tables(const ::std::vector<sstable>& tables, level_t target_l);
 
 private:
     ::std::stop_source m_stp_src;

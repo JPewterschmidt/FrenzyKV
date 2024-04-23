@@ -96,13 +96,22 @@ public:
         return first_user_key_without_seq() < other.first_user_key_without_seq();
     }
 
-private:
-    koios::task<bool>   parse_meta_data();
-    koios::task<btl_t>  btl_value(uintmax_t offset);    // Required by `generate_block_offsets()`
-    koios::task<bool>   generate_block_offsets(mbo_t mbo);       // Required by `parse_meta_data()`
+    // Required by `get_segment()`
+    koios::task<::std::optional<block_with_storage>> 
+    get_block(uintmax_t offset, btl_t btl);
 
     koios::task<::std::optional<block_with_storage>> 
-    get_block(uintmax_t offset, btl_t btl);             // Required by `get_segment()`
+    get_block(::std::pair<uintmax_t, btl_t> p)
+    {
+        return get_block(p.first, p.second);
+    }
+
+    koios::generator<::std::pair<uintmax_t, btl_t>> block_offsets() const noexcept;
+
+private:
+    koios::task<bool>   parse_meta_data();
+    koios::task<btl_t>  btl_value(uintmax_t offset);        // Required by `generate_block_offsets()`
+    koios::task<bool>   generate_block_offsets(mbo_t mbo);  // Required by `parse_meta_data()`
     
 private:
     const kvdb_deps* m_deps{};

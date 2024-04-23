@@ -112,17 +112,17 @@ koios::task<> db_impl::flush_imm_to_sstable()
 
 koios::task<>
 db_impl::
-merge_tables(const ::std::vector<sstable> tables, level_t target_l)
+merge_tables(const ::std::vector<sstable>& tables, level_t target_l)
 {
-    file_id_t builder_file = m_level.create_file(target_l);
+    [[maybe_unused]] auto [id, file] = co_await m_level.create_file(target_l);
     sstable_builder builder{ 
         m_deps, m_level.allowed_file_size(target_l), 
-        m_filter_policy.get(), m_level.open_write(builder_file) 
+        m_filter_policy.get(), ::std::move(file)
     };
 
     while (!builder.reach_the_size_limit())
     {
-        for (const auto& table : tables)
+        for ([[maybe_unused]] const auto& table : tables)
         {
             // TODO
         }
@@ -151,8 +151,9 @@ compact_files(sstable lowlevelt, level_t nextl)
             })
         ;
 
-    [[maybe_unused]] ::std::vector<sstable> tables(begin(merging_tables), end(merging_tables));
+    ::std::vector<sstable> tables(begin(merging_tables), end(merging_tables));
     ::std::sort(tables.begin(), tables.end());
+    co_await merge_tables(tables, nextl);
 
     co_return;
 }

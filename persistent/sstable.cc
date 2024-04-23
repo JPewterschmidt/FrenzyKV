@@ -255,4 +255,12 @@ bool sstable::disjoint(const sstable& other) const noexcept
     return (al < bl && ar < bl) || (bl < al && br < al);
 }
 
+koios::generator<::std::pair<uintmax_t, btl_t>> 
+sstable::
+block_offsets() const noexcept
+{
+    for (auto p : m_block_offsets)
+        co_yield p;
+}
+
 } // namespace frenzykv

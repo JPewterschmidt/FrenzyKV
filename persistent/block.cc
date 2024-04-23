@@ -299,8 +299,21 @@ segments_in_single_interval(const ::std::byte* from, const ::std::byte* sentinal
 
 koios::generator<block_segment> block::segments_in_single_interval() const
 {
-    const auto* potiential_end = meta_data_beg_ptr(m_storage);
-    return segments_in_single_interval(m_special_segs[0], m_special_segs.size() > 1 ? m_special_segs[1]: potiential_end);
+    const auto* potential_end = meta_data_beg_ptr(m_storage);
+    return segments_in_single_interval(m_special_segs[0], m_special_segs.size() > 1 ? m_special_segs[1]: potential_end);
+}
+
+koios::generator<block_segment> block::segments() const
+{
+    const ::std::byte* current = m_special_segs[0];
+    const ::std::byte* sentinal = meta_data_beg_ptr(m_storage);
+    while (current < sentinal)
+    {
+        block_segment seg{ { current, static_cast<size_t>(sentinal - current) } };
+        assert(seg.parse_result() == parse_result_t::success);
+        current += seg.storage().size();
+        co_yield ::std::move(seg);
+    }
 }
 
 ::std::optional<block_segment> block::get(const_bspan user_prefix) const

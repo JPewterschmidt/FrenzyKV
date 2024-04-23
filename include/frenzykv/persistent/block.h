@@ -150,6 +150,7 @@ public:
      */
     koios::generator<block_segment> segments_in_single_interval(const ::std::byte* beg, const ::std::byte* end) const;
     koios::generator<block_segment> segments_in_single_interval() const;
+    koios::generator<block_segment> segments() const;
 
     const auto& special_segment_ptrs() { return m_special_segs; }
     const_bspan first_segment_public_prefix() const noexcept { return m_first_seg_public_prefix; }
