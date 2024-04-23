@@ -28,7 +28,7 @@ koios::task<bool> write(logger& l)
     auto w = make_batch();
     try
     {
-        co_await l.write(w);
+        co_await l.insert(w);
     }
     catch (...)
     {

@@ -6,10 +6,9 @@
 #include <stop_token>
 #include "frenzykv/db/memtable.h"
 #include "frenzykv/util/record_writer_wrapper.h"
-#include "frenzykv/util/memtable_set.h"
 #include "frenzykv/log/logger.h"
 #include "koios/coroutine_mutex.h"
-#include "koios/coroutine_shated_mutex.h"
+#include "koios/coroutine_shared_mutex.h"
 #include "frenzykv/db.h"
 #include "frenzykv/kvdb_deps.h"
 #include "frenzykv/db/kv_entry.h"
@@ -24,7 +23,7 @@ public:
     db_impl(::std::string dbname, const options& opt);
     ~db_impl() noexcept;
 
-    koios::task<size_t> write(write_options write_opt, write_batch batch) override;
+    koios::task<::std::error_code> insert(write_options write_opt, write_batch batch) override;
 
     virtual koios::task<::std::optional<kv_entry>> 
     get(const_bspan key, ::std::error_code& ec_out) noexcept override;
@@ -40,8 +39,8 @@ private:
 
     // mamtable===============================
     mutable koios::shared_mutex m_mem_mutex;
-    memtable m_mem;
-    imm_memtable m_imm;
+    ::std::unique_ptr<memtable> m_mem;
+    ::std::unique_ptr<imm_memtable> m_imm{};
 
     // other===============================
 

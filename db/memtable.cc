@@ -8,7 +8,6 @@ namespace frenzykv
 
 koios::task<::std::error_code> memtable::insert(const write_batch& b)
 {
-    const size_t batch_bs = batch.serialized_bytes_size();
     auto lk = co_await m_list_mutex.acquire();
     if (!could_fit_in_impl(b))
     {
@@ -26,7 +25,6 @@ koios::task<::std::error_code> memtable::insert(const write_batch& b)
 
 koios::task<::std::error_code> memtable::insert(write_batch&& b)
 {
-    const size_t batch_bs = batch.serialized_bytes_size();
     auto lk = co_await m_list_mutex.acquire();
     if (!could_fit_in_impl(b))
     {
@@ -124,13 +122,13 @@ koios::task<size_t> memtable::size_bytes() const
 
 bool memtable::could_fit_in_impl(const write_batch& batch) const noexcept
 {
-    const size_t batch_sz = batch.serialized_bytes_size();
+    const size_t batch_sz = batch.serialized_size();
     return batch_sz + size_bytes_impl() <= bound_size_bytes_impl();
 }
 
 koios::task<bool> memtable::could_fit_in(const write_batch& batch) const noexcept
 {
-    auto lk = co_await m_mutex.acquire_shared();
+    auto lk = co_await m_list_mutex.acquire_shared();
     co_return could_fit_in_impl(batch);
 }
 

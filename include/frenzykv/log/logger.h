@@ -23,7 +23,7 @@ public:
     {
     }
 
-    koios::task<> write(const write_batch& b);
+    koios::task<> insert(const write_batch& b);
 
     koios::task<> may_flush(bool force = false) noexcept;
     

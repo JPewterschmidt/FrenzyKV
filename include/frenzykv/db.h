@@ -3,6 +3,7 @@
 
 #include "frenzykv/frenzykv.h"
 #include "frenzykv/write_batch.h"
+#include "frenzykv/db/read_write_options.h"
 
 #include "koios/task.h"
 
@@ -15,13 +16,20 @@ class db_interface
 {
 public:
     virtual ~db_interface() noexcept {}
-    virtual koios::task<size_t> write(write_batch batch) = 0;
-    virtual koios::task<size_t> write(const_bspan key, const_bspan value) { return write({key, value}); }
-    virtual koios::task<size_t> remove_from_db(const_bspan key)
+    virtual koios::task<::std::error_code> insert(write_options opt, write_batch batch) = 0;
+    virtual koios::task<::std::error_code> insert(write_options opt, const_bspan key, const_bspan value) 
+    { 
+        return insert(::std::move(opt), {key, value}); 
+    }
+
+    virtual koios::task<::std::error_code> remove_from_db(write_options opt, const_bspan key)
     {
         write_batch b;
         b.remove_from_db(key);
-        return write(::std::move(b));
+
+        // OK, wont be a couroutine issue.
+        // because we move this batch in.
+        return insert(::std::move(opt), ::std::move(b));
     }
 
     virtual koios::task<::std::optional<kv_entry>> get(const_bspan key)
