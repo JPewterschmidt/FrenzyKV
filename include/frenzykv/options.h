@@ -26,6 +26,9 @@ struct options
     size_t memory_page_bytes = 4096;
     size_t max_block_segments_number = 1000;
     size_t block_size = 4096;
+    size_t max_level = 3;
+    ::std::vector<size_t> level_file_number{ 2, 4 };
+    ::std::vector<size_t> level_file_size{ 4 * 1024 * 1024, 20 * 1024 * 1024, 60 * 1024 * 1024 }; // SSTable bound
     int compress_level = 15;
     bool need_buffered_write = true;
     bool sync_write = false;
@@ -50,6 +53,9 @@ struct adl_serializer<frenzykv::options>
     static void to_json(json& j, const frenzykv::options& opt) 
     {
         j = json{ 
+            { "max_level", opt.max_level },
+            { "level_file_number", opt.level_file_number }, 
+            { "level_file_size", opt.level_file_size }, 
             { "disk_block_bytes",  opt.disk_block_bytes }, 
             { "memory_page_bytes", opt.memory_page_bytes },
             { "max_block_segments_number", opt.max_block_segments_number },
@@ -64,7 +70,7 @@ struct adl_serializer<frenzykv::options>
             { "log", {
                 { "path", opt.log_path }, 
                 { "level", magic_enum::enum_name<frenzykv::logging_level>(opt.log_level) }, 
-            }}
+            }}, 
         };
     }
 
@@ -75,7 +81,10 @@ struct adl_serializer<frenzykv::options>
         j.at("memory_page_bytes").get_to(opt.memory_page_bytes);
         j.at("need_compress").get_to(opt.need_compress);
         j.at("need_buffered_write").get_to(opt.need_buffered_write);
+        j.at("max_level").get_to(opt.max_level);
         j.at("block_size").get_to(opt.block_size);
+        j.at("level_file_number").get_to(opt.level_file_number);
+        j.at("level_file_size").get_to(opt.level_file_size);
         j.at("compressor_name").get_to(opt.compressor_name);
         j.at("compress_level").get_to(opt.compress_level);
         j.at("max_block_segments_number").get_to(opt.max_block_segments_number);
@@ -88,7 +97,6 @@ struct adl_serializer<frenzykv::options>
         j.at("root_path").get_to(opt.root_path);
         temp.clear();
         j.at("log").at("path").get_to(temp);
-        // TODO, assign to opt
         temp.clear();
         
         ::std::string level_str;
@@ -102,7 +110,12 @@ struct adl_serializer<frenzykv::options>
         {
             spdlog::error("could not retrive logging level from your conf file.");
         }
-        // TODO, assign to opt
+
+        if (opt.level_file_number.size() < opt.max_level - 1)
+            spdlog::error("wrong file number count");
+        
+        if (opt.level_file_size.size() < opt.max_level - 1)
+            spdlog::error("wrong file size number");
     }
 };
 NLOHMANN_JSON_NAMESPACE_END

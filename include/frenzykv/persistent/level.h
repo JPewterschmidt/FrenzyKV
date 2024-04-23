@@ -38,6 +38,12 @@ public:
     koios::task<> start() noexcept;
     koios::task<> finish() noexcept;
 
+    /*! \brief Return the max number of SSTable of specific level
+     *  \retval 0   There's no exact restriction of file number.
+     *  \retval !=0 the max number of files.
+     */
+    size_t allowed_file_number(level_t l);
+
 private:
     koios::task<file_id_t> allocate_file_id();
     bool working() const noexcept;

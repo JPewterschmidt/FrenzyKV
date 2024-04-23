@@ -73,6 +73,14 @@ koios::task<file_id_t> level::allocate_file_id()
     co_return result;
 }
 
+size_t level::allowed_file_number(level_t l)
+{
+    auto opt = m_deps->opt();
+    const auto& number_vec = opt->level_file_number;
+    if (l >= number_vec.size()) return 0;
+    return number_vec[l];
+}
+
 koios::task<::std::pair<file_id_t, ::std::unique_ptr<seq_writable>>> 
 level::create_file(level_t level)
 {
