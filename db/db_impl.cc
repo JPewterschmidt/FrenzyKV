@@ -24,14 +24,20 @@ db_impl::~db_impl() noexcept
 }
 
 koios::task<size_t> 
-db_impl::write(write_batch batch) 
+db_impl::
+write(write_options write_opt, write_batch batch) override
 {
     const size_t serialized_size = batch.serialized_size();
 
     co_await m_log.write(batch);
-    co_await m_memset.insert(::std::move(batch));
-    auto [total_count, _] = co_await m_deps.stat()->increase_hot_data_scale(batch.count(), serialized_size);
-    (void)_;
+    co_await m_log.may_flush(write_opt.sync_write);
+    
+    // Not doing mem-imm trasformation, only need shared lock
+    auto shah = co_await m_mem_mutex.acquire_shared();
+    if (!m_mem.insert(batch))
+    {
+               
+    }
 
     co_return total_count;
 }

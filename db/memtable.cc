@@ -1,4 +1,5 @@
 #include "frenzykv/db/memtable.h"
+#include "frenzykv/error_category.h"
 #include <utility>
 #include <cassert>
 
@@ -7,7 +8,13 @@ namespace frenzykv
 
 koios::task<::std::error_code> memtable::insert(const write_batch& b)
 {
+    const size_t batch_bs = batch.serialized_bytes_size();
     auto lk = co_await m_list_mutex.acquire();
+    if (batch_bs + size_bytes_impl() >= bound_size_bytes_impl())
+    {
+        co_return make_frzkv_out_of_range();
+    }
+
     ::std::error_code result{};
     for (const auto& item : b)
     {
@@ -19,7 +26,12 @@ koios::task<::std::error_code> memtable::insert(const write_batch& b)
 
 koios::task<::std::error_code> memtable::insert(write_batch&& b)
 {
+    const size_t batch_bs = batch.serialized_bytes_size();
     auto lk = co_await m_list_mutex.acquire();
+    if (batch_bs + size_bytes_impl() >= bound_size_bytes_impl())
+    {
+        co_return make_frzkv_out_of_range();
+    }
     ::std::error_code result{};
     for (auto& item : b)
     {
@@ -78,20 +90,35 @@ koios::task<size_t> memtable::bound_size_bytes() const
 {
     auto lk = co_await m_list_mutex.acquire_shared();
     assert(m_bound_size_bytes);
-    co_return m_bound_size_bytes;
+    co_return bound_size_bytes_impl();
 }
 
 koios::task<bool> memtable::full() const
 {
     auto lk = co_await m_list_mutex.acquire_shared();
     assert(m_bound_size_bytes);
-    co_return m_list.size() == m_bound_size_bytes;
+    co_return full_impl();
+}
+
+bool memtable::full_impl() const
+{
+    return m_list.size() >= m_bound_size_bytes;
+}
+
+size_t memtable::bound_size_bytes_impl() const
+{
+    return m_bound_size_bytes;
+}
+
+size_t memtable::size_bytes_impl() const
+{
+    return m_size_bytes;
 }
 
 koios::task<size_t> memtable::size_bytes() const
 {
     auto lk = co_await m_list_mutex.acquire_shared();
-    co_return m_size_bytes;
+    co_return size_bytes_impl();
 }
 
 koios::task<::std::optional<kv_entry>> 

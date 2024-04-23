@@ -9,9 +9,11 @@
 #include "frenzykv/util/memtable_set.h"
 #include "frenzykv/log/logger.h"
 #include "koios/coroutine_mutex.h"
+#include "koios/coroutine_shated_mutex.h"
 #include "frenzykv/db.h"
 #include "frenzykv/kvdb_deps.h"
 #include "frenzykv/db/kv_entry.h"
+#include "frenzykv/db/read_write_options.h"
 
 namespace frenzykv
 {
@@ -22,7 +24,7 @@ public:
     db_impl(::std::string dbname, const options& opt);
     ~db_impl() noexcept;
 
-    koios::task<size_t> write(write_batch batch) override;
+    koios::task<size_t> write(write_options write_opt, write_batch batch) override;
 
     virtual koios::task<::std::optional<kv_entry>> 
     get(const_bspan key, ::std::error_code& ec_out) noexcept override;
@@ -35,8 +37,15 @@ private:
     ::std::string m_dbname;
     kvdb_deps m_deps;
     logger m_log;
-    memtable_set m_memset;
-};
+
+    // mamtable===============================
+    mutable koios::shared_mutex m_mem_mutex;
+    memtable m_mem;
+    imm_memtable m_imm;
+
+    // other===============================
+
+};  
 
 } // namespace frenzykv
 

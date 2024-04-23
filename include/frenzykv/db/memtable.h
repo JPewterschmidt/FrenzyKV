@@ -56,11 +56,15 @@ private:
     ::std::error_code insert_impl(kv_entry&& entry);
     ::std::error_code insert_impl(const kv_entry& entry);
     void delete_impl(const kv_entry& entry) noexcept
-    {
+    {;
         return delete_impl(entry.key());
     }
 
     void delete_impl(const sequenced_key& key);
+
+    bool full_impl() const;
+    size_t bound_size_bytes_impl() const;
+    size_t size_bytes_impl() const;
     
 private:
     const kvdb_deps* m_deps{};
