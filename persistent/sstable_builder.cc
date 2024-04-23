@@ -93,6 +93,7 @@ koios::task<bool> sstable_builder::finish()
     
     // Build meta block
     block_builder meta_builder{ *m_deps };
+    meta_builder.add({0, "last_uk"}, m_last_uk);
     meta_builder.add({0, "bloom_filter"}, m_filter_rep);
     m_block_builder = ::std::move(meta_builder);
 

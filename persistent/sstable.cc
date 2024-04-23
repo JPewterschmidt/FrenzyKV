@@ -49,17 +49,25 @@ koios::task<bool> sstable::parse_meta_data()
     for (block_segment seg : meta_block.segments_in_single_interval())
     {
         sequenced_key filter_key{ 0, "bloom_filter" };
+        sequenced_key last_uk_key{ 0, "last_uk" };
         auto filter_key_rep = filter_key.serialize_user_key_as_string();
+        auto last_uk_rep = last_uk_key.serialize_user_key_as_string();
         if (as_string_view(seg.public_prefix()) == filter_key_rep)
         {
             auto fake_user_value_sp_with_seq = seg.items().front();
             auto uv = kv_user_value::parse(fake_user_value_sp_with_seq.subspan(sizeof(sequence_number_t)));
             m_filter_rep = uv.value();
-            break; // Until now, there should be only one segment, only one element in segment.
+        }
+        else if (as_string_view(seg.public_prefix()) == last_uk_rep)
+        {
+            auto fake_user_value_sp_with_seq = seg.items().front();
+            auto last_uk = kv_user_value::parse(fake_user_value_sp_with_seq.subspan(sizeof(sequence_number_t)));
+            m_last_uk = last_uk.value();
         }
     }
 
     assert(m_filter_rep.size() != 0);
+    assert(m_last_uk.size() != 0);
     if (!co_await generate_block_offsets(mbo)) 
         co_return false;
 
