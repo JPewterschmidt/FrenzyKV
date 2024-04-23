@@ -97,10 +97,13 @@ public:
     }
 
     const auto& storage() const noexcept { return m_list; }
+    void set_flushed_flags() noexcept { m_flushed = true; }
+    bool was_flushed() const noexcept { return m_flushed; }
 
 private:
     toolpex::skip_list<sequenced_key, kv_user_value> m_list;
     const size_t m_size_bytes{};
+    bool m_flushed{};
 };
 
 } // namespace frenzykv

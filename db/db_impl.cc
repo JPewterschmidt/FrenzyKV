@@ -69,6 +69,7 @@ insert(write_options write_opt, write_batch batch)
 koios::task<> db_impl::flush_imm_to_sstable()
 {
     auto lk = co_await m_mem_mutex.acquire();
+    if (m_imm->was_flushed()) co_return;
     
     [[maybe_unused]] auto [id, file] = co_await m_level.create_file(0);
     const size_t table_size_bound = 4 * 1024 * 1024;
@@ -98,11 +99,16 @@ koios::task<> db_impl::flush_imm_to_sstable()
         }
     }
 
+    m_imm->set_flushed_flags();
     lk.unlock();
 
-    // TODO raise a compaction
+    may_compact().run();
     
-    
+    co_return;
+}
+
+koios::task<> db_impl::may_compact()
+{
     co_return;
 }
 
