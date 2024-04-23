@@ -1,11 +1,15 @@
-#include "frenzykv/db/db_impl.h"
-#include "frenzykv/util/multi_dest_record_writer.h"
-#include "frenzykv/util/stdout_debug_record_writer.h"
-#include "frenzykv/log/logger.h"
+#include <cassert>
+
 #include "frenzykv/statistics.h"
 #include "frenzykv/error_category.h"
 #include "frenzykv/options.h"
-#include <cassert>
+
+#include "frenzykv/util/multi_dest_record_writer.h"
+#include "frenzykv/util/stdout_debug_record_writer.h"
+
+#include "frenzykv/log/logger.h"
+
+#include "frenzykv/db/db_impl.h"
 
 namespace frenzykv
 {
@@ -14,7 +18,8 @@ db_impl::db_impl(::std::string dbname, const options& opt)
     : m_dbname{ ::std::move(dbname) }, 
       m_deps{ opt },
       m_log{ m_deps, m_deps.env()->get_seq_writable(prewrite_log_dir().path()/"0001-test.frzkvlog") }, 
-      m_mem{ ::std::make_unique<memtable>(m_deps) }
+      m_mem{ ::std::make_unique<memtable>(m_deps) }, 
+      m_filter_policy{ make_bloom_filter(64) }
 {
 }
 
@@ -42,9 +47,27 @@ insert(write_options write_opt, write_batch batch)
             auto ec = co_await m_mem->insert(batch);
             co_return ec;
         }
+
+        m_imm = ::std::make_unique<imm_memtable>(::std::move(*m_mem));
+        m_mem = ::std::make_unique<memtable>(m_deps);
+        auto ec = co_await m_mem->insert(::std::move(batch));
+
+        unih.unlock();
+
+        // Will hold the lock
+        flush_imm_to_sstable().run();
+
+        co_return ec;
     }
 
     co_return {};
+}
+
+koios::task<> db_impl::flush_imm_to_sstable()
+{
+    auto lk = co_await m_mem_mutex.acquire();
+    // TODO
+    co_return;
 }
 
 koios::task<::std::optional<kv_entry>> 

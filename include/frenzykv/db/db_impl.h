@@ -4,15 +4,21 @@
 #include <system_error>
 #include <memory>
 #include <stop_token>
-#include "frenzykv/db/memtable.h"
-#include "frenzykv/util/record_writer_wrapper.h"
-#include "frenzykv/log/logger.h"
+
 #include "koios/coroutine_mutex.h"
 #include "koios/coroutine_shared_mutex.h"
-#include "frenzykv/db.h"
+
 #include "frenzykv/kvdb_deps.h"
+
+#include "frenzykv/log/logger.h"
+
+#include "frenzykv/util/record_writer_wrapper.h"
+
+#include "frenzykv/db.h"
 #include "frenzykv/db/kv_entry.h"
+#include "frenzykv/db/memtable.h"
 #include "frenzykv/db/read_write_options.h"
+#include "frenzykv/db/filter.h"
 
 namespace frenzykv
 {
@@ -30,6 +36,7 @@ public:
 
 private:
     koios::task<sequenced_key> make_query_key(const_bspan userkey);
+    koios::task<> flush_imm_to_sstable();
 
 private:
     ::std::stop_source m_stp_src;
@@ -43,7 +50,7 @@ private:
     ::std::unique_ptr<imm_memtable> m_imm{};
 
     // other===============================
-
+    ::std::unique_ptr<filter_policy> m_filter_policy;
 };  
 
 } // namespace frenzykv
