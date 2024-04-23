@@ -51,6 +51,11 @@ retrive_level_and_id_from_name(const ::std::string& name)
     return result;
 }
 
+level::level(const kvdb_deps& deps) 
+    : m_deps{ &deps }
+{
+}
+
 koios::task<file_id_t> level::allocate_file_id()
 {
     assert(working());

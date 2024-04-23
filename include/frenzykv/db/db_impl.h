@@ -20,6 +20,8 @@
 #include "frenzykv/db/read_write_options.h"
 #include "frenzykv/db/filter.h"
 
+#include "frenzykv/persistent/level.h"
+
 namespace frenzykv
 {
 
@@ -51,6 +53,7 @@ private:
 
     // other===============================
     ::std::unique_ptr<filter_policy> m_filter_policy;
+    level m_level;
 };  
 
 } // namespace frenzykv

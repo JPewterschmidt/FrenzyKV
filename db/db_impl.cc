@@ -11,6 +11,8 @@
 
 #include "frenzykv/db/db_impl.h"
 
+#include "frenzykv/persistent/sstable_builder.h"
+
 namespace frenzykv
 {
 
@@ -19,7 +21,8 @@ db_impl::db_impl(::std::string dbname, const options& opt)
       m_deps{ opt },
       m_log{ m_deps, m_deps.env()->get_seq_writable(prewrite_log_dir().path()/"0001-test.frzkvlog") }, 
       m_mem{ ::std::make_unique<memtable>(m_deps) }, 
-      m_filter_policy{ make_bloom_filter(64) }
+      m_filter_policy{ make_bloom_filter(64) }, 
+      m_level{ m_deps }
 {
 }
 
@@ -66,7 +69,40 @@ insert(write_options write_opt, write_batch batch)
 koios::task<> db_impl::flush_imm_to_sstable()
 {
     auto lk = co_await m_mem_mutex.acquire();
-    // TODO
+    
+    [[maybe_unused]] auto [id, file] = co_await m_level.create_file(0);
+    const size_t table_size_bound = 4 * 1024 * 1024;
+
+    sstable_builder builder{ 
+        m_deps, table_size_bound, 
+        m_filter_policy.get(), ::std::move(file) 
+    };
+    
+    const auto& list = m_imm->storage();
+    for (const auto& item : list)
+    {
+        auto add_ret = co_await builder.add(item.first, item.second);
+
+        // current sstable full
+        if (add_ret == false)
+        {
+            co_await builder.finish();
+            [[maybe_unused]] auto [id, file] = co_await m_level.create_file(0);
+            builder = { 
+                m_deps, table_size_bound, 
+                m_filter_policy.get(), ::std::move(file)
+            };
+
+            [[maybe_unused]] auto add_ret2 = co_await builder.add(item.first, item.second);
+            assert(add_ret2);
+        }
+    }
+
+    lk.unlock();
+
+    // TODO raise a compaction
+    
+    
     co_return;
 }
 
