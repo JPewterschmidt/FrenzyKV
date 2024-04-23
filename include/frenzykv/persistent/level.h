@@ -54,7 +54,7 @@ public:
 
     size_t actual_file_number(level_t l) const noexcept;
 
-    const auto& level_file_ids(level_t l) const noexcept;
+    const ::std::vector<file_id_t>& level_file_ids(level_t l) const noexcept;
 
     size_t level_number() const noexcept;
 

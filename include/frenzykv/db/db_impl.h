@@ -40,6 +40,7 @@ private:
     koios::task<sequenced_key> make_query_key(const_bspan userkey);
     koios::task<> flush_imm_to_sstable();
     koios::task<> may_compact();
+    koios::task<> compact_files(const ::std::vector<file_id_t>& files);
 
 private:
     ::std::stop_source m_stp_src;
