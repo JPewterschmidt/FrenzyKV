@@ -27,7 +27,7 @@ struct options
     size_t max_block_segments_number = 1000;
     size_t block_size = 4096;
     size_t max_level = 3;
-    ::std::vector<size_t> level_file_number{ 2, 4 };
+    ::std::vector<size_t> level_file_number{ 2, 3 };
     ::std::vector<size_t> level_file_size{ 4 * 1024 * 1024, 20 * 1024 * 1024, 60 * 1024 * 1024 }; // SSTable bound
     int compress_level = 15;
     bool need_buffered_write = true;
