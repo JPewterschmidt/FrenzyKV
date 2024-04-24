@@ -15,9 +15,9 @@ namespace rv = ::std::ranges::views;
 
 sstable::sstable(const kvdb_deps& deps, 
                  filter_policy* filter, 
-                 ::std::unique_ptr<random_readable> file)
+                 random_readable* file)
     : m_deps{ &deps }, 
-      m_file{ ::std::move(file) }, 
+      m_file{ file }, 
       m_filter{ filter },
       m_compressor{ get_compressor(*m_deps->opt(), m_deps->opt()->compressor_name) }
 {

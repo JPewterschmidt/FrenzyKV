@@ -1,8 +1,13 @@
-#include "frenzykv/io/in_mem_rw.h"
-#include "koios/task.h"
-#include <stdexcept>
-#include <cassert>
 #include <vector>
+#include <ranges>
+#include <cassert>
+#include <stdexcept>
+
+#include "koios/task.h"
+
+#include "frenzykv/io/in_mem_rw.h"
+
+namespace rv = ::std::ranges::views;
 
 namespace frenzykv
 {
@@ -119,6 +124,22 @@ file_size() const noexcept
         result += bf.size();
     }
     return result;
+}
+
+koios::task<size_t> in_mem_rw::
+dump_to(seq_writable& file)
+{
+    size_t wrote{};
+    for (const auto& buf : m_blocks 
+        | rv::transform([](auto&& val){ return val.valid_span(); })
+        | rv::filter([](auto&& sp){ return !sp.empty(); }))
+    {
+        size_t cur_wrote = co_await file.append(buf);
+        if (cur_wrote == 0) co_return 0;
+        wrote += cur_wrote;
+    }
+    assert(wrote == file_size());
+    co_return wrote;
 }
 
 } // namespace frenzykv

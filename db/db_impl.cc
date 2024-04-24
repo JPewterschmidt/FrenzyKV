@@ -1,5 +1,8 @@
 #include <cassert>
 #include <ranges>
+#include <list>
+#include <vector>
+#include <algorithm>
 
 #include "frenzykv/statistics.h"
 #include "frenzykv/error_category.h"
@@ -79,7 +82,7 @@ koios::task<> db_impl::flush_imm_to_sstable()
 
     sstable_builder builder{ 
         m_deps, table_size_bound, 
-        m_filter_policy.get(), ::std::move(file) 
+        m_filter_policy.get(), file.get()
     };
     
     const auto& list = m_imm->storage();
@@ -94,7 +97,7 @@ koios::task<> db_impl::flush_imm_to_sstable()
             [[maybe_unused]] auto [id, file] = co_await m_level.create_file(0);
             builder = { 
                 m_deps, table_size_bound, 
-                m_filter_policy.get(), ::std::move(file)
+                m_filter_policy.get(), file.get()
             };
 
             [[maybe_unused]] auto add_ret2 = co_await builder.add(item.first, item.second);
@@ -110,40 +113,100 @@ koios::task<> db_impl::flush_imm_to_sstable()
     co_return;
 }
 
-koios::task<>
-db_impl::
-merge_tables(const ::std::vector<sstable>& tables, level_t target_l)
+static koios::task<::std::vector<kv_entry>>
+get_entries(sstable& table)
 {
-    [[maybe_unused]] auto [id, file] = co_await m_level.create_file(target_l);
-    sstable_builder builder{ 
-        m_deps, m_level.allowed_file_size(target_l), 
-        m_filter_policy.get(), ::std::move(file)
-    };
-
-    while (!builder.reach_the_size_limit())
+    ::std::vector<kv_entry> result;
+    for (auto blk_off : table.block_offsets())
     {
-        for ([[maybe_unused]] const auto& table : tables)
+        auto blk_opt = co_await table.get_block(blk_off);
+        assert(blk_opt.has_value());
+        for (auto kv : blk_opt->b.entries())
         {
-            // TODO
+            result.push_back(::std::move(kv));
         }
     }
+    assert(::std::is_sorted(result.begin(), result.end()));
+    co_return result;
+}
 
-    co_return;
+koios::task<::std::unique_ptr<in_mem_rw>>
+db_impl::
+merge_two_table(sstable& lhs, sstable& rhs, level_t l)
+{
+    const size_t allowed_size = m_level.allowed_file_size(l);
+    ::std::vector<::std::unique_ptr<in_mem_rw>> result;
+
+    ::std::vector<kv_entry> lhs_entries = co_await get_entries(lhs);
+    ::std::vector<kv_entry> rhs_entries = co_await get_entries(rhs);
+
+    ::std::list<kv_entry> merged;
+    ::std::merge(::std::move_iterator(lhs_entries.begin()), 
+                 ::std::move_iterator(lhs_entries.end()), 
+                 ::std::move_iterator(rhs_entries.begin()), 
+                 ::std::move_iterator(rhs_entries.end()), 
+                 ::std::back_inserter(merged));
+    lhs_entries = {};
+    rhs_entries = {};
+
+    // TODO: remove out-of-data entries
+    
+    auto file = ::std::make_unique<in_mem_rw>(allowed_size);
+    sstable_builder builder{ 
+        m_deps, allowed_size, 
+        m_filter_policy.get(), file.get() 
+    };
+    for (const auto& entry : merged)
+    {
+        if (!co_await builder.add(entry))
+        {
+            co_await builder.finish();
+            result.push_back(::std::move(file));
+            file = ::std::make_unique<in_mem_rw>(allowed_size);
+            builder = { 
+                m_deps, allowed_size, 
+                m_filter_policy.get(), file.get() 
+            };
+            [[maybe_unused]] bool ret = co_await builder.add(entry);
+            assert(ret);
+        }
+    }
+    
+    co_return file;
+}
+
+koios::task<>
+db_impl::
+merge_tables(::std::vector<sstable>& tables, level_t target_l)
+{
+    assert(tables.size() >= 2);
+    auto file = co_await merge_two_table(tables[0], tables[1], target_l);
+    for (auto& t : tables | rv::drop(2))
+    {
+        sstable temp{ m_deps, m_filter_policy.get(), file.get() };
+        file = co_await merge_two_table(temp, t, target_l);
+    }
+
+    [[maybe_unused]] auto [id, disk_file] = co_await m_level.create_file(target_l);
+    [[maybe_unused]] size_t wrote = co_await file->dump_to(*disk_file);
+    assert(wrote);
+    co_await disk_file->sync();
 }
 
 koios::eager_task<> 
 db_impl::
 compact_files(sstable lowlevelt, level_t nextl)
 {
+    ::std::vector<::std::unique_ptr<random_readable>> files;
     auto merging_tables = m_level.level_file_ids(nextl)
         | rv::transform(
-            [this, nextl](auto&& id) noexcept { 
-                return m_level.open_read(nextl, id); 
+            [this, nextl, &files](auto&& id) mutable noexcept { 
+                return files.emplace_back(m_level.open_read(nextl, id)).get();
             })
         | rv::transform(
             [this](auto&& filep) { 
                 assert(filep);
-                return sstable{ m_deps, m_filter_policy.get(), ::std::move(filep) }; 
+                return sstable{ m_deps, m_filter_policy.get(), filep }; 
             })
         | rv::filter(
             [&lowlevelt](auto&& tab) { 
@@ -152,6 +215,7 @@ compact_files(sstable lowlevelt, level_t nextl)
         ;
 
     ::std::vector<sstable> tables(begin(merging_tables), end(merging_tables));
+    tables.push_back(::std::move(lowlevelt));
     ::std::sort(tables.begin(), tables.end());
     co_await merge_tables(tables, nextl);
 
@@ -168,7 +232,7 @@ koios::task<> db_impl::may_compact()
             const file_id_t target_file = m_level.oldest_file(l);
             auto file = m_level.open_read(l, target_file);
             assert(file);
-            co_await compact_files({ m_deps, m_filter_policy.get(), ::std::move(file) }, l);
+            co_await compact_files({ m_deps, m_filter_policy.get(), file.get() }, l);
         }
     }
     co_return;

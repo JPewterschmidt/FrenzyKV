@@ -9,9 +9,8 @@
 #include "koios/coroutine_shared_mutex.h"
 
 #include "frenzykv/kvdb_deps.h"
-
 #include "frenzykv/log/logger.h"
-
+#include "frenzykv/io/in_mem_rw.h"
 #include "frenzykv/util/record_writer_wrapper.h"
 
 #include "frenzykv/db.h"
@@ -42,7 +41,10 @@ private:
     koios::task<> flush_imm_to_sstable();
     koios::task<> may_compact();
     koios::eager_task<> compact_files(sstable lowlevelt, level_t nextl);
-    koios::task<> merge_tables(const ::std::vector<sstable>& tables, level_t target_l);
+    koios::task<> merge_tables(::std::vector<sstable>& tables, level_t target_l);
+
+    koios::task<::std::unique_ptr<in_mem_rw>>
+    merge_two_table(sstable& lhs, sstable& rhs, level_t l);
 
 private:
     ::std::stop_source m_stp_src;
