@@ -187,9 +187,10 @@ merge_tables(::std::vector<sstable>& tables, level_t target_l)
         file = co_await merge_two_table(temp, t, target_l);
     }
 
-    // TODO: dump mem file to a real file
-
-    co_return;
+    [[maybe_unused]] auto [id, disk_file] = co_await m_level.create_file(target_l);
+    [[maybe_unused]] size_t wrote = co_await file->dump_to(*disk_file);
+    assert(wrote);
+    co_await disk_file->sync();
 }
 
 koios::eager_task<> 
