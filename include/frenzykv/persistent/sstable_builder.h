@@ -46,7 +46,7 @@ public:
     sstable_builder(const kvdb_deps& deps, 
                     uintmax_t size_limit,
                     filter_policy* filter, 
-                    seq_writable file);
+                    seq_writable* file);
     
     koios::task<bool> add(const sequenced_key& key, const kv_user_value& value);
     koios::task<bool> add(const kv_entry& kv) { return add(kv.key(), kv.value()); }

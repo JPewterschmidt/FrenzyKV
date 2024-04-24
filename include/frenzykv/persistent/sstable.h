@@ -64,7 +64,7 @@ class sstable
 public:
     sstable(const kvdb_deps& deps, 
             filter_policy* filter, 
-            ::std::unique_ptr<random_readable> file);
+            random_readable* file);
 
     /*! \brief Searching specific user key from this memtable
      *  
@@ -116,7 +116,7 @@ private:
 private:
     const kvdb_deps* m_deps{};
     bool m_meta_data_parsed{};
-    ::std::unique_ptr<random_readable> m_file;
+    random_readable* m_file;
     ::std::string m_filter_rep;
     ::std::string m_first_uk;
     ::std::string m_last_uk;

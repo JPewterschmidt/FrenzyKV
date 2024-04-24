@@ -94,7 +94,7 @@ koios::task<> db_impl::flush_imm_to_sstable()
             [[maybe_unused]] auto [id, file] = co_await m_level.create_file(0);
             builder = { 
                 m_deps, table_size_bound, 
-                m_filter_policy.get(), ::std::move(file)
+                m_filter_policy.get(), file.get()
             };
 
             [[maybe_unused]] auto add_ret2 = co_await builder.add(item.first, item.second);
@@ -117,14 +117,13 @@ merge_two_table(const sstable& lhs, const sstable& rhs, level_t l)
     const size_t allowed_size = m_level.allowed_file_size(l);
     ::std::vector<::std::unique_ptr<in_mem_rw>> result;
 
-    sstable_builder table{ m_deps, allowed_size, m_filter_policy.get(), file }; 
 
     auto lhs_blk_offs = lhs.block_offsets();
     auto rhs_blk_offs = rhs.block_offsets();
 
         // TODO       
     auto file = ::std::make_unique<in_mem_rw>(allowed_size);
-    table = { m_deps, allowed_size, m_filter_policy.get(), file.get() };
+    sstable_builder table{ m_deps, allowed_size, m_filter_policy.get(), file.get() }; 
     while (!table.reach_the_size_limit())
     {
         // TODO       
@@ -148,15 +147,16 @@ koios::eager_task<>
 db_impl::
 compact_files(sstable lowlevelt, level_t nextl)
 {
+    ::std::vector<::std::unique_ptr<random_readable>> files;
     auto merging_tables = m_level.level_file_ids(nextl)
         | rv::transform(
-            [this, nextl](auto&& id) noexcept { 
-                return m_level.open_read(nextl, id); 
+            [this, nextl, &files](auto&& id) mutable noexcept { 
+                return files.emplace_back(m_level.open_read(nextl, id)).get();
             })
         | rv::transform(
             [this](auto&& filep) { 
                 assert(filep);
-                return sstable{ m_deps, m_filter_policy.get(), ::std::move(filep) }; 
+                return sstable{ m_deps, m_filter_policy.get(), filep }; 
             })
         | rv::filter(
             [&lowlevelt](auto&& tab) { 
@@ -181,7 +181,7 @@ koios::task<> db_impl::may_compact()
             const file_id_t target_file = m_level.oldest_file(l);
             auto file = m_level.open_read(l, target_file);
             assert(file);
-            co_await compact_files({ m_deps, m_filter_policy.get(), ::std::move(file) }, l);
+            co_await compact_files({ m_deps, m_filter_policy.get(), file.get() }, l);
         }
     }
     co_return;

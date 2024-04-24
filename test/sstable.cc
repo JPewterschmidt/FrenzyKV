@@ -53,7 +53,7 @@ public:
     {
         m_filter = make_bloom_filter(64);
         m_file = ::std::make_unique<in_mem_rw>(4096);
-        m_file_storage = &file->storage();
+        m_file_storage = &m_file->storage();
         m_builder = ::std::make_unique<sstable_builder>(
             m_deps, 4096 * 1024 * 100 /*400MB*/, m_filter.get(), m_file.get()
         );
@@ -79,14 +79,14 @@ public:
                 co_return false;
         }
 
-        auto file = ::std::make_unique<in_mem_rw>();
-        file->clone_from(::std::move(*m_file_storage), 4096);
-        m_file_storage = &file->storage();
+        m_file2 = ::std::make_unique<in_mem_rw>();
+        m_file2->clone_from(::std::move(*m_file_storage), 4096);
+        m_file_storage = &m_file2->storage();
 
         m_table = ::std::make_unique<sstable>(
-            m_deps, m_filter.get(), ::std::move(file)
+            m_deps, m_filter.get(), m_file2.get()
         );
-        
+
         co_return true;
     }
 
@@ -127,7 +127,8 @@ public:
 private:
     kvdb_deps m_deps{};
     ::std::vector<buffer<>>* m_file_storage{};
-    ::std::unique_ptr<seq_writable> m_file;
+    ::std::unique_ptr<in_mem_rw> m_file;
+    ::std::unique_ptr<in_mem_rw> m_file2;
     ::std::unique_ptr<sstable_builder> m_builder;
     ::std::unique_ptr<sstable> m_table;
     ::std::unique_ptr<filter_policy> m_filter;

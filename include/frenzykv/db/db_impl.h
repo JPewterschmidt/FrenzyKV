@@ -9,9 +9,8 @@
 #include "koios/coroutine_shared_mutex.h"
 
 #include "frenzykv/kvdb_deps.h"
-
 #include "frenzykv/log/logger.h"
-
+#include "frenzykv/io/in_mem_rw.h"
 #include "frenzykv/util/record_writer_wrapper.h"
 
 #include "frenzykv/db.h"
@@ -30,7 +29,7 @@ class db_impl : public db_interface
 {
 public:
     db_impl(::std::string dbname, const options& opt);
-    ~db_impl() noexcept
+    ~db_impl() noexcept;
 
     koios::task<::std::error_code> insert(write_options write_opt, write_batch batch) override;
 
