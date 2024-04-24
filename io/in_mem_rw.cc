@@ -136,6 +136,7 @@ dump_to(seq_writable& file)
     {
         size_t cur_wrote = co_await file.append(buf);
         if (cur_wrote == 0) co_return 0;
+        wrote += cur_wrote;
     }
     assert(wrote == file_size());
     co_return wrote;
