@@ -46,7 +46,7 @@ public:
     sstable_builder(const kvdb_deps& deps, 
                     uintmax_t size_limit,
                     filter_policy* filter, 
-                    ::std::unique_ptr<seq_writable> file);
+                    seq_writable file);
     
     koios::task<bool> add(const sequenced_key& key, const kv_user_value& value);
     koios::task<bool> add(const kv_entry& kv) { return add(kv.key(), kv.value()); }
@@ -69,7 +69,7 @@ private:
     ::std::string m_filter_rep{};
     block_builder m_block_builder;
 
-    ::std::unique_ptr<seq_writable> m_file;
+    seq_writable* m_file;
     mbo_t m_bytes_appended_to_file{};
 };
 

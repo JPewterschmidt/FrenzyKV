@@ -30,7 +30,7 @@ class db_impl : public db_interface
 {
 public:
     db_impl(::std::string dbname, const options& opt);
-    ~db_impl() noexcept;
+    ~db_impl() noexcept
 
     koios::task<::std::error_code> insert(write_options write_opt, write_batch batch) override;
 
@@ -43,6 +43,8 @@ private:
     koios::task<> may_compact();
     koios::eager_task<> compact_files(sstable lowlevelt, level_t nextl);
     koios::task<> merge_tables(const ::std::vector<sstable>& tables, level_t target_l);
+    koios::task<::std::vector<::std::unique_ptr<in_mem_rw>>> 
+    merge_two_table(const sstable& lhs, const sstable& rhs, level_t l);
 
 private:
     ::std::stop_source m_stp_src;

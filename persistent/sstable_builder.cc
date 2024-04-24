@@ -17,12 +17,12 @@ sstable_builder::sstable_builder(
         const kvdb_deps& deps, 
         uintmax_t size_limit,
         filter_policy* filter, 
-        ::std::unique_ptr<seq_writable> file)
+        seq_writable* file)
     : m_deps{ &deps }, 
       m_size_limit{ size_limit },
       m_filter{ filter }, 
       m_block_builder{ *m_deps, get_compressor(*m_deps->opt(), "zstd") },
-      m_file{ ::std::move(file) }
+      m_file{ file }
 {
     assert(m_size_limit != 0);
 }

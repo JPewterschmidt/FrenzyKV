@@ -79,7 +79,7 @@ koios::task<> db_impl::flush_imm_to_sstable()
 
     sstable_builder builder{ 
         m_deps, table_size_bound, 
-        m_filter_policy.get(), ::std::move(file) 
+        m_filter_policy.get(), file.get()
     };
     
     const auto& list = m_imm->storage();
@@ -110,24 +110,37 @@ koios::task<> db_impl::flush_imm_to_sstable()
     co_return;
 }
 
+koios::task<::std::vector<::std::unique_ptr<in_mem_rw>>> 
+db_impl::
+merge_two_table(const sstable& lhs, const sstable& rhs, level_t l)
+{
+    const size_t allowed_size = m_level.allowed_file_size(l);
+    ::std::vector<::std::unique_ptr<in_mem_rw>> result;
+
+    sstable_builder table{ m_deps, allowed_size, m_filter_policy.get(), file }; 
+
+    auto lhs_blk_offs = lhs.block_offsets();
+    auto rhs_blk_offs = rhs.block_offsets();
+
+        // TODO       
+    auto file = ::std::make_unique<in_mem_rw>(allowed_size);
+    table = { m_deps, allowed_size, m_filter_policy.get(), file.get() };
+    while (!table.reach_the_size_limit())
+    {
+        // TODO       
+    }
+    result.push_back(::std::move(file));
+        // TODO       
+
+    
+    co_return result;
+}
+
 koios::task<>
 db_impl::
 merge_tables(const ::std::vector<sstable>& tables, level_t target_l)
 {
-    [[maybe_unused]] auto [id, file] = co_await m_level.create_file(target_l);
-    sstable_builder builder{ 
-        m_deps, m_level.allowed_file_size(target_l), 
-        m_filter_policy.get(), ::std::move(file)
-    };
-
-    while (!builder.reach_the_size_limit())
-    {
-        for ([[maybe_unused]] const auto& table : tables)
-        {
-            // TODO
-        }
-    }
-
+    // TODO
     co_return;
 }
 
