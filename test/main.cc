@@ -5,6 +5,7 @@
 #include <fstream>
 #include <filesystem>
 
+#include "spdlog/spdlog.h"
 #include "frenzykv/options.h"
 
 namespace fs = ::std::filesystem;
@@ -29,5 +30,6 @@ int main(int argc, char** argv)
     koios::runtime_init(11);
     auto result = RUN_ALL_TESTS();
     koios::runtime_exit();
+    spdlog::info("Working directory: {}", fs::current_path().string());
     return result;
 }

@@ -13,7 +13,10 @@
 #include <cerrno>
 #include <system_error>
 
+#include "spdlog/spdlog.h"
+
 using namespace koios;
+namespace fs = ::std::filesystem;
 
 namespace frenzykv
 {
@@ -27,45 +30,45 @@ public:
     posix_uring_env(const options& opt) noexcept : m_opt{ &opt } {}
 
     ::std::unique_ptr<seq_readable>
-    get_seq_readable(const ::std::filesystem::path& p) override
+    get_seq_readable(const fs::path& p) override
 	{
         return ::std::make_unique<iouring_readable>(p, *m_opt);
 	}
 
     ::std::unique_ptr<random_readable>
-    get_random_readable(const ::std::filesystem::path& p) override
+    get_random_readable(const fs::path& p) override
 	{
         return ::std::make_unique<iouring_readable>(p, *m_opt);
 	}
 
     ::std::unique_ptr<seq_writable>
-    get_seq_writable(const ::std::filesystem::path& p) override
+    get_seq_writable(const fs::path& p) override
 	{
         return ::std::make_unique<iouring_writable>(p, *m_opt);
 	}
 
     koios::task<>
-	delete_file(const ::std::filesystem::path& p) override
+	delete_file(const fs::path& p) override
 	{
         co_await uring::unlink(p);
 	}
 
     koios::task<>
-	delete_dir(const ::std::filesystem::path& p) override
+	delete_dir(const fs::path& p) override
 	{
-        ::std::filesystem::remove_all(p);
+        fs::remove_all(p);
         co_return;
 	}
 
     koios::task<>
-	move_file(const ::std::filesystem::path& from, const ::std::filesystem::path& to) override
+	move_file(const fs::path& from, const fs::path& to) override
 	{
         return rename_file(from, to);
 	}
 
     koios::task<>
-	rename_file(const ::std::filesystem::path& p, 
-                const ::std::filesystem::path& newname) override
+	rename_file(const fs::path& p, 
+                const fs::path& newname) override
 	{
         if (p == newname) [[unlikely]] co_return;
 
@@ -88,17 +91,21 @@ public:
         co_await this_task::sleep_until(tp);
     }
 
-    ::std::filesystem::path 
+    fs::path 
     current_directory() const override
     {
-        return ::std::filesystem::current_path();
+        return fs::current_path();
     }
 
     ::std::error_code 
-    change_current_directroy(const ::std::filesystem::path& p) override
+    change_current_directroy(const fs::path& p) override
     {
         ::std::error_code result{};
-        ::std::filesystem::current_path(p, result);
+        if (fs::current_path() != fs::canonical(p))
+        {
+            fs::current_path(p, result);
+            spdlog::info("Working directory now is '{}'", p.string());
+        }
         return result;
     }
 };
@@ -113,49 +120,49 @@ public:
     return ::std::make_unique<posix_uring_env>(::std::move(result));
 }
 
-namespace fs = ::std::filesystem;
+namespace fs = fs;
 
-::std::filesystem::path sstables_path()
+fs::path sstables_path()
 {
     return fs::current_path()/"sstable";
 }
 
-::std::filesystem::path prewrite_log_path()
+fs::path prewrite_log_path()
 {
     return fs::current_path()/"db_prewrite_log";
 }
 
-::std::filesystem::path system_log_path()
+fs::path system_log_path()
 {
     return fs::current_path()/"system_log";
 }
 
-::std::filesystem::path config_path()
+fs::path config_path()
 {
     return fs::current_path()/"config";
 }
 
-::std::filesystem::directory_entry sstables_dir(::std::error_code& ec)
+fs::directory_entry sstables_dir(::std::error_code& ec)
 {
     return { sstables_path(), ec };
 }
 
-::std::filesystem::directory_entry prewrite_log_dir(::std::error_code& ec)
+fs::directory_entry prewrite_log_dir(::std::error_code& ec)
 {
     return { prewrite_log_path(), ec };
 }
 
-::std::filesystem::directory_entry system_log_dir(::std::error_code& ec)
+fs::directory_entry system_log_dir(::std::error_code& ec)
 {
     return { system_log_path(), ec };
 }
 
-::std::filesystem::directory_entry config_dir(::std::error_code& ec)
+fs::directory_entry config_dir(::std::error_code& ec)
 {
     return { config_path(), ec };
 }
 
-::std::filesystem::directory_entry sstables_dir()
+fs::directory_entry sstables_dir()
 {
 	::std::error_code ec;
     fs::directory_entry result = sstables_dir(ec);
@@ -164,7 +171,7 @@ namespace fs = ::std::filesystem;
     return result;
 }
 
-::std::filesystem::directory_entry prewrite_log_dir()
+fs::directory_entry prewrite_log_dir()
 {
 	::std::error_code ec;
     fs::directory_entry result = prewrite_log_dir(ec);
@@ -173,7 +180,7 @@ namespace fs = ::std::filesystem;
     return result;
 }
 
-::std::filesystem::directory_entry system_log_dir()
+fs::directory_entry system_log_dir()
 {
 	::std::error_code ec;
     fs::directory_entry result = system_log_dir(ec);
@@ -182,7 +189,7 @@ namespace fs = ::std::filesystem;
     return result;
 }
 
-::std::filesystem::directory_entry config_dir()
+fs::directory_entry config_dir()
 {
 	::std::error_code ec;
     fs::directory_entry result = config_dir(ec);
