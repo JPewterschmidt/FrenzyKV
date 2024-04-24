@@ -69,6 +69,8 @@ public:
         m_block_size = block_size;
     }
 
+    koios::task<size_t> dump_to(seq_writable& file);
+
 private:
     koios::generator<::std::span<const ::std::byte>> 
     target_spans(size_t offset, size_t dest_size) const noexcept;
