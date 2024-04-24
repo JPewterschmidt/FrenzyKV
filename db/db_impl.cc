@@ -179,8 +179,16 @@ koios::task<>
 db_impl::
 merge_tables(::std::vector<sstable>& tables, level_t target_l)
 {
-    // TODO   
-       
+    assert(tables.size() >= 2);
+    auto file = co_await merge_two_table(tables[0], tables[1], target_l);
+    for (auto& t : tables | rv::drop(2))
+    {
+        sstable temp{ m_deps, m_filter_policy.get(), file.get() };
+        file = co_await merge_two_table(temp, t, target_l);
+    }
+
+    // TODO: dump mem file to a real file
+
     co_return;
 }
 
