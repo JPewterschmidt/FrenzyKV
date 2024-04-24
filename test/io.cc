@@ -13,7 +13,7 @@ namespace
 koios::task<in_mem_rw> make_source_file()
 {
     in_mem_rw result{};
-    ::std::string buffer(128, 1);
+    ::std::string buffer(40960, 1);
     const_bspan cb{ ::std::as_bytes(::std::span{ buffer }) };
     co_await result.append(cb);
     co_return result;
@@ -22,7 +22,7 @@ koios::task<in_mem_rw> make_source_file()
 koios::task<bool> test_body(random_readable& file)
 {
     in_mem_rw new_file = co_await to_in_mem_rw(file);
-    co_return new_file.file_size() == 128;
+    co_return new_file.file_size() == 40960;
 }
 
 koios::task<bool> in_mem_dump_test()
