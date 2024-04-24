@@ -1,5 +1,8 @@
 #include <cassert>
 #include <ranges>
+#include <list>
+#include <vector>
+#include <algorithm>
 
 #include "frenzykv/statistics.h"
 #include "frenzykv/error_category.h"
@@ -110,36 +113,74 @@ koios::task<> db_impl::flush_imm_to_sstable()
     co_return;
 }
 
-koios::task<::std::vector<::std::unique_ptr<in_mem_rw>>> 
+static koios::task<::std::vector<kv_entry>>
+get_entries(sstable& table)
+{
+    ::std::vector<kv_entry> result;
+    for (auto blk_off : table.block_offsets())
+    {
+        auto blk_opt = co_await table.get_block(blk_off);
+        assert(blk_opt.has_value());
+        for (auto kv : blk_opt->b.entries())
+        {
+            result.push_back(::std::move(kv));
+        }
+    }
+    assert(::std::is_sorted(result.begin(), result.end()));
+    co_return result;
+}
+
+koios::task<::std::unique_ptr<in_mem_rw>>
 db_impl::
-merge_two_table(const sstable& lhs, const sstable& rhs, level_t l)
+merge_two_table(sstable& lhs, sstable& rhs, level_t l)
 {
     const size_t allowed_size = m_level.allowed_file_size(l);
     ::std::vector<::std::unique_ptr<in_mem_rw>> result;
 
+    ::std::vector<kv_entry> lhs_entries = co_await get_entries(lhs);
+    ::std::vector<kv_entry> rhs_entries = co_await get_entries(rhs);
 
-    auto lhs_blk_offs = lhs.block_offsets();
-    auto rhs_blk_offs = rhs.block_offsets();
+    ::std::list<kv_entry> merged;
+    ::std::merge(::std::move_iterator(lhs_entries.begin()), 
+                 ::std::move_iterator(lhs_entries.end()), 
+                 ::std::move_iterator(rhs_entries.begin()), 
+                 ::std::move_iterator(rhs_entries.end()), 
+                 ::std::back_inserter(merged));
+    lhs_entries = {};
+    rhs_entries = {};
 
-        // TODO       
-    auto file = ::std::make_unique<in_mem_rw>(allowed_size);
-    sstable_builder table{ m_deps, allowed_size, m_filter_policy.get(), file.get() }; 
-    while (!table.reach_the_size_limit())
-    {
-        // TODO       
-    }
-    result.push_back(::std::move(file));
-        // TODO       
-
+    // TODO: remove out-of-data entries
     
-    co_return result;
+    auto file = ::std::make_unique<in_mem_rw>(allowed_size);
+    sstable_builder builder{ 
+        m_deps, allowed_size, 
+        m_filter_policy.get(), file.get() 
+    };
+    for (const auto& entry : merged)
+    {
+        if (!co_await builder.add(entry))
+        {
+            co_await builder.finish();
+            result.push_back(::std::move(file));
+            file = ::std::make_unique<in_mem_rw>(allowed_size);
+            builder = { 
+                m_deps, allowed_size, 
+                m_filter_policy.get(), file.get() 
+            };
+            [[maybe_unused]] bool ret = co_await builder.add(entry);
+            assert(ret);
+        }
+    }
+    
+    co_return file;
 }
 
 koios::task<>
 db_impl::
-merge_tables(const ::std::vector<sstable>& tables, level_t target_l)
+merge_tables(::std::vector<sstable>& tables, level_t target_l)
 {
-    // TODO
+    // TODO   
+       
     co_return;
 }
 
@@ -165,6 +206,7 @@ compact_files(sstable lowlevelt, level_t nextl)
         ;
 
     ::std::vector<sstable> tables(begin(merging_tables), end(merging_tables));
+    tables.push_back(::std::move(lowlevelt));
     ::std::sort(tables.begin(), tables.end());
     co_await merge_tables(tables, nextl);
 

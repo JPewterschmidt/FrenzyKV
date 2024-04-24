@@ -546,4 +546,15 @@ static ::std::span<char> block_content(::std::string& storage)
     return ::std::move(m_storage);
 }
 
+koios::generator<kv_entry> block::entries() const
+{
+    for (block_segment seg : segments())
+    {
+        for (auto entry : entries_from_block_segment(seg))
+        {
+            co_yield ::std::move(entry);
+        }
+    }
+}
+
 } // namespace frenzykv

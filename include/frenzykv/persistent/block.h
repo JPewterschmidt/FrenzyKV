@@ -158,6 +158,7 @@ public:
     bool less_than_this_first_segment_public_prefix(const_bspan user_prefix) const noexcept;
 
     ::std::optional<block_segment> get(const_bspan public_prefix) const;
+    koios::generator<kv_entry> entries() const;
 
 private:
     parse_result_t parse_meta_data();
