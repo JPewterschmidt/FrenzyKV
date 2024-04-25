@@ -108,6 +108,7 @@ class sequenced_key
 {
 public:   
     constexpr sequenced_key() noexcept = default;
+    bool not_initialized() const noexcept { return m_user_key.empty(); }
 
     sequenced_key(sequence_number_t seq, ::std::string key) noexcept
         : m_seq{ seq }, m_user_key{ ::std::move(key) }
@@ -152,6 +153,7 @@ public:
     ::std::string to_string_debug() const;
     bool operator==(const sequenced_key& other) const noexcept;
     bool operator<(const sequenced_key& other) const noexcept;
+    bool logic_lexicographic_simulate_less(const sequenced_key& other) const noexcept;
 
     size_t serialize_sequence_number_append_to(::std::string& dst) const;
     size_t serialize_user_key_append_to(::std::string& dst) const;

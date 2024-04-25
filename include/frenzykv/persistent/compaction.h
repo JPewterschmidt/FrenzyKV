@@ -14,24 +14,24 @@ namespace frenzykv
 class compactor
 {
 public:
-    compactor(const kvdb_deps& deps, level& l, filter_policy& filter) noexcept
-        : m_deps{ &deps }, m_level{ &l }, m_filter_policy{ &filter }
+    compactor(const kvdb_deps& deps, uintmax_t newfilesizebound, filter_policy& filter) noexcept
+        : m_deps{ &deps }, m_newfilesizebound{ newfilesizebound }, m_filter_policy{ &filter }
     {
     }
 
     koios::task<::std::unique_ptr<in_mem_rw>> 
-    merge_tables(::std::ranges::range auto& tables, level_t target_level)
+    merge_tables(::std::ranges::range auto& tables)
     {
         namespace rv = ::std::ranges::views;
         assert(tables.size() >= 2);
         const auto first_two = tables | rv::take(2) | rv::adjacent<2>;
         auto [t1, t2] = *begin(first_two);
         
-        auto file = co_await merge_two_tables(t1, t2, target_level);
+        auto file = co_await merge_two_tables(t1, t2);
         for (auto& t : tables | rv::drop(2))
         {
             sstable temp{ *m_deps, m_filter_policy, file.get() };
-            file = co_await merge_two_tables(temp, t, target_level);
+            file = co_await merge_two_tables(temp, t);
         }
 
         assert(file->file_size() > 0);
@@ -40,11 +40,11 @@ public:
 
 private:
     koios::task<::std::unique_ptr<in_mem_rw>>
-    merge_two_tables(sstable& lhs, sstable& rhs, level_t l);
+    merge_two_tables(sstable& lhs, sstable& rhs);
 
 private:
     const kvdb_deps* m_deps;
-    level* m_level;
+    uintmax_t m_newfilesizebound{};
     filter_policy* m_filter_policy;
 };
 

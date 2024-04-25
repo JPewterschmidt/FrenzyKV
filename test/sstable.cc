@@ -3,7 +3,10 @@
 #include <memory>
 #include <ranges>
 #include <string>
+#include <iostream>
 #include <string_view>
+
+#include "toolpex/skip_list.h"
 
 #include "koios/task.h"
 
@@ -29,6 +32,8 @@ const ::std::string tomb_stone_key = "bbbdddccc";
 ::std::vector<kv_entry> make_kvs()
 {
     ::std::vector<kv_entry> kvs{};
+
+    //toolpex::skip_list<sequenced_key, kv_user_value> kvs(15);
     ::std::string key = "aaabbbccc";
 
     kvs.emplace_back(0, tomb_stone_key);
@@ -42,7 +47,26 @@ const ::std::string tomb_stone_key = "bbbdddccc";
 
         kvs.emplace_back((sequence_number_t)i, key, user_value);
     }
+
+    for (auto kv : rv::iota(10, 20) 
+        | rv::transform([](auto&& val){ 
+            return kv_entry(0, ::std::to_string(val), "xxxxx"s);
+        }))
+    {
+        kvs.emplace_back(kv);// for vector
+    }
+
+    for (auto kv : rv::iota(1, 10) 
+        | rv::transform([](auto&& val){ 
+            return kv_entry(0, ::std::to_string(val), "xxxxx"s);
+        }))
+    {
+        kvs.emplace_back(kv);// for vector
+        //kvs.insert(kv);// for skiplist
+    }
+
     ::std::sort(kvs.begin(), kvs.end());
+    assert(::std::is_sorted(kvs.begin(), kvs.end()));
     return kvs;
 }
     
@@ -68,6 +92,12 @@ public:
             if (!co_await m_builder->add(kv))
                 co_return false;
         }
+        
+        //for (const auto& [k, v] : kvs)
+        //{
+        //    if (!co_await m_builder->add(k, v))
+        //        co_return false;
+        //}
         co_return co_await m_builder->finish();
     }
 
@@ -121,7 +151,13 @@ public:
     bool first_uk_right() const
     {
         sequenced_key key = m_table->first_user_key_without_seq();
-        return key.user_key() == "bbbcccddd"sv;
+        return key.user_key() == "1"sv;
+    }
+
+    koios::task<bool> entries_sorted()
+    {
+        auto vec = co_await get_entries_from_sstable(*m_table);
+        co_return ::std::is_sorted(vec.begin(), vec.end());
     }
 
 private:
@@ -152,6 +188,7 @@ TEST_F(sstable_test, get)
     ASSERT_TRUE(get({0, "ggghhhiii"}).result());
     ASSERT_TRUE(last_uk_exists());
     ASSERT_TRUE(first_uk_right());
+    ASSERT_TRUE(entries_sorted().result());
 }
 
 TEST_F(sstable_test, find_tomb_stone)
