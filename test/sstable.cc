@@ -47,8 +47,25 @@ const ::std::string tomb_stone_key = "bbbdddccc";
 
         kvs.emplace_back((sequence_number_t)i, key, user_value);
     }
-    ::std::sort(kvs.begin(), kvs.end());
 
+    for (auto kv : rv::iota(10, 20) 
+        | rv::transform([](auto&& val){ 
+            return kv_entry(0, ::std::to_string(val), "xxxxx"s);
+        }))
+    {
+        kvs.emplace_back(kv);// for vector
+    }
+
+    for (auto kv : rv::iota(1, 10) 
+        | rv::transform([](auto&& val){ 
+            return kv_entry(0, ::std::to_string(val), "xxxxx"s);
+        }))
+    {
+        kvs.emplace_back(kv);// for vector
+        //kvs.insert(kv);// for skiplist
+    }
+
+    ::std::sort(kvs.begin(), kvs.end());
     assert(::std::is_sorted(kvs.begin(), kvs.end()));
     return kvs;
 }
@@ -134,7 +151,7 @@ public:
     bool first_uk_right() const
     {
         sequenced_key key = m_table->first_user_key_without_seq();
-        return key.user_key() == "bbbcccddd"sv;
+        return key.user_key() == "1"sv;
     }
 
     koios::task<bool> entries_sorted()

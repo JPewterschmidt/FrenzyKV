@@ -200,25 +200,32 @@ bool sequenced_key::operator==(const sequenced_key& other) const noexcept
     return sequence_number() == other.sequence_number() && user_key() == other.user_key();
 }
 
+bool sequenced_key::logic_lexicographic_simulate_less(const sequenced_key& rhs) const noexcept
+{
+    // See also KV entry definition
+    const auto& lk = user_key();
+    const auto& rk = rhs.user_key();
+    const auto  ls = sequence_number();
+    const auto  rs = rhs.sequence_number();
+
+    // Simulate lexicgraphical order after serialized.
+    const bool key_less = lk.size() < rk.size() || lk < rk;
+
+    // Simulate lexicgraphical order involving a bytes array and a integer.
+    if (key_less) return true;
+    else if (lk == rk) return ls < rs;
+    return false;
+}
+
 bool sequenced_key::operator<(const sequenced_key& rhs) const noexcept
 {
-//    // See also KV entry definition
-//    const auto& lk = user_key();
-//    const auto& rk = rhs.user_key();
-//    const auto  ls = sequence_number();
-//    const auto  rs = rhs.sequence_number();
-//
-//    // Simulate lexicgraphical order after serialized.
-//    const bool key_less = lk.size() < rk.size() || lk < rk;
-//
-//    // Simulate lexicgraphical order involving a bytes array and a integer.
-//    if (key_less) return true;
-//    else if (lk == rk) return ls < rs;
-//    return false;
-
     auto lstr = this->serialize_as_string();
     auto rstr = rhs.serialize_as_string();
-    return lstr < rstr;
+    const bool result = lstr < rstr;
+    //const bool logic_result = logic_lexicographic_simulate_less(rhs);
+    //assert(result == logic_result);
+
+    return result;
 }
 
 ::std::string kv_user_value::serialize_as_string() const
