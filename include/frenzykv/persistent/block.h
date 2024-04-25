@@ -185,9 +185,6 @@ public:
      *  \userkey the userkey which will be the public prefix of this block segment
      */
     block_segment_builder(::std::string& dst, ::std::string_view userkey) noexcept;
-    ~block_segment_builder() noexcept { assert(m_finish); }
-    block_segment_builder(block_segment_builder&&) noexcept = default;
-    block_segment_builder& operator=(block_segment_builder&&) noexcept = default;
 
     ::std::string_view public_prefix() const noexcept { return m_public_prefix; }
 
@@ -222,9 +219,6 @@ class block_builder : public toolpex::move_only
 {
 public:
     block_builder(const kvdb_deps& deps, ::std::shared_ptr<compressor_policy> compressor = {});
-    ~block_builder() noexcept { assert(m_finish); }
-    block_builder(block_builder&&) noexcept = default;
-    block_builder& operator=(block_builder&&) noexcept = default;
 
     // No any size limit. The caller manager size bounding.
     bool add(const kv_entry& kv);
