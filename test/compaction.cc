@@ -22,7 +22,6 @@ public:
     {
     }
     
-    [[maybe_unused]]
     koios::task<::std::unique_ptr<in_mem_rw>>
     make_sstable(size_t keybeg, size_t keyend)
     {
@@ -42,6 +41,34 @@ public:
         co_return result;       
     }
 
+    koios::task<bool> test_merging_two()
+    {
+        ::std::vector fvec{ 
+            co_await make_sstable(0, 1000), 
+            co_await make_sstable(500, 1000),
+        };
+        
+        compactor c(m_deps, 81920, *m_filter);
+        ::std::unique_ptr<seq_writable> newfile = co_await c.merge_tables(
+            fvec | rv::transform([this](auto&& f){ 
+                return sstable(m_deps, m_filter.get(), f.get()); 
+            }
+        ));
+
+        //const uintmax_t old_files_size = ::std::ranges::fold_left(
+        //    fvec | rv::transform([](auto&& f){ 
+        //        return f->file_size(); }
+        //    ), 0, ::std::plus<uintmax_t>{});
+        
+        uintmax_t old_files_size{};
+        for (const auto& filep : fvec)
+        {
+            old_files_size += filep->file_size();
+        }
+
+        co_return newfile->file_size() < old_files_size;
+    }
+
 private:
     kvdb_deps m_deps;
     ::std::unique_ptr<filter_policy> m_filter = make_bloom_filter(64);
@@ -51,5 +78,5 @@ private:
 
 TEST_F(compaction_test, basic)
 {
-    
+    ASSERT_TRUE(test_merging_two().result()); 
 }
