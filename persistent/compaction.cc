@@ -56,6 +56,7 @@ merge_two_tables(sstable& lhs, sstable& rhs)
             assert(ret);
         }
     }
+    co_await builder.finish();
     
     co_return file;
 }

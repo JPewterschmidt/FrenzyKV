@@ -281,6 +281,7 @@ block_offsets() const noexcept
 koios::task<::std::vector<kv_entry>>
 get_entries_from_sstable(sstable& table)
 {
+    co_await table.parse_meta_data();
     ::std::vector<kv_entry> result;
     for (auto blk_off : table.block_offsets())
     {
