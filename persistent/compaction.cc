@@ -26,9 +26,8 @@ get_entries(sstable& table)
 
 koios::task<::std::unique_ptr<in_mem_rw>>
 compactor::
-merge_two_tables(sstable& lhs, sstable& rhs, level_t l)
+merge_two_tables(sstable& lhs, sstable& rhs)
 {
-    const size_t allowed_size = m_level->allowed_file_size(l);
     ::std::vector<::std::unique_ptr<in_mem_rw>> result;
 
     ::std::vector<kv_entry> lhs_entries = co_await get_entries(lhs);
@@ -47,9 +46,9 @@ merge_two_tables(sstable& lhs, sstable& rhs, level_t l)
 
     // TODO: remove out-of-date entries
     
-    auto file = ::std::make_unique<in_mem_rw>(allowed_size);
+    auto file = ::std::make_unique<in_mem_rw>(m_newfilesizebound);
     sstable_builder builder{ 
-        *m_deps, allowed_size, 
+        *m_deps, m_newfilesizebound, 
         m_filter_policy, file.get() 
     };
     for (const auto& entry : uniqued_merged)
@@ -58,9 +57,9 @@ merge_two_tables(sstable& lhs, sstable& rhs, level_t l)
         {
             co_await builder.finish();
             result.push_back(::std::move(file));
-            file = ::std::make_unique<in_mem_rw>(allowed_size);
+            file = ::std::make_unique<in_mem_rw>(m_newfilesizebound);
             builder = { 
-                *m_deps, allowed_size, 
+                *m_deps, m_newfilesizebound, 
                 m_filter_policy, file.get() 
             };
             [[maybe_unused]] bool ret = co_await builder.add(entry);

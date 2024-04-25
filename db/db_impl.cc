@@ -142,8 +142,8 @@ compact_files(sstable lowlevelt, level_t nextl)
     ::std::sort(tables.begin(), tables.end());
 
     auto mem_file = co_await compactor(
-        m_deps, m_level, *m_filter_policy
-    ).merge_tables(tables, nextl);
+        m_deps, m_level.allowed_file_size(nextl), *m_filter_policy
+    ).merge_tables(tables);
 
     auto disk_id_file = co_await m_level.create_file(nextl);
     assert(disk_id_file.second);
