@@ -202,6 +202,7 @@ bool sequenced_key::operator==(const sequenced_key& other) const noexcept
 
 bool sequenced_key::logic_lexicographic_simulate_less(const sequenced_key& rhs) const noexcept
 {
+    // TODO: need to be re-write
     // See also KV entry definition
     const auto& lk = user_key();
     const auto& rk = rhs.user_key();
