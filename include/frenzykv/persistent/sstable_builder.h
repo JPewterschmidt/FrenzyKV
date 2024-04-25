@@ -47,6 +47,11 @@ public:
                     uintmax_t size_limit,
                     filter_policy* filter, 
                     seq_writable* file);
+
+    ~sstable_builder() noexcept { assert(m_finish); }
+
+    sstable_builder(sstable_builder&& other) noexcept = default;
+    sstable_builder& operator=(sstable_builder&& other) noexcept = default;
     
     koios::task<bool> add(const sequenced_key& key, const kv_user_value& value);
     koios::task<bool> add(const kv_entry& kv) { return add(kv.key(), kv.value()); }

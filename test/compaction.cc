@@ -66,12 +66,17 @@ public:
             return sstable(m_deps, m_filter.get(), f.get()); 
         });
         ::std::vector<sstable> tables(tables_view.begin(), tables_view.end());
-        ::std::unique_ptr<seq_writable> newfile = co_await c.merge_tables(tables);
-
+        ::std::unique_ptr<in_mem_rw> newfile = co_await c.merge_tables(tables);
+        sstable final_table(m_deps, m_filter.get(), newfile.get());
+        [[maybe_unused]] bool parse_ret = co_await final_table.parse_meta_data();
+        assert(parse_ret);
+        const auto entries = co_await get_entries_from_sstable(final_table);
+        
         co_return newfile->file_size() < ::std::ranges::fold_left(
             fvec | rv::transform([](auto&& f){ 
                 return f->file_size(); }
-            ), 0, ::std::plus<uintmax_t>{});
+            ), 0, ::std::plus<uintmax_t>{}) 
+            && ::std::is_sorted(entries.begin(), entries.end());
     }
 
 private:
@@ -83,5 +88,5 @@ private:
 
 TEST_F(compaction_test, basic)
 {
-//    ASSERT_TRUE(test_merging_two().result()); 
+    ASSERT_TRUE(test_merging_two().result()); 
 }

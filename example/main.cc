@@ -26,9 +26,9 @@ koios::task<> file_test()
 
 int main()
 {
-    auto opt = get_global_options();
-    nlohmann::json j(opt);
-    ::std::ofstream ofs{ "test-config.json" };
-    ofs << j.dump(4);
-    ::std::cout << j.dump(4) << ::std::endl;
+    sequenced_key lhs(0, "127");
+    sequenced_key rhs(0, "2");
+    
+    bool result = lhs.logic_lexicographic_simulate_less(rhs);
+    ::std::cout << result << ::std::endl;
 }

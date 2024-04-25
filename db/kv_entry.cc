@@ -202,6 +202,7 @@ bool sequenced_key::operator==(const sequenced_key& other) const noexcept
 
 bool sequenced_key::logic_lexicographic_simulate_less(const sequenced_key& rhs) const noexcept
 {
+    // TODO: need to be re-write
     // See also KV entry definition
     const auto& lk = user_key();
     const auto& rk = rhs.user_key();
@@ -209,23 +210,18 @@ bool sequenced_key::logic_lexicographic_simulate_less(const sequenced_key& rhs) 
     const auto  rs = rhs.sequence_number();
 
     // Simulate lexicgraphical order after serialized.
-    const bool key_less = lk.size() < rk.size() || lk < rk;
+    /**/ if (lk.size() < rk.size()) return true;   
+    else if (lk.size() > rk.size()) return false;
+    /**/ if (lk < rk)               return true;
+    else if (lk > rk)               return false;
 
     // Simulate lexicgraphical order involving a bytes array and a integer.
-    if (key_less) return true;
-    else if (lk == rk) return ls < rs;
-    return false;
+    return ls < rs;
 }
 
 bool sequenced_key::operator<(const sequenced_key& rhs) const noexcept
 {
-    auto lstr = this->serialize_as_string();
-    auto rstr = rhs.serialize_as_string();
-    const bool result = lstr < rstr;
-    //const bool logic_result = logic_lexicographic_simulate_less(rhs);
-    //assert(result == logic_result);
-
-    return result;
+    return logic_lexicographic_simulate_less(rhs);
 }
 
 ::std::string kv_user_value::serialize_as_string() const
