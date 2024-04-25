@@ -34,7 +34,8 @@ struct options
     bool sync_write = false;
     bool buffered_read = true;
     bool need_compress = true;
-    ::std::filesystem::path root_path = "/tmp/frenzykv/";
+    ::std::filesystem::path root_path = "/tmp/frenzykv";
+    bool create_root_path_if_not_exists = true;
     ::std::filesystem::path log_path = "frenzy-prewrite-log";
     logging_level log_level = logging_level::DEBUG;
     ::std::string compressor_name = "zstd";
@@ -66,7 +67,10 @@ struct adl_serializer<frenzykv::options>
             { "sync_write", opt.sync_write }, 
             { "compressor_name", opt.compressor_name }, 
             { "buffered_read", opt.buffered_read }, 
-            { "root_path", opt.root_path }, 
+            { "root_path", { 
+                { "path", opt.root_path }, 
+                { "create_root_path_if_not_exists", opt.create_root_path_if_not_exists },
+            }}, 
             { "log", {
                 { "path", opt.log_path }, 
                 { "level", magic_enum::enum_name<frenzykv::logging_level>(opt.log_level) }, 
@@ -94,7 +98,8 @@ struct adl_serializer<frenzykv::options>
         }
         j.at("sync_write").get_to(opt.sync_write);
         j.at("buffered_read").get_to(opt.buffered_read);
-        j.at("root_path").get_to(opt.root_path);
+        j.at("root_path").at("path").get_to(opt.root_path);
+        j.at("root_path").at("create_root_path_if_not_exists").get_to(opt.create_root_path_if_not_exists);
         temp.clear();
         j.at("log").at("path").get_to(temp);
         temp.clear();

@@ -101,7 +101,7 @@ public:
     change_current_directroy(const fs::path& p) override
     {
         ::std::error_code result{};
-        if (fs::current_path() != fs::canonical(p))
+        if (fs::absolute(fs::current_path()) != fs::absolute(p))
         {
             fs::current_path(p, result);
             spdlog::info("Working directory now is '{}'", p.string());
