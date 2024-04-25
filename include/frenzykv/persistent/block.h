@@ -185,6 +185,9 @@ public:
      *  \userkey the userkey which will be the public prefix of this block segment
      */
     block_segment_builder(::std::string& dst, ::std::string_view userkey) noexcept;
+    ~block_segment_builder() noexcept { assert(m_finish); }
+    block_segment_builder(block_segment_builder&&) noexcept = default;
+    block_segment_builder& operator=(block_segment_builder&&) noexcept = default;
 
     ::std::string_view public_prefix() const noexcept { return m_public_prefix; }
 
