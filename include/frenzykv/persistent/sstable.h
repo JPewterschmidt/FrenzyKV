@@ -107,9 +107,9 @@ public:
     }
 
     koios::generator<::std::pair<uintmax_t, btl_t>> block_offsets() const noexcept;
+    koios::task<bool>   parse_meta_data();
 
 private:
-    koios::task<bool>   parse_meta_data();
     koios::task<btl_t>  btl_value(uintmax_t offset);        // Required by `generate_block_offsets()`
     koios::task<bool>   generate_block_offsets(mbo_t mbo);  // Required by `parse_meta_data()`
     
@@ -126,6 +126,9 @@ private:
     buffer<> m_buffer{};
     size_t m_get_call_count{};
 };
+
+koios::task<::std::vector<kv_entry>>
+get_entries_from_sstable(sstable& table);
 
 } // namespace frenzykv
 

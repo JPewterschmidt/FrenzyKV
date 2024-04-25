@@ -108,6 +108,7 @@ class sequenced_key
 {
 public:   
     constexpr sequenced_key() noexcept = default;
+    bool not_initialized() const noexcept { return m_user_key.empty(); }
 
     sequenced_key(sequence_number_t seq, ::std::string key) noexcept
         : m_seq{ seq }, m_user_key{ ::std::move(key) }

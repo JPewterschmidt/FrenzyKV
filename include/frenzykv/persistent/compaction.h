@@ -20,7 +20,7 @@ public:
     }
 
     koios::task<::std::unique_ptr<in_mem_rw>> 
-    merge_tables(::std::ranges::range auto tables)
+    merge_tables(::std::ranges::range auto& tables)
     {
         namespace rv = ::std::ranges::views;
         assert(tables.size() >= 2);

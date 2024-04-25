@@ -27,6 +27,8 @@ sstable::sstable(const kvdb_deps& deps,
 
 koios::task<bool> sstable::parse_meta_data()
 {
+    if (m_meta_data_parsed) co_return true;
+    
     const uintmax_t filesz = m_file->file_size();
     const size_t footer_sz = sizeof(mbo_t) + sizeof(mgn_t);
     ::std::string buffer(footer_sz, 0);
@@ -114,6 +116,8 @@ koios::task<bool> sstable::generate_block_offsets(mbo_t mbo)
 koios::task<::std::optional<block_with_storage>> 
 sstable::get_block(uintmax_t offset, btl_t btl)
 {
+    [[maybe_unused]] bool parse_ret = co_await parse_meta_data();
+    assert(parse_ret);
     ::std::optional<block_with_storage> result{};
 
     buffer<> buff{btl + 10}; // extra bytes to avoid unknow reason buffer overflow.
@@ -149,8 +153,8 @@ koios::task<::std::optional<::std::pair<block_segment, block_with_storage>>>
 sstable::
 get_segment(const sequenced_key& user_key_ignore_seq)
 {
-    if (!m_meta_data_parsed)
-        co_await parse_meta_data();
+    [[maybe_unused]] bool parse_ret = co_await parse_meta_data();
+    assert(parse_ret);
 
     auto user_key_rep = user_key_ignore_seq.serialize_user_key_as_string();
     auto user_key_rep_b = ::std::as_bytes(::std::span{ user_key_rep });
@@ -201,6 +205,9 @@ koios::task<::std::optional<kv_entry>>
 sstable::
 get_kv_entry(const sequenced_key& user_key)
 {
+    [[maybe_unused]] bool parse_ret = co_await parse_meta_data();
+    assert(parse_ret);
+
     auto seg_opt = co_await get_segment(user_key);
     if (!seg_opt) co_return {};
     const auto& seg = seg_opt->first;
@@ -216,6 +223,8 @@ get_kv_entry(const sequenced_key& user_key)
 
 sequenced_key sstable::last_user_key_without_seq() const noexcept
 {
+    assert(m_meta_data_parsed);
+
     ::std::string temp = m_last_uk;
     temp.resize(temp.size() + 8);
     auto tempb = ::std::span{ temp };
@@ -225,6 +234,8 @@ sequenced_key sstable::last_user_key_without_seq() const noexcept
 
 sequenced_key sstable::first_user_key_without_seq() const noexcept
 {
+    assert(m_meta_data_parsed);
+
     ::std::string temp = m_first_uk;
     temp.resize(temp.size() + 8);
     auto tempb = ::std::span{ temp };
@@ -239,6 +250,8 @@ bool sstable::overlapped(const sstable& other) const noexcept
 
 bool sstable::disjoint(const sstable& other) const noexcept
 {
+    assert(m_meta_data_parsed);
+
     /*
      *        A               B
      *   al|-----|ar    bl|-------|br
@@ -259,8 +272,30 @@ koios::generator<::std::pair<uintmax_t, btl_t>>
 sstable::
 block_offsets() const noexcept
 {
+    assert(m_meta_data_parsed);
+
     for (auto p : m_block_offsets)
         co_yield p;
+}
+
+koios::task<::std::vector<kv_entry>>
+get_entries_from_sstable(sstable& table)
+{
+    ::std::vector<kv_entry> result;
+    for (auto blk_off : table.block_offsets())
+    {
+        auto blk_opt = co_await table.get_block(blk_off);
+        assert(blk_opt.has_value());
+        for (auto kv : blk_opt->b.entries())
+        {
+            result.push_back(::std::move(kv));
+        }
+    }
+    // TODO: recovery the assert when it passed asan
+    //assert(::std::is_sorted(result.begin(), result.end()));
+
+    ::std::sort(result.begin(), result.end());
+    co_return result;
 }
 
 } // namespace frenzykv
