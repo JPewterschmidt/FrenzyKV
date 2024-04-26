@@ -169,6 +169,26 @@ koios::task<> db_impl::may_compact()
     co_return;
 }
 
+koios::task<> 
+db_impl::back_ground_GC(::std::stop_token tk)
+{
+    while (tk.stop_requested())
+    {
+        const auto period = m_deps.opt()->gc_period_sec;
+        spdlog::debug("background gc sleepping for {}", period);
+        co_await koios::this_task::sleep_for(period);
+        spdlog::debug("background gc wake up.");
+        co_await do_GC();
+    }
+}
+
+koios::task<> 
+db_impl::do_GC()
+{
+    // TODO
+    co_return;
+}
+
 koios::task<::std::optional<kv_entry>> 
 db_impl::get(const_bspan key, ::std::error_code& ec_out) noexcept
 {

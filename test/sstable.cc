@@ -32,8 +32,6 @@ const ::std::string tomb_stone_key = "bbbdddccc";
 ::std::vector<kv_entry> make_kvs()
 {
     ::std::vector<kv_entry> kvs{};
-
-    //toolpex::skip_list<sequenced_key, kv_user_value> kvs(15);
     ::std::string key = "aaabbbccc";
 
     kvs.emplace_back(0, tomb_stone_key);
@@ -62,7 +60,6 @@ const ::std::string tomb_stone_key = "bbbdddccc";
         }))
     {
         kvs.emplace_back(kv);// for vector
-        //kvs.insert(kv);// for skiplist
     }
 
     ::std::sort(kvs.begin(), kvs.end());
@@ -92,12 +89,6 @@ public:
             if (!co_await m_builder->add(kv))
                 co_return false;
         }
-        
-        //for (const auto& [k, v] : kvs)
-        //{
-        //    if (!co_await m_builder->add(k, v))
-        //        co_return false;
-        //}
         co_return co_await m_builder->finish();
     }
 
