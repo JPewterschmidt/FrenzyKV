@@ -37,7 +37,7 @@ db_impl::db_impl(::std::string dbname, const options& opt)
 
 db_impl::~db_impl() noexcept
 {
-    m_stp_src.request_stop();
+    m_bg_gc_stop_src.request_stop();
 }
 
 koios::task<::std::error_code> 
@@ -175,7 +175,9 @@ db_impl::back_ground_GC(::std::stop_token tk)
     while (tk.stop_requested())
     {
         const auto period = m_deps.opt()->gc_period_sec;
-        spdlog::debug("background gc sleepping for {}", period);
+        spdlog::debug("background gc sleepping for {}ms", 
+                      ::std::chrono::duration_cast<::std::chrono::milliseconds>(period).count()
+                     );
         co_await koios::this_task::sleep_for(period);
         spdlog::debug("background gc wake up.");
         co_await do_GC();

@@ -50,7 +50,6 @@ private:
     koios::task<> do_GC();
 
 private:
-    ::std::stop_source m_stp_src;
     ::std::string m_dbname;
     kvdb_deps m_deps;
     logger m_log;
