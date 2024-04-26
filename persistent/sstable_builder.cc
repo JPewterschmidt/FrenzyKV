@@ -27,6 +27,34 @@ sstable_builder::sstable_builder(
     assert(m_size_limit != 0);
 }
 
+sstable_builder::sstable_builder(sstable_builder&& other) noexcept
+{
+    swap(::std::move(other));
+    other.m_finish = true;
+}
+
+sstable_builder& sstable_builder::operator=(sstable_builder&& other) noexcept
+{
+    swap(::std::move(other));
+    other.m_finish = true;
+    return *this;
+}
+
+void sstable_builder::swap(sstable_builder&& other)
+{
+    ::std::swap(m_deps, other.m_deps);
+    ::std::swap(m_finish, other.m_finish);
+    ::std::swap(m_size_limit, other.m_size_limit);
+    ::std::swap(m_size_wrote, other.m_size_wrote);
+    ::std::swap(m_filter, other.m_filter);
+    ::std::swap(m_first_uk, other.m_first_uk);
+    ::std::swap(m_last_uk, other.m_last_uk);
+    ::std::swap(m_filter_rep, other.m_filter_rep);
+    ::std::swap(m_block_builder, other.m_block_builder);
+    ::std::swap(m_file, other.m_file);
+    ::std::swap(m_bytes_appended_to_file, other.m_bytes_appended_to_file);
+}
+
 koios::task<bool> sstable_builder::add(
     const sequenced_key& key, const kv_user_value& value)
 {
