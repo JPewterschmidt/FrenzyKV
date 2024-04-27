@@ -214,7 +214,7 @@ get_kv_entry(const sequenced_key& user_key)
     
     for (kv_entry entry : entries_from_block_segment(seg))
     {
-        if (entry.key().sequence_number() >= user_key.sequence_number()) 
+        if (entry.key().sequence_number() <= user_key.sequence_number()) 
             co_return entry;
     }
 
