@@ -19,6 +19,11 @@ public:
     {
     }
 
+    /*  \brief  Merge sstables
+     *  \param  tables a vector conatins several sstables.
+     *  \return A `in_mem_rw` contains mergging result. 
+     *          You can later dump the file into a real fisk file.
+     */
     koios::task<::std::unique_ptr<in_mem_rw>> 
     merge_tables(::std::ranges::range auto& tables)
     {

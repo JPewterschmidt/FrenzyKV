@@ -34,8 +34,6 @@ merge_two_tables(sstable& lhs, sstable& rhs)
                     }), 
                  merged.end());
 
-    // TODO: remove out-of-date entries
-    
     auto file = ::std::make_unique<in_mem_rw>(m_newfilesizebound);
     sstable_builder builder{ 
         *m_deps, m_newfilesizebound, 
