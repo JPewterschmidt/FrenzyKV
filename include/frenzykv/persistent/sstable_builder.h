@@ -50,8 +50,8 @@ public:
 
     ~sstable_builder() noexcept { assert(m_finish); }
 
-    sstable_builder(sstable_builder&& other) noexcept = default;
-    sstable_builder& operator=(sstable_builder&& other) noexcept = default;
+    sstable_builder(sstable_builder&& other) noexcept;
+    sstable_builder& operator=(sstable_builder&& other) noexcept;
     
     koios::task<bool> add(const sequenced_key& key, const kv_user_value& value);
     koios::task<bool> add(const kv_entry& kv) { return add(kv.key(), kv.value()); }
@@ -62,6 +62,7 @@ public:
 
 private:
     koios::task<bool> flush_current_block(bool need_flush = true);
+    void swap(sstable_builder&& other);
 
 private:
     const kvdb_deps* m_deps;

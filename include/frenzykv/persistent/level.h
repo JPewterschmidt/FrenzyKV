@@ -19,9 +19,6 @@
 namespace frenzykv
 {
 
-using file_id_t = uint32_t;
-using level_t = size_t;
-
 class level
 {
 public:

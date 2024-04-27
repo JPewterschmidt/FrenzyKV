@@ -218,6 +218,7 @@ private:
 class block_builder : public toolpex::move_only
 {
 public:
+    constexpr block_builder() noexcept = default;
     block_builder(const kvdb_deps& deps, ::std::shared_ptr<compressor_policy> compressor = {});
 
     // No any size limit. The caller manager size bounding.

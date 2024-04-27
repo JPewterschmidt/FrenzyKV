@@ -40,8 +40,7 @@ public:
         return *this;
     }
 
-    koios::task<::std::error_code> insert(const write_batch& b);
-    koios::task<::std::error_code> insert(write_batch&& b);
+    koios::task<::std::error_code> insert(write_batch b);
 
     koios::task<::std::optional<kv_entry>> get(const sequenced_key& key) const noexcept;
     koios::task<size_t> count() const;

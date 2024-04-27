@@ -46,8 +46,10 @@ private:
     koios::task<::std::unique_ptr<in_mem_rw>>
     merge_two_table(sstable& lhs, sstable& rhs, level_t l);
 
+    koios::task<> back_ground_GC(::std::stop_token tk);
+    koios::task<> do_GC();
+
 private:
-    ::std::stop_source m_stp_src;
     ::std::string m_dbname;
     kvdb_deps m_deps;
     logger m_log;
@@ -60,6 +62,7 @@ private:
     // other===============================
     ::std::unique_ptr<filter_policy> m_filter_policy;
     level m_level;
+    ::std::stop_source m_bg_gc_stop_src;
 };  
 
 } // namespace frenzykv

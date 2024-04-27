@@ -6,24 +6,7 @@
 namespace frenzykv
 {
 
-koios::task<::std::error_code> memtable::insert(const write_batch& b)
-{
-    auto lk = co_await m_list_mutex.acquire();
-    if (!could_fit_in_impl(b))
-    {
-        co_return make_frzkv_out_of_range();
-    }
-
-    ::std::error_code result{};
-    for (const auto& item : b)
-    {
-        result = insert_impl(item);
-        if (result) break;
-    }
-    co_return result;
-}
-
-koios::task<::std::error_code> memtable::insert(write_batch&& b)
+koios::task<::std::error_code> memtable::insert(write_batch b)
 {
     auto lk = co_await m_list_mutex.acquire();
     if (!could_fit_in_impl(b))

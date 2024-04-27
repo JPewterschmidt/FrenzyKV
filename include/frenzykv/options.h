@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <memory>
 #include <limits>
+#include <chrono>
 
 #include "magic_enum.hpp"
 #include "nlohmann/json.hpp"
@@ -34,6 +35,7 @@ struct options
     bool sync_write = false;
     bool buffered_read = true;
     bool need_compress = true;
+    ::std::chrono::seconds gc_period_sec = ::std::chrono::seconds{10};
     ::std::filesystem::path root_path = "/tmp/frenzykv";
     bool create_root_path_if_not_exists = true;
     ::std::filesystem::path log_path = "frenzy-prewrite-log";
@@ -63,6 +65,7 @@ struct adl_serializer<frenzykv::options>
             { "block_size", opt.block_size },
             { "need_compress", opt.need_compress },
             { "need_buffered_write", opt.need_buffered_write }, 
+            { "gc_period_sec", opt.gc_period_sec.count() }, 
             { "compress_level", opt.compress_level }, 
             { "sync_write", opt.sync_write }, 
             { "compressor_name", opt.compressor_name }, 
@@ -89,6 +92,11 @@ struct adl_serializer<frenzykv::options>
         j.at("block_size").get_to(opt.block_size);
         j.at("level_file_number").get_to(opt.level_file_number);
         j.at("level_file_size").get_to(opt.level_file_size);
+
+        int sec{10};
+        j.at("gc_period_sec").get_to(sec);
+        opt.gc_period_sec = ::std::chrono::seconds{sec};
+
         j.at("compressor_name").get_to(opt.compressor_name);
         j.at("compress_level").get_to(opt.compress_level);
         j.at("max_block_segments_number").get_to(opt.max_block_segments_number);

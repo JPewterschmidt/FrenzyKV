@@ -483,6 +483,7 @@ static ::std::span<char> block_content(::std::string& storage)
 {
     assert(m_finish == false);
     m_finish = true;
+    assert(m_seg_count);
 
     // If the last sbso point to exactly the end of data area, then delete it.
     if (m_sbsos.back() == m_storage.size())
