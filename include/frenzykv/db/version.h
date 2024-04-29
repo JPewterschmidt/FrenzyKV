@@ -58,10 +58,10 @@ private:
     sequence_number_t m_seq;
 };
 
-class version_set
+class version_center
 {
 public:
-    version_set(const kvdb_deps& deps, sequence_number_t current)
+    version_center(const kvdb_deps& deps, sequence_number_t current)
         : m_deps{ &deps }, m_current{ current };
     {
     }
