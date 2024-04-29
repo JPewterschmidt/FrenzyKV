@@ -42,22 +42,6 @@ private:
     ::std::vector<file_id_t> m_added;
 };
 
-class version
-{
-public:
-    using sptr = ::std::shared_ptr<version>;
-    
-public:
-    sequence_number_t sequence_number() const noexcept { return m_seq; }
-    ~version() noexcept;
-
-    bool    operator<(const version& other) const noexcept;
-    version operator+(const version_delta& delta) const noexcept;
-
-private:
-    sequence_number_t m_seq;
-};
-
 class version_center
 {
 public:
