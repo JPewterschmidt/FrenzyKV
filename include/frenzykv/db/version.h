@@ -10,6 +10,7 @@
 #include "toolpex/move_only.h"
 
 #include "koios/task.h"
+#include "koios/task_concepts.h"
 #include "koios/coroutine_shared_mutex.h"
 
 #include "frenzykv/types.h"
@@ -80,23 +81,21 @@ private:
 class version_guard : public toolpex::move_only
 {
 public:
+    constexpr version_guard() noexcept = default;
+
     version_guard(version_rep* rep) noexcept
         : m_rep{ rep }
     {
         m_rep->ref();
     }
 
-    ~version_guard() noexcept
-    {
-        if (m_rep)
-        {
-            m_rep->deref();
-            m_rep = nullptr;
-        }
-    }
+    version_guard(version_rep& rep) noexcept : version_guard(&rep) { }
+
+    ~version_guard() noexcept { release(); }
 
     version_guard& operator=(version_guard&& other) noexcept
     {
+        release();
         m_rep = ::std::exchange(other.m_rep, nullptr);
         return *this;
     }
@@ -104,6 +103,20 @@ public:
     version_guard(version_guard&& other) noexcept
         : m_rep{ ::std::exchange(other.m_rep, nullptr) }
     {
+    }
+
+    version_guard(const version_guard& other) noexcept
+        : m_rep{ other.m_rep }
+    {
+        m_rep->ref();
+    }
+
+    version_guard& operator=(const version_guard& other)
+    {
+        release();
+        m_rep = other.m_rep;
+        m_rep->ref();
+        return *this;
     }
 
     auto& rep() noexcept { return *m_rep; }
@@ -120,6 +133,16 @@ public:
         rep() += delta;
         return *this;
     }
+
+private:
+    void release() noexcept
+    {
+        if (m_rep)
+        {
+            m_rep->deref();
+            m_rep = nullptr;
+        }
+    }
     
 private:
     version_rep* m_rep{};
@@ -133,13 +156,26 @@ public:
     koios::task<version_guard> current_version() noexcept
     {
         auto lk = co_await m_modify_lock.acquire_shared();
-        co_return { m_current_ptr };
+        co_return m_current;
+    }
+
+    koios::task<void> GC_with(koios::task_callable_concept auto async_func_file_range)
+    {
+        namespace rv = ::std::ranges::views;
+        auto lk = co_await m_modify_lock.acquire();
+        auto is_garbage = [](auto&& item) { return item.approx_ref_count() == 0; };
+        for (const auto& out_dated_version : m_versions 
+            | rv::take(m_versions.size())
+            | rv::filter(is_garbage))
+        {
+            co_await async_func_file_range(out_dated_version);
+        }
+        ::std::erase_if(m_versions, is_garbage);
     }
 
 private:
-    sequence_number_t m_current;
     ::std::list<version_rep> m_versions;
-    version_rep* m_current_ptr{};
+    version_guard m_current;
 
     // If you want to add or remove a version, acquire a unique lock
     // Otherwise acquire a shared lock.

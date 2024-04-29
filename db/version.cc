@@ -22,7 +22,8 @@ version_rep& version_rep::operator+=(const version_delta& delta)
 koios::task<version_guard> version_center::add_new_version()
 {
     auto lk = co_await m_modify_lock.acquire();
-    co_return { &m_versions.emplace_back(m_versions.back()) };
+    m_current = { m_versions.emplace_back(m_versions.back()) };
+    co_return m_current;
 }
 
 } // namespace frenzykv
