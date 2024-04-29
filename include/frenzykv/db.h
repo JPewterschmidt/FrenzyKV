@@ -1,13 +1,16 @@
 #ifndef FRENZYKV_DB_H
 #define FRENZYKV_DB_H
 
+#include <memory>
+#include <system_error>
+
 #include "frenzykv/frenzykv.h"
 #include "frenzykv/write_batch.h"
 #include "frenzykv/db/read_write_options.h"
+#include "frenzykv/options.h"
 
+#include "toolpex/ipaddress.h"
 #include "koios/task.h"
-
-#include <system_error>
 
 namespace frenzykv
 {
@@ -43,6 +46,9 @@ public:
     virtual koios::task<::std::optional<kv_entry>> 
     get(const_bspan key, ::std::error_code& ec_out) noexcept = 0;
 };
+
+::std::unique_ptr<db_interface> open(toolpex::ip_address::ptr ip, in_port_t port);
+::std::unique_ptr<db_interface> open(::std::filesystem::path path, options opt);
 
 } // namespace frenzykv
 

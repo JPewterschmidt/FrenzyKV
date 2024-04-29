@@ -22,10 +22,6 @@ namespace rv = ::std::ranges::views;
 class compaction_test : public ::testing::Test
 {
 public:
-    void reset()
-    {
-    }
-    
     koios::task<::std::unique_ptr<in_mem_rw>>
     make_sstable(size_t keybeg, size_t keyend)
     {

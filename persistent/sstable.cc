@@ -214,7 +214,7 @@ get_kv_entry(const sequenced_key& user_key)
     
     for (kv_entry entry : entries_from_block_segment(seg))
     {
-        if (entry.key().sequence_number() >= user_key.sequence_number()) 
+        if (entry.key().sequence_number() <= user_key.sequence_number()) 
             co_return entry;
     }
 
@@ -292,8 +292,7 @@ get_entries_from_sstable(sstable& table)
             result.push_back(::std::move(kv));
         }
     }
-    // TODO: recovery the assert when it passed asan
-    //assert(::std::is_sorted(result.begin(), result.end()));
+    assert(::std::is_sorted(result.begin(), result.end()));
 
     ::std::sort(result.begin(), result.end());
     co_return result;
