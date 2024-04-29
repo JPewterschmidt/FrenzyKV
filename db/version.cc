@@ -6,23 +6,23 @@
 namespace frenzykv
 {
 
-using namespace r = ::std::ranges;
-using namespace rv = r::views;
+namespace r = ::std::ranges;
+namespace rv = r::views;
 
-version_rep operator+(const version_delta& delta) const
+version_rep& version_rep::operator+=(const version_delta& delta) 
 {
-    const auto& old_files = files();
     ::std::vector<file_id_t> new_versions_files;
-    r::set_difference(old_files, delta.comapcted_files(), 
+    r::set_difference(files(), delta.comapcted_files(), 
                       ::std::back_inserter(new_versions_files));
     assert(!new_versions_files.empty());
-    return { new_versions_files };
+    m_files = ::std::move(new_versions_files);
+    return *this;
 }
 
-void add_new_version(version_rep v)
+koios::task<version_guard> version_center::add_new_version()
 {
     auto lk = co_await m_modify_lock.acquire();
-    m_current_ptr = &m_versions.emplace_back(::std::move(v));
+    co_return { &m_versions.emplace_back(m_versions.back()) };
 }
 
 } // namespace frenzykv

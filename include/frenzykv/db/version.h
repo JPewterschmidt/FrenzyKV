@@ -13,6 +13,7 @@
 #include "koios/coroutine_shared_mutex.h"
 
 #include "frenzykv/types.h"
+#include "frenzykv/kvdb_deps.h"
 
 namespace frenzykv
 {
@@ -22,13 +23,19 @@ class version_delta
 public:
     decltype(auto) add_compacted_files(::std::ranges::range auto const& ids)
     {
-        m_compacted.append_range(ids);
+        for (const auto& item : ids)
+        {
+            m_compacted.emplace_back(item);
+        }
         return *this;
     }
 
     decltype(auto) add_new_files(::std::ranges::range auto const& ids)
     {
-        m_added.append_range(ids);
+        for (const auto& item : ids)
+        {
+            m_added.emplace_back(item);
+        }
         return *this;
     }
 
@@ -49,17 +56,21 @@ private:
 class version_rep
 {
 public:
+    version_rep(const version_rep& other)
+        : m_files{ other.m_files }
+    {
+    }
+
     const auto& files() const noexcept { return m_files; }
     auto ref() noexcept { return m_ref++; }
     auto deref() noexcept { return m_ref--; }
-    version_rep operator+(const version_delta& delta) const;
-    auto approx_ref_count() const noexcept { return m_ref.load(::std::memory_order_relaxed); }
-
-private:
-    version_rep(::std::ranges::range auto const& files)
-        : m_files{ begin(files), end(files) }
+    version_rep& operator+=(const version_delta& delta);
+    version_rep& apply(const version_delta& delta)
     {
+        return operator+=(delta);
     }
+
+    auto approx_ref_count() const noexcept { return m_ref.load(::std::memory_order_relaxed); }
 
 private:
     ::std::vector<file_id_t> m_files;
@@ -77,10 +88,10 @@ public:
 
     ~version_guard() noexcept
     {
-        if (rep)
+        if (m_rep)
         {
-            rep->deref();
-            rep = nullptr;
+            m_rep->deref();
+            m_rep = nullptr;
         }
     }
 
@@ -94,6 +105,21 @@ public:
         : m_rep{ ::std::exchange(other.m_rep, nullptr) }
     {
     }
+
+    auto& rep() noexcept { return *m_rep; }
+    const auto& rep() const noexcept { return *m_rep; }
+
+    auto& operator*() noexcept { return rep(); }
+    const auto& operator*() const noexcept { return rep(); }
+
+    auto* operator ->() noexcept { return &rep(); }
+    const auto* operator ->() const noexcept { return &rep(); }
+
+    version_guard& operator+=(const version_delta& delta)
+    {
+        rep() += delta;
+        return *this;
+    }
     
 private:
     version_rep* m_rep{};
@@ -102,21 +128,15 @@ private:
 class version_center
 {
 public:
-    version_center(const kvdb_deps& deps, sequence_number_t current)
-        : m_deps{ &deps }, m_current{ current };
-    {
-    }
+    koios::task<version_guard> add_new_version();
 
-    void add_new_version(version_rep v);
-
-    auto current_version() noexcept
+    koios::task<version_guard> current_version() noexcept
     {
         auto lk = co_await m_modify_lock.acquire_shared();
-        return version_guard{ m_current_ptr };
+        co_return { m_current_ptr };
     }
 
 private:
-    const kvdb_deps* m_deps;
     sequence_number_t m_current;
     ::std::list<version_rep> m_versions;
     version_rep* m_current_ptr{};
