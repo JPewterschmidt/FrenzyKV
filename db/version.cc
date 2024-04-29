@@ -11,7 +11,7 @@ namespace rv = r::views;
 
 version_rep& version_rep::operator+=(const version_delta& delta) 
 {
-    ::std::vector<file_id_t> new_versions_files;
+    ::std::vector<file_id_t> new_versions_files = delta.added_files();
     r::set_difference(files(), delta.comapcted_files(), 
                       ::std::back_inserter(new_versions_files));
     assert(!new_versions_files.empty());

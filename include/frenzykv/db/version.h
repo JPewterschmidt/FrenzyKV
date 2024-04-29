@@ -4,6 +4,7 @@
 #include <memory>
 #include <ranges>
 #include <vector>
+#include <cassert>
 #include <list>
 
 #include "toolpex/ref_count.h"
@@ -119,8 +120,8 @@ public:
         return *this;
     }
 
-    auto& rep() noexcept { return *m_rep; }
-    const auto& rep() const noexcept { return *m_rep; }
+    auto& rep() noexcept { assert(m_rep); return *m_rep; }
+    const auto& rep() const noexcept { assert(m_rep); return *m_rep; }
 
     auto& operator*() noexcept { return rep(); }
     const auto& operator*() const noexcept { return rep(); }
@@ -173,13 +174,19 @@ public:
         ::std::erase_if(m_versions, is_garbage);
     }
 
+    koios::task<size_t> size() const
+    {
+        auto lk = co_await m_modify_lock.acquire_shared();
+        co_return m_versions.size();
+    }
+
 private:
     ::std::list<version_rep> m_versions;
     version_guard m_current;
 
     // If you want to add or remove a version, acquire a unique lock
     // Otherwise acquire a shared lock.
-    koios::shared_mutex m_modify_lock;
+    mutable koios::shared_mutex m_modify_lock;
 };
 
 } // namespace frenzykv
