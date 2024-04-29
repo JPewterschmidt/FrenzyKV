@@ -292,8 +292,7 @@ get_entries_from_sstable(sstable& table)
             result.push_back(::std::move(kv));
         }
     }
-    // TODO: recovery the assert when it passed asan
-    //assert(::std::is_sorted(result.begin(), result.end()));
+    assert(::std::is_sorted(result.begin(), result.end()));
 
     ::std::sort(result.begin(), result.end());
     co_return result;
