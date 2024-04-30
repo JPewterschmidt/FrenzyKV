@@ -17,6 +17,9 @@ public:
     auto approx_ref_count() const noexcept { return m_ref.load(::std::memory_order_relaxed); }
     file_id_t file_id() const noexcept { return m_fileid; }
     level_t level() const noexcept { return m_level; }
+    
+    operator file_id_t() const noexcept { return file_id(); }
+    operator level_t() const noexcept { return level(); }
 
 private:
     file_id_t m_fileid{};
