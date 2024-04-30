@@ -15,6 +15,7 @@
 #include "frenzykv/types.h"
 #include "frenzykv/io/writable.h"
 #include "frenzykv/io/readable.h"
+#include "frenzykv/util/file_guard.h"
 
 namespace frenzykv
 {

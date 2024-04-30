@@ -5,7 +5,7 @@
 
 #include "frenzykv/types.h"
 
-namespace fernzykv
+namespace frenzykv
 {
 
 class file_rep
@@ -47,7 +47,7 @@ public:
     }
 
     file_guard(const file_guard& other) noexcept
-        m_rep{ other.m_rep }
+        : m_rep{ other.m_rep }
     {
         m_rep->ref();
     }
