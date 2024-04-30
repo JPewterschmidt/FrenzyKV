@@ -6,9 +6,12 @@
 #include <memory>
 #include <string_view>
 #include <functional>
-#include "koios/generator.h"
-#include "frenzykv/types.h"
+
 #include "toolpex/functional.h"
+#include "koios/generator.h"
+#include "koios/task.h"
+
+#include "frenzykv/types.h"
 #include "frenzykv/util/comp.h"
 
 /*      ----------------------------------------------------------------------------|--------------|
@@ -331,5 +334,7 @@ public:
 };
 
 } // namespace frenzykv
+
+extern template class koios::_task<frenzykv::kv_entry, koios::discardable, koios::lazy_aw>::_type;
 
 #endif

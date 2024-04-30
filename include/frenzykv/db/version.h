@@ -152,6 +152,21 @@ private:
 class version_center
 {
 public:
+    version_center() noexcept = default;
+
+    version_center(version_center&& other) noexcept
+        : m_versions{ ::std::move(other.m_versions) }, 
+          m_current{ ::std::move(other.m_current) }
+    {
+    }
+
+    version_center& operator=(version_center&& other) noexcept
+    {
+        m_versions = ::std::move(other.m_versions);
+        m_current = ::std::move(other.m_current);
+        return *this;
+    }
+
     koios::task<version_guard> add_new_version();
 
     koios::task<version_guard> current_version() noexcept
@@ -160,7 +175,8 @@ public:
         co_return m_current;
     }
 
-    koios::task<void> GC_with(koios::task_callable_concept auto async_func_file_range)
+    //koios::task<void> GC_with(koios::awaitable_callable_concept auto async_func_file_range)
+    koios::task<void> GC_with(auto async_func_file_range)
     {
         namespace rv = ::std::ranges::views;
         auto lk = co_await m_modify_lock.acquire();
