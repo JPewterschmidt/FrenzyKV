@@ -19,32 +19,34 @@ class db_interface
 {
 public:
     virtual ~db_interface() noexcept {}
-    virtual koios::task<::std::error_code> insert(write_options opt, write_batch batch) = 0;
-    virtual koios::task<::std::error_code> insert(write_options opt, const_bspan key, const_bspan value) 
+    virtual koios::task<::std::error_code> insert(write_batch batch, write_options opt = {}) = 0;
+
+    virtual koios::task<::std::error_code> 
+    insert(const_bspan key, const_bspan value, write_options opt = {}) 
     { 
-        return insert(::std::move(opt), {key, value}); 
+        return insert({key, value}, ::std::move(opt)); 
     }
 
-    virtual koios::task<::std::error_code> remove_from_db(write_options opt, const_bspan key)
+    virtual koios::task<::std::error_code> remove_from_db(const_bspan key, write_options opt = {})
     {
         write_batch b;
         b.remove_from_db(key);
 
         // OK, wont be a couroutine issue.
         // because we move this batch in.
-        return insert(::std::move(opt), ::std::move(b));
+        return insert(::std::move(b), ::std::move(opt));
     }
 
-    virtual koios::task<::std::optional<kv_entry>> get(const_bspan key)
+    virtual koios::task<::std::optional<kv_entry>> get(const_bspan key, read_options opt = {})
     {
         ::std::error_code ec{};
-        auto ret = co_await get(key, ec);
+        auto ret = co_await get(key, ec, ::std::move(opt));
         if (ec) [[unlikely]] throw koios::exception{ec};
         co_return ret;
     }
 
     virtual koios::task<::std::optional<kv_entry>> 
-    get(const_bspan key, ::std::error_code& ec_out) noexcept = 0;
+    get(const_bspan key, ::std::error_code& ec_out, read_options opt = {}) noexcept = 0;
 };
 
 ::std::unique_ptr<db_interface> open(toolpex::ip_address::ptr ip, in_port_t port);
