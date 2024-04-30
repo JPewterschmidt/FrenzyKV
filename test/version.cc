@@ -21,8 +21,8 @@ public:
 
     koios::task<bool> test_basic()
     {
-        co_await new_version(version_delta{}.add_new_files(::std::vector{1, 2, 3, 4, 5}));
-        co_await new_version(version_delta{}.add_new_files(::std::vector{6, 7}));
+        co_await new_version(version_delta{}.add_new_files(::std::vector<file_guard>(5)));
+        co_await new_version(version_delta{}.add_new_files(::std::vector<file_guard>(2)));
         co_return co_await m_center.size() == 2;
     }
 
@@ -32,9 +32,9 @@ public:
     {
         for (size_t i{}; i < scale; ++i)
         {
-            co_await new_version(version_delta{}.add_new_files(::std::vector{1, 2, 3, 4, 5}));
+            co_await new_version(version_delta{}.add_new_files(::std::vector<file_guard>(5)));
         }
-        co_await new_version(version_delta{}.add_new_files(::std::vector{6, 7}));
+        co_await new_version(version_delta{}.add_new_files(::std::vector<file_guard>(2)));
 
         const size_t oldsize = co_await size();
 

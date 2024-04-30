@@ -1,6 +1,8 @@
 #ifndef FRENZYKV_READ_WRITE_OPTIONS_H
 #define FRENZYKV_READ_WRITE_OPTIONS_H
 
+#include "frenzykv/db/snapshot.h"
+
 namespace frenzykv
 {
 
@@ -11,7 +13,7 @@ struct write_options
 
 struct read_options
 {
-    sequence_number_t sequence_number; // TODO: going to be replaced with snapshot object
+    snapshot snap{};
 };
 
 } // namespace frenzykv

@@ -8,7 +8,9 @@
 namespace frenzykv
 {
 
-using sequence_number_t = uint32_t;
+// The first sequence number should be 1 not 0
+// 0 will be a magic number ot indicate something.
+using sequence_number_t = uint32_t; 
 using bspan = ::std::span<::std::byte>;
 using const_bspan = ::std::span<const ::std::byte>;
 using file_id_t = uint32_t;

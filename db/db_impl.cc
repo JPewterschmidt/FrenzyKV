@@ -42,10 +42,10 @@ db_impl::~db_impl() noexcept
 
 koios::task<::std::error_code> 
 db_impl::
-insert(write_options write_opt, write_batch batch) 
+insert(write_batch batch, write_options opt)
 {
     co_await m_log.insert(batch);
-    co_await m_log.may_flush(write_opt.sync_write);
+    co_await m_log.may_flush(opt.sync_write);
     
     // Not doing mem-imm trasformation, only need shared lock
     auto shah = co_await m_mem_mutex.acquire_shared();
@@ -198,18 +198,19 @@ db_impl::do_GC()
 }
 
 koios::task<::std::optional<kv_entry>> 
-db_impl::get(const_bspan key, ::std::error_code& ec_out) noexcept
+db_impl::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noexcept
 {
-    const sequenced_key skey = co_await this->make_query_key(key);
+    const sequenced_key skey = co_await this->make_query_key(key, opt);
     auto result_opt = co_await m_mem->get(skey);
     if (result_opt) co_return result_opt;
 
     co_return {};
 }
 
-koios::task<sequenced_key> db_impl::make_query_key(const_bspan userkey)
+koios::task<sequenced_key> 
+db_impl::make_query_key(const_bspan userkey, const read_options& opt)
 {
-    toolpex::not_implemented();
+    // TODO: combine snapshot_center and version_center
     co_return {};
 }
 

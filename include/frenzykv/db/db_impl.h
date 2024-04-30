@@ -32,13 +32,14 @@ public:
     db_impl(::std::string dbname, const options& opt);
     ~db_impl() noexcept;
 
-    koios::task<::std::error_code> insert(write_options write_opt, write_batch batch) override;
+    koios::task<::std::error_code> 
+    insert(write_batch batch, write_options opt = {}) override;
 
-    virtual koios::task<::std::optional<kv_entry>> 
-    get(const_bspan key, ::std::error_code& ec_out) noexcept override;
+    koios::task<::std::optional<kv_entry>> 
+    get(const_bspan key, ::std::error_code& ec_out, read_options opt = {}) noexcept override;
 
 private:
-    koios::task<sequenced_key> make_query_key(const_bspan userkey);
+    koios::task<sequenced_key> make_query_key(const_bspan userkey, const read_options& opt);
     koios::task<> flush_imm_to_sstable();
     koios::task<> may_compact();
     koios::eager_task<> compact_files(sstable lowlevelt, level_t nextl);
