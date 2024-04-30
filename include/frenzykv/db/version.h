@@ -135,6 +135,12 @@ public:
         return *this;
     }
 
+    const auto& files() const noexcept
+    {
+        assert(m_rep);
+        return m_rep->files();
+    }
+
 private:
     void release() noexcept
     {
@@ -152,6 +158,21 @@ private:
 class version_center
 {
 public:
+    version_center() noexcept = default;
+
+    version_center(version_center&& other) noexcept
+        : m_versions{ ::std::move(other.m_versions) }, 
+          m_current{ ::std::move(other.m_current) }
+    {
+    }
+
+    version_center& operator=(version_center&& other) noexcept
+    {
+        m_versions = ::std::move(other.m_versions);
+        m_current = ::std::move(other.m_current);
+        return *this;
+    }
+
     koios::task<version_guard> add_new_version();
 
     koios::task<version_guard> current_version() noexcept
@@ -160,18 +181,25 @@ public:
         co_return m_current;
     }
 
-    koios::task<void> GC_with(koios::task_callable_concept auto async_func_file_range)
+    //koios::task<void> GC_with(koios::awaitable_callable_concept auto async_func_file_range)
+    koios::task<> GC_with(auto async_func_file_range)
     {
         namespace rv = ::std::ranges::views;
         auto lk = co_await m_modify_lock.acquire();
-        auto is_garbage = [](auto&& item) { return item.approx_ref_count() == 0; };
+
         for (const auto& out_dated_version : m_versions 
             | rv::take(m_versions.size())
             | rv::filter(is_garbage))
         {
             co_await async_func_file_range(out_dated_version);
         }
-        ::std::erase_if(m_versions, is_garbage);
+        GC_impl();
+    }
+
+    koios::task<> GC()
+    {
+        auto lk = co_await m_modify_lock.acquire();
+        GC_impl();
     }
 
     koios::task<size_t> size() const
@@ -179,6 +207,14 @@ public:
         auto lk = co_await m_modify_lock.acquire_shared();
         co_return m_versions.size();
     }
+
+private:
+    static bool is_garbage(const version_rep& vg)
+    {
+        return vg.approx_ref_count() == 0;
+    }
+
+    void GC_impl() { ::std::erase_if(m_versions, is_garbage); }
 
 private:
     ::std::list<version_rep> m_versions;

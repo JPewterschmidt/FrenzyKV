@@ -187,7 +187,11 @@ db_impl::back_ground_GC(::std::stop_token tk)
 koios::task<> 
 db_impl::do_GC()
 {
-    // TODO
+    // TODO: 
+    // GC seuqnece: 
+    //      version center first
+    //      level file management second
+    co_await m_version_center.GC();
     co_return;
 }
 

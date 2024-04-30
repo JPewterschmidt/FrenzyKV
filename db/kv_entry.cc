@@ -1,11 +1,14 @@
 #include "frenzykv/db/kv_entry.h"
 #include "frenzykv/util/serialize_helper.h"
 #include "toolpex/exceptions.h"
+#include "koios/task.h"
 #include <limits>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <span>
+
+template class koios::_task<frenzykv::kv_entry, koios::discardable, koios::lazy_aw>::_type;
 
 namespace frenzykv
 {

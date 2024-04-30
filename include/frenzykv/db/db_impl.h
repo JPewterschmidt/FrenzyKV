@@ -18,6 +18,7 @@
 #include "frenzykv/db/memtable.h"
 #include "frenzykv/db/read_write_options.h"
 #include "frenzykv/db/filter.h"
+#include "frenzykv/db/version.h"
 
 #include "frenzykv/persistent/level.h"
 #include "frenzykv/persistent/sstable.h"
@@ -63,6 +64,7 @@ private:
     ::std::unique_ptr<filter_policy> m_filter_policy;
     level m_level;
     ::std::stop_source m_bg_gc_stop_src;
+    version_center m_version_center;
 };  
 
 } // namespace frenzykv
