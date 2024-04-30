@@ -121,10 +121,10 @@ db_impl::
 compact_files(sstable lowlevelt, level_t nextl)
 {
     ::std::vector<::std::unique_ptr<random_readable>> files;
-    auto merging_tables = m_level.level_file_ids(nextl)
+    auto merging_tables = m_level.level_file_guards(nextl)
         | rv::transform(
-            [this, nextl, &files](auto&& id) mutable noexcept { 
-                return files.emplace_back(m_level.open_read(nextl, id)).get();
+            [this, &files](auto&& guard) mutable noexcept { 
+                return files.emplace_back(m_level.open_read(guard)).get();
             })
         | rv::transform(
             [this](auto&& filep) { 
@@ -150,6 +150,8 @@ compact_files(sstable lowlevelt, level_t nextl)
     co_await mem_file->dump_to(*disk_id_file.second);
     co_await disk_id_file.second->sync();
 
+    // TODO: save the file guard
+
     co_return;
 }
 
@@ -160,8 +162,8 @@ koios::task<> db_impl::may_compact()
     {
         if (m_level.need_to_comapct(l))
         {
-            const file_id_t target_file = m_level.oldest_file(l);
-            auto file = m_level.open_read(l, target_file);
+            auto guard = m_level.oldest_file(l);
+            auto file = m_level.open_read(guard);
             assert(file);
             co_await compact_files({ m_deps, m_filter_policy.get(), file.get() }, l);
         }
