@@ -44,6 +44,9 @@ koios::task<::std::error_code>
 db_impl::
 insert(write_batch batch, write_options opt)
 {
+    sequence_number_t seq = m_snapshot_center.get_next_unused_sequence_number(batch.count());
+    batch.set_first_sequence_num(seq);
+
     co_await m_log.insert(batch);
     co_await m_log.may_flush(opt.sync_write);
     

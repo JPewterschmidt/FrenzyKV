@@ -19,6 +19,7 @@
 #include "frenzykv/db/read_write_options.h"
 #include "frenzykv/db/filter.h"
 #include "frenzykv/db/version.h"
+#include "frenzykv/db/snapshot.h"
 
 #include "frenzykv/persistent/level.h"
 #include "frenzykv/persistent/sstable.h"
@@ -66,6 +67,7 @@ private:
     level m_level;
     ::std::stop_source m_bg_gc_stop_src;
     version_center m_version_center;
+    snapshot_center m_snapshot_center;
 };  
 
 } // namespace frenzykv

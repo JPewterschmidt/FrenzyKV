@@ -2,6 +2,7 @@
 #define FRENZYKV_DB_SNAPSHOT_H
 
 #include <atomic>
+#include <limits>
 
 #include "frenzykv/types.h"
 #include "frenzykv/db/version.h"
@@ -29,20 +30,21 @@ private:
 class snapshot_center
 {
 public:
-    sequence_number_t newest_sequence_number() const noexcept 
-    { 
-        return m_newest_seq.load(); 
-    }   
-
-    void set_newest_sequence_number(sequence_number_t seq) noexcept;
-
     snapshot get_snapshot(version_guard version) noexcept
     {
-        return { newest_sequence_number(), ::std::move(version) };
+        return { leatest_used_sequence_number(), ::std::move(version) };
     }
-       
+
+    sequence_number_t leatest_used_sequence_number() const noexcept { return m_newest_seq.load(); }
+
+    sequence_number_t get_next_unused_sequence_number(size_t count = 1) noexcept 
+    { 
+        assert(count < ::std::numeric_limits<sequence_number_t>::max());
+        return m_newest_seq.fetch_add(static_cast<sequence_number_t>(count)); 
+    }
+
 private:
-    ::std::atomic<sequence_number_t> m_newest_seq;
+    ::std::atomic<sequence_number_t> m_newest_seq{1};
 };
 
 } // namesapce frenzykv
