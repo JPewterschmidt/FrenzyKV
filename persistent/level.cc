@@ -53,7 +53,7 @@ retrive_level_and_id_from_name(const ::std::string& name)
 
 level::level(const kvdb_deps& deps) 
    : m_deps{ &deps }, 
-     m_levels_file_id(m_deps->opt()->max_level)
+     m_levels_file_rep(m_deps->opt()->max_level)
 {
 }
 
@@ -90,10 +90,10 @@ size_t level::allowed_file_size(level_t l) const noexcept
     return number_vec[l];
 }
 
-koios::task<::std::pair<file_id_t, ::std::unique_ptr<seq_writable>>> 
+koios::task<::std::pair<file_guard, ::std::unique_ptr<seq_writable>>> 
 level::create_file(level_t level)
 {
-    assert(level < m_levels_file_id.size());
+    assert(level < m_levels_file_rep.size());
     assert(working());
     file_id_t id = co_await allocate_file_id();
     auto name = name_a_file(level, id);
@@ -101,21 +101,22 @@ level::create_file(level_t level)
     auto file = m_deps->env()->get_seq_writable(sstables_path()/name);
 
     m_id_name[id] = ::std::move(name);
-    m_levels_file_id[level].push_back(id);
-    
-    co_return { id, ::std::move(file) };
+    auto& rep = m_levels_file_rep[level].emplace_back(::std::make_unique<file_rep>(level, id));
+
+    co_return { *rep, ::std::move(file) };
 }
 
-koios::task<> level::delete_file(level_t level, file_id_t id)
+koios::task<> level::delete_file(const file_rep& rep)
 {
     assert(working());
+    assert(rep.approx_ref_count() == 0);
     auto lk = co_await m_mutex.acquire();
-    co_await m_deps->env()->delete_file(sstables_path()/m_id_name.at(id));
-    m_id_name.erase(id);
-    ::std::erase(m_levels_file_id[level], id);
+    co_await m_deps->env()->delete_file(sstables_path()/m_id_name.at(rep));
+    m_id_name.erase(rep);
+    ::std::erase_if(m_levels_file_rep[rep.level()], [&rep](const auto& p){ return *p == rep; });
 
     // Recycle file id;
-    m_id_recycled.push(id);
+    m_id_recycled.push(rep.file_id());
 }
 
 koios::task<> level::finish() noexcept
@@ -151,8 +152,8 @@ koios::task<> level::start() noexcept
             continue;
         m_id_name[level_and_id_opt->second] = name;
 
-        m_levels_file_id[level_and_id_opt->first]
-            .push_back(level_and_id_opt->second);
+        m_levels_file_rep[level_and_id_opt->first]
+            .emplace_back(::std::make_unique<file_rep>(level_and_id_opt->first, level_and_id_opt->second));
 
         id_used.push_back(level_and_id_opt->second);
     }
@@ -179,8 +180,8 @@ bool level::working() const noexcept
 
 size_t level::actual_file_number(level_t l) const noexcept
 {
-    assert(l < m_levels_file_id.size());
-    return m_levels_file_id[l].size();
+    assert(l < m_levels_file_rep.size());
+    return m_levels_file_rep[l].size();
 }
 
 bool level::need_to_comapct(level_t l) const noexcept
@@ -188,55 +189,58 @@ bool level::need_to_comapct(level_t l) const noexcept
     return (actual_file_number(l) >= allowed_file_number(l));
 }
 
-const ::std::vector<file_id_t>& level::level_file_ids(level_t l) const noexcept
+::std::vector<file_guard> level::level_file_guards(level_t l) noexcept
 {
-    assert(l < m_levels_file_id.size());
-    return m_levels_file_id[l];
+    assert(l < m_levels_file_rep.size());
+    auto v = m_levels_file_rep[l] 
+        | rv::transform([](auto&& rep) { return file_guard(*rep); });
+    return { begin(v), end(v) };
 }
 
 size_t level::level_number() const noexcept
 {
-    return m_levels_file_id.size();
+    return m_levels_file_rep.size();
 }
 
-file_id_t level::oldest_file(level_t l) const
+file_guard level::oldest_file(level_t l)
 {
-    return oldest_file(level_file_ids(l));
+    return oldest_file(level_file_guards(l));
 }
 
-file_id_t level::oldest_file(const ::std::vector<file_id_t>& files) const
+file_guard level::oldest_file(const ::std::vector<file_guard>& files)
 {
-    ::std::pair<fs::file_time_type, file_id_t> oldest;
+    ::std::pair<fs::file_time_type, file_guard> oldest;
     auto tfps = files 
-        | rv::transform([this](auto&& id){ 
-              return ::std::pair{ m_id_name.at(id), id }; 
+        | rv::transform([this](auto&& guard){ 
+              return ::std::pair{ m_id_name.at(file_id_t(guard)), guard }; 
           })
-        | rv::transform([](auto&& nameid) { 
+        | rv::transform([](auto&& name_guard) { 
               return ::std::pair{ 
-                  fs::last_write_time(nameid.first), nameid.second 
+                  fs::last_write_time(name_guard.first), name_guard.second 
               }; 
           });
     oldest = *begin(tfps);
+
+    // TODO: optimize: do copy elision 
     for (auto p : tfps)
     {
         if (p.first < oldest.first)
             oldest = p;
     }
 
-    return oldest.second;
+    return ::std::move(oldest.second);
 }
 
 ::std::unique_ptr<seq_writable>
 level::
-open_write(level_t l, file_id_t id)
+open_write(const file_guard& guard)
 {
-    assert(l < m_levels_file_id.size());
-    if (!level_contains(l, id)) [[unlikely]]
+    if (!level_contains(guard)) [[unlikely]]
     {
         return nullptr;
     }
     auto result = m_deps->env()->get_seq_writable(
-        sstables_path()/m_id_name[id]
+        sstables_path()/m_id_name[guard]
     );
     assert(result->file_size() == 0);
     return result;
@@ -244,26 +248,27 @@ open_write(level_t l, file_id_t id)
 
 ::std::unique_ptr<random_readable>
 level::
-open_read(level_t l, file_id_t id)
+open_read(const file_guard& guard)
 {
-    assert(l < m_levels_file_id.size());
-    if (!level_contains(l, id)) [[unlikely]]
+    if (!level_contains(guard)) [[unlikely]]
     {
         return nullptr;
     }
     auto result = m_deps->env()->get_random_readable(
-        sstables_path()/m_id_name[id]
+        sstables_path()/m_id_name[guard]
     );
     assert(result->file_size() > 0);
     return result;
 }
 
-bool level::level_contains(level_t l, file_id_t file) const
+bool level::level_contains(const file_rep& rep) const
 {
-    assert(l < m_levels_file_id.size());
-    const auto& vec = m_levels_file_id[l];
-    const auto iter = ::std::find(vec.begin(), vec.end(), file);
-    return iter != vec.end();
+    const auto& vec = m_levels_file_rep[rep];
+    for (const auto& rep_ptr : vec)
+    {
+        if (*rep_ptr == rep) return true;
+    }
+    return false;
 }
 
 } // namespace frenzykv
