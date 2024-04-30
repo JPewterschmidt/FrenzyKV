@@ -16,6 +16,7 @@
 
 #include "frenzykv/types.h"
 #include "frenzykv/kvdb_deps.h"
+#include "frenzykv/util/file_guard.h"
 
 namespace frenzykv
 {
@@ -23,36 +24,36 @@ namespace frenzykv
 class version_delta
 {
 public:
-    decltype(auto) add_compacted_files(::std::ranges::range auto const& ids)
+    decltype(auto) add_compacted_files(::std::ranges::range auto guards)
     {
-        for (const auto& item : ids)
+        for (auto& item : guards)
         {
-            m_compacted.emplace_back(item);
+            m_compacted.emplace_back(::std::move(item));
         }
         return *this;
     }
 
-    decltype(auto) add_new_files(::std::ranges::range auto const& ids)
+    decltype(auto) add_new_files(::std::ranges::range auto guards)
     {
-        for (const auto& item : ids)
+        for (auto& item : guards)
         {
-            m_added.emplace_back(item);
+            m_added.emplace_back(::std::move(item));
         }
         return *this;
     }
 
-    decltype(auto) add_new_file(file_id_t id)
+    decltype(auto) add_new_file(file_guard guard)
     {
-        m_added.emplace_back(id);
+        m_added.emplace_back(::std::move(guard));
         return *this;
     }
 
-    const auto& comapcted_files() const noexcept { return m_compacted; }
+    const auto& compacted_files() const noexcept { return m_compacted; }
     const auto& added_files() const noexcept { return m_added; }
 
 private:
-    ::std::vector<file_id_t> m_compacted;
-    ::std::vector<file_id_t> m_added;
+    ::std::vector<file_guard> m_compacted;
+    ::std::vector<file_guard> m_added;
 };
 
 class version_rep
@@ -75,7 +76,7 @@ public:
     auto approx_ref_count() const noexcept { return m_ref.load(::std::memory_order_relaxed); }
 
 private:
-    ::std::vector<file_id_t> m_files;
+    ::std::vector<file_guard> m_files;
     toolpex::ref_count m_ref;
 };
 
@@ -87,7 +88,7 @@ public:
     version_guard(version_rep* rep) noexcept
         : m_rep{ rep }
     {
-        m_rep->ref();
+        if (m_rep) m_rep->ref();
     }
 
     version_guard(version_rep& rep) noexcept : version_guard(&rep) { }
@@ -109,14 +110,14 @@ public:
     version_guard(const version_guard& other) noexcept
         : m_rep{ other.m_rep }
     {
-        m_rep->ref();
+        if (m_rep) m_rep->ref();
     }
 
     version_guard& operator=(const version_guard& other)
     {
         release();
         m_rep = other.m_rep;
-        m_rep->ref();
+        if (m_rep) m_rep->ref();
         return *this;
     }
 

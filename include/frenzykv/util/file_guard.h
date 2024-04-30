@@ -36,6 +36,17 @@ public:
         return false;
     }
 
+    bool operator!=(const file_rep& other) const noexcept
+    {
+        return !(*this == other);
+    }
+
+    bool operator<(const file_rep& other) const noexcept
+    {
+        // For set difference
+        return file_id() < other.file_id();
+    }
+
 private:
     level_t m_level{};
     file_id_t m_fileid{};
@@ -67,14 +78,14 @@ public:
     file_guard(const file_guard& other) noexcept
         : m_rep{ other.m_rep }
     {
-        m_rep->ref();
+        if (m_rep) m_rep->ref();
     }
 
     file_guard& operator=(const file_guard& other) noexcept
     {
         release();
         m_rep = other.m_rep;
-        m_rep->ref();
+        if (m_rep) m_rep->ref();
         return *this;
     }
 
@@ -95,6 +106,21 @@ public:
 
     operator file_id_t() const noexcept { return file_id(); }
     operator level_t() const noexcept { return level(); }
+
+    bool operator==(const file_guard& other) const noexcept
+    {
+        return m_rep == other.m_rep;
+    }
+
+    bool operator!=(const file_guard& other) const noexcept
+    {
+        return !(*this == other);
+    }
+
+    bool operator<(const file_guard& other) const noexcept
+    {
+        return (*m_rep < *other.m_rep);
+    }
 
 private:
     void release() noexcept
