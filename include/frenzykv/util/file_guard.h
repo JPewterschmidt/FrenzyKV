@@ -72,6 +72,9 @@ public:
         return m_rep->level();
     }
 
+    operator file_id_t() const noexcept { return file_id(); }
+    operator level_t() const noexcept { return level(); }
+
 private:
     void release() noexcept
     {
