@@ -1,5 +1,5 @@
-#ifndef FRENZYKV_UTIL_FILE_HANDLER_H
-#define FRENZYKV_UTIL_FILE_HANDLER_H
+#ifndef FRENZYKV_UTIL_FILE_GUARD_H
+#define FRENZYKV_UTIL_FILE_GUARD_H
 
 #include "toolpex/ref_count.h"
 
@@ -19,39 +19,40 @@ public:
     level_t level() const noexcept { return m_level; }
 
 private:
-    file_id_t m_fileid;
+    file_id_t m_fileid{};
+    level_t m_level{};
     toolpex::ref_count m_ref;
 };
 
-class file_handle
+class file_guard
 {
 public:
-    constexpr file_handle();
+    constexpr file_guard();
 
-    file_handle(file_rep* rep) noexcept : m_rep{ rep } { }
-    file_handle(file_rep& rep) noexcept : m_rep{ &rep } { }
+    file_guard(file_rep* rep) noexcept : m_rep{ rep } { }
+    file_guard(file_rep& rep) noexcept : m_rep{ &rep } { }
 
-    ~file_handle() noexcept { release(); }
+    ~file_guard() noexcept { release(); }
 
-    file_handle(file_handle&& other) noexcept
+    file_guard(file_guard&& other) noexcept
         : m_rep{ ::std::exchange(other.m_rep, nullptr) }
     {
     }
 
-    file_handle& operator=(file_handle&& other) noexcept
+    file_guard& operator=(file_guard&& other) noexcept
     {
         release();
         m_rep = ::std::exchange(other.m_rep, nullptr);
         return *this;
     }
 
-    file_handle(const file_handle& other) noexcept
+    file_guard(const file_guard& other) noexcept
         m_rep{ other.m_rep }
     {
         m_rep->ref();
     }
 
-    file_handle& operator=(const file_handle& other) noexcept
+    file_guard& operator=(const file_guard& other) noexcept
     {
         release();
         m_rep = other.m_rep;
