@@ -142,6 +142,11 @@ fs::path config_path()
     return fs::current_path()/"config";
 }
 
+::std::filesystem::path version_path()
+{
+    return fs::current_path()/"version";
+}
+
 fs::directory_entry sstables_dir(::std::error_code& ec)
 {
     return { sstables_path(), ec };
@@ -160,6 +165,11 @@ fs::directory_entry system_log_dir(::std::error_code& ec)
 fs::directory_entry config_dir(::std::error_code& ec)
 {
     return { config_path(), ec };
+}
+
+::std::filesystem::directory_entry version_dir(::std::error_code& ec)
+{
+    return { version_path(), ec };
 }
 
 fs::directory_entry sstables_dir()
@@ -198,6 +208,15 @@ fs::directory_entry config_dir()
     return result;
 }
 
+fs::directory_entry version_dir()
+{
+	::std::error_code ec;
+    fs::directory_entry result = version_dir(ec);
+    if (ec) throw koios::exception(ec);
+
+    return result;
+}
+
 ::std::error_code recreate_dirs_if_non_exists()
 {
     // assume that we are already in the working directory
@@ -220,6 +239,8 @@ fs::directory_entry config_dir()
     if (!fs::exists(system_log_path(), result) && !fs::create_directory(system_log_path(), result)) return result;
     result = {};
     if (!fs::exists(config_path(), result) && !fs::create_directory(config_path(), result)) return result;
+    result = {};
+    if (!fs::exists(version_path(), result) && !fs::create_directory(version_path(), result)) return result;
 
     return result;
 }
