@@ -14,7 +14,8 @@ namespace frenzykv
 {
 
 namespace fs = ::std::filesystem;
-namespace rv = ::std::ranges::views;
+namespace r = ::std::ranges;
+namespace rv = r::views;
 using namespace ::std::string_literals;
 using namespace ::std::string_view_literals;
 
@@ -60,6 +61,7 @@ level::level(const kvdb_deps& deps)
 koios::task<file_id_t> level::allocate_file_id()
 {
     assert(working());
+    auto shr = co_await m_mutex.acquire_shared();
     file_id_t result{};
     if (m_id_recycled.empty())
     {
@@ -67,6 +69,8 @@ koios::task<file_id_t> level::allocate_file_id()
     }
     else 
     {
+        shr.unlock();
+        auto lk = co_await m_mutex.acquire();
         result = m_id_recycled.front();
         m_id_recycled.pop();
     }
@@ -74,32 +78,35 @@ koios::task<file_id_t> level::allocate_file_id()
     co_return result;
 }
 
-size_t level::allowed_file_number(level_t l) const noexcept
+koios::task<size_t> level::allowed_file_number(level_t l) const noexcept
 {
     auto opt = m_deps->opt();
     const auto& number_vec = opt->level_file_number;
-    if (l >= number_vec.size()) return 0;
-    return number_vec[l];
+    if (l >= number_vec.size()) co_return 0;
+    co_return number_vec[l];
 }
 
-size_t level::allowed_file_size(level_t l) const noexcept
+koios::task<size_t> level::allowed_file_size(level_t l) const noexcept
 {
     auto opt = m_deps->opt();
     const auto& number_vec = opt->level_file_size;
-    if (l >= number_vec.size()) return 0;
-    return number_vec[l];
+    if (l >= number_vec.size()) co_return 0;
+    co_return number_vec[l];
 }
 
 koios::task<::std::pair<file_guard, ::std::unique_ptr<seq_writable>>> 
 level::create_file(level_t level)
 {
+    auto shr = co_await m_mutex.acquire_shared();
     assert(level < m_levels_file_rep.size());
     assert(working());
     file_id_t id = co_await allocate_file_id();
     auto name = name_a_file(level, id);
+    shr.unlock();
 
     auto file = m_deps->env()->get_seq_writable(sstables_path()/name);
 
+    auto lk = co_await m_mutex.acquire();
     m_id_name[id] = ::std::move(name);
     auto& rep = m_levels_file_rep[level].emplace_back(::std::make_unique<file_rep>(level, id));
 
@@ -110,10 +117,14 @@ koios::task<> level::delete_file(const file_rep& rep)
 {
     assert(working());
     assert(rep.approx_ref_count() == 0);
+
+    auto shr = co_await m_mutex.acquire_shared();
+    const auto name = m_id_name.at(rep);
+    shr.unlock();
+    co_await m_deps->env()->delete_file(sstables_path()/name);
+
     auto lk = co_await m_mutex.acquire();
-    co_await m_deps->env()->delete_file(sstables_path()/m_id_name.at(rep));
     m_id_name.erase(rep);
-    ::std::erase_if(m_levels_file_rep[rep.level()], [&rep](const auto& p){ return *p == rep; });
 
     // Recycle file id;
     m_id_recycled.push(rep.file_id());
@@ -178,38 +189,42 @@ bool level::working() const noexcept
     return m_working.load() == 1;
 }
 
-size_t level::actual_file_number(level_t l) const noexcept
+koios::task<size_t> level::actual_file_number(level_t l) const noexcept
 {
+    auto lk = co_await m_mutex.acquire_shared();
     assert(l < m_levels_file_rep.size());
-    return m_levels_file_rep[l].size();
+    co_return m_levels_file_rep[l].size();
 }
 
-bool level::need_to_comapct(level_t l) const noexcept
+koios::task<bool> level::need_to_comapct(level_t l) const noexcept
 {
-    return (actual_file_number(l) >= allowed_file_number(l));
+    co_return (co_await actual_file_number(l) >= co_await allowed_file_number(l));
 }
 
-::std::vector<file_guard> level::level_file_guards(level_t l) noexcept
+koios::task<::std::vector<file_guard>> level::level_file_guards(level_t l) noexcept
 {
+    auto lk = co_await m_mutex.acquire_shared();
     assert(l < m_levels_file_rep.size());
     auto v = m_levels_file_rep[l] 
         | rv::transform([](auto&& rep) { return file_guard(*rep); });
-    return { begin(v), end(v) };
+    co_return { begin(v), end(v) };
 }
 
-size_t level::level_number() const noexcept
+koios::task<size_t> level::level_number() const noexcept
 {
-    return m_levels_file_rep.size();
+    auto lk = co_await m_mutex.acquire_shared();
+    co_return m_levels_file_rep.size();
 }
 
-file_guard level::oldest_file(level_t l)
+koios::task<file_guard> level::oldest_file(level_t l)
 {
-    return oldest_file(level_file_guards(l));
+    co_return co_await oldest_file(co_await level_file_guards(l));
 }
 
-file_guard level::oldest_file(const ::std::vector<file_guard>& files)
+koios::task<file_guard> level::oldest_file(const ::std::vector<file_guard>& files)
 {
     ::std::pair<fs::file_time_type, file_guard> oldest;
+    auto lk = co_await m_mutex.acquire_shared();
     auto tfps = files 
         | rv::transform([this](auto&& guard){ 
               return ::std::pair{ m_id_name.at(file_id_t(guard)), guard }; 
@@ -228,47 +243,68 @@ file_guard level::oldest_file(const ::std::vector<file_guard>& files)
             oldest = p;
     }
 
-    return ::std::move(oldest.second);
+    co_return ::std::move(oldest.second);
 }
 
-::std::unique_ptr<seq_writable>
+koios::task<::std::unique_ptr<seq_writable>>
 level::
 open_write(const file_guard& guard)
 {
-    if (!level_contains(guard)) [[unlikely]]
+    auto lk = co_await m_mutex.acquire_shared();
+    if (!co_await level_contains(guard)) [[unlikely]]
     {
-        return nullptr;
+        co_return nullptr;
     }
     auto result = m_deps->env()->get_seq_writable(
         sstables_path()/m_id_name[guard]
     );
     assert(result->file_size() == 0);
-    return result;
+    co_return result;
 }
 
-::std::unique_ptr<random_readable>
+koios::task<::std::unique_ptr<random_readable>>
 level::
 open_read(const file_guard& guard)
 {
-    if (!level_contains(guard)) [[unlikely]]
+    auto lk = co_await m_mutex.acquire_shared();
+    if (!co_await level_contains(guard)) [[unlikely]]
     {
-        return nullptr;
+        co_return nullptr;
     }
     auto result = m_deps->env()->get_random_readable(
         sstables_path()/m_id_name[guard]
     );
     assert(result->file_size() > 0);
-    return result;
+    co_return result;
 }
 
-bool level::level_contains(const file_rep& rep) const
+koios::task<bool> level::level_contains(const file_rep& rep) const
 {
+    auto lk = co_await m_mutex.acquire_shared();
     const auto& vec = m_levels_file_rep[rep];
     for (const auto& rep_ptr : vec)
     {
-        if (*rep_ptr == rep) return true;
+        if (*rep_ptr == rep) co_return true;
     }
-    return false;
+    co_return false;
+}
+
+koios::task<> level::GC()
+{
+    auto lk = co_await m_mutex.acquire();
+    for (auto& level_files : m_levels_file_rep)
+    {
+        auto remove_ret = r::remove_if(level_files, [](const auto& filep) {
+            assert(filep != nullptr);
+            return filep->approx_ref_count() == 0;
+        });
+        for (auto& filep : remove_ret)
+        {
+            co_await delete_file(*filep);
+        }
+        level_files.erase(remove_ret.begin(), remove_ret.end());
+    }
+    co_return;
 }
 
 } // namespace frenzykv

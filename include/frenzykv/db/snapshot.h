@@ -21,6 +21,7 @@ public:
     }
 
     sequence_number_t sequence_number() const noexcept { return m_seq; }
+    constexpr bool valid() const noexcept { return m_seq != 0; }
 
 private:
     sequence_number_t m_seq{};
