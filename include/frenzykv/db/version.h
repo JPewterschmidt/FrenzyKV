@@ -59,6 +59,7 @@ private:
 class version_rep
 {
 public:
+    // It should be copyable, used by creating a nwe version based on an old one.
     version_rep(const version_rep& other)
         : m_files{ other.m_files }
     {
