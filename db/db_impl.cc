@@ -15,6 +15,7 @@
 #include "frenzykv/log/logger.h"
 
 #include "frenzykv/db/db_impl.h"
+#include "frenzykv/db/version_descriptor.h"
 
 #include "frenzykv/persistent/sstable_builder.h"
 #include "frenzykv/persistent/compaction.h"
@@ -127,6 +128,7 @@ compact_files(sstable lowlevelt, level_t nextl)
     ::std::vector<::std::unique_ptr<random_readable>> files;
 
     ::std::vector<sstable> tables;
+    ::std::vector<file_guard> table_guards;
     for (auto& guard : co_await m_level.level_file_guards(nextl))
     {
         random_readable* filep = files.emplace_back(co_await m_level.open_read(guard)).get();
@@ -134,6 +136,7 @@ compact_files(sstable lowlevelt, level_t nextl)
         if (lowlevelt.overlapped(potiential_target_table))
         {
             tables.emplace_back(::std::move(potiential_target_table));
+            table_guards.push_back(guard);
         }
     }
 
@@ -153,14 +156,24 @@ compact_files(sstable lowlevelt, level_t nextl)
     co_await disk_id_file.second->sync();
 
     // Record and apply version delta. TODO
-    //version_delta delta;
-    //delta.add_compacted_files(merging_tables)
-    //     .add_new_file(disk_id_file.first);
+    version_delta delta;
+    delta.add_compacted_files(table_guards)
+         .add_new_file(disk_id_file.first);
 
-    //version_guard new_version = co_await m_version_center.add_new_version();
-    //new_version += delta;
+    version_guard new_version = co_await m_version_center.add_new_version();
+    new_version += delta;
 
-    // TODO: write a new version descripter
+    // write a new version descripter
+    ::std::string version_desc_name = get_version_descriptor_name();
+    auto version_desc = m_deps.env()->get_seq_writable(version_path()/version_desc_name);
+    [[maybe_unused]] bool ret = co_await write_version_descriptor(new_version.rep(), m_level, version_desc.get());
+    assert(ret);
+
+    // Set current version
+    co_await set_current_version_file(m_deps, version_desc_name);
+    co_await m_version_center.set_current_version(new_version);   
+
+    // TODO: Do GC
     
     co_return;
 }
@@ -199,10 +212,6 @@ db_impl::back_ground_GC(::std::stop_token tk)
 koios::task<> 
 db_impl::do_GC()
 {
-    // TODO: 
-    // GC seuqnece: 
-    //      version center first
-    //      level file management second
     co_await m_version_center.GC();
     co_await m_level.GC();
 

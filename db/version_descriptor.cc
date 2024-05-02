@@ -1,5 +1,9 @@
 #include <ranges>
+#include <format>
+#include <cassert>
+
 #include "frenzykv/db/version_descriptor.h"
+#include "frenzykv/util/uuid.h"
 
 namespace rv = ::std::ranges::views;
 using namespace ::std::string_view_literals;
@@ -35,8 +39,39 @@ write_version_descriptor(
 koios::task<::std::vector<::std::string>> 
 read_version_descriptor(seq_readable* file)
 {
-    // TODO
-    co_return {};
+    ::std::vector<::std::string> result;
+    size_t readed{};
+    do
+    {
+        // See also test/version.cc ::name_length
+        ::std::array<::std::byte, 53> buffer{}; 
+        readed = co_await file->read(buffer);
+        result.emplace_back(reinterpret_cast<char*>(buffer.data()), 52);
+    }
+    while (readed);
+
+    co_return result;
+}
+
+koios::task<> set_current_version_file(const kvdb_deps& deps, const ::std::string& filename)
+{
+    auto file = deps.env()->get_truncate_seq_writable(version_path()/"current_version_descriptor");
+    co_await file->append(filename);
+    co_await file->sync();
+    
+    co_return;
+}
+
+static constexpr auto vd_name_pattern = "frzkv#{}#.frzkvver"sv;
+
+::std::string get_version_descriptor_name()
+{
+    return ::std::format(vd_name_pattern, uuid{}.to_string());
+}
+
+bool is_version_descriptor_name(::std::string_view name)
+{
+    return name.ends_with("#.frzkvver");
 }
 
 } // namespace frenzykv

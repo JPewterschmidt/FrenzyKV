@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <cerrno>
 #include <system_error>
+#include <mutex>
 
 #include "spdlog/spdlog.h"
 
@@ -122,12 +123,10 @@ public:
 
 ::std::unique_ptr<env> env::make_default_env(const options& opt)
 {
-    static auto result = [&]{ 
-        posix_uring_env env(opt);
-        env.change_current_directroy(opt.root_path);
-        return env;
-    }();
-    return ::std::make_unique<posix_uring_env>(::std::move(result));
+    static ::std::once_flag flag;
+    auto ret = ::std::make_unique<posix_uring_env>(opt);
+    ::std::call_once(flag, [&]{ ret->change_current_directroy(opt.root_path); });
+    return ret;
 }
 
 namespace fs = fs;

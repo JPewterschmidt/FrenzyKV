@@ -3,6 +3,7 @@
 #include "koios/task.h"
 
 #include "frenzykv/db/version.h"
+#include "frenzykv/db/version_descriptor.h"
 
 namespace 
 {
@@ -66,4 +67,13 @@ TEST_F(version_test, GC)
 {
     reset();
     ASSERT_TRUE(test_gc().result());
+}
+
+TEST(version_descriptor_test, name_length)
+{
+    const auto name1 = get_version_descriptor_name();
+    const auto name2 = get_version_descriptor_name();
+    ASSERT_EQ(name1.size(), name2.size())  // 52
+        << " name1 sz = " << name1.size()
+        << " name2 sz = " << name2.size();
 }
