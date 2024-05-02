@@ -40,6 +40,8 @@ public:
     koios::task<> start() noexcept;
     koios::task<> finish() noexcept;
 
+    koios::task<::std::string> file_name(const file_guard& f) const;
+
     /*! \brief Return the max number of SSTable of specific level
      *  \retval 0   There's no exact restriction of file number.
      *  \retval !=0 the max number of files.
@@ -51,15 +53,10 @@ public:
      *  \retval !=0 the max size of a sstable.
      */
     koios::task<size_t> allowed_file_size(level_t l) const noexcept;
-    
     koios::task<bool> need_to_comapct(level_t l) const noexcept;
-
     koios::task<size_t> actual_file_number(level_t l) const noexcept;
-
     koios::task<::std::vector<file_guard>> level_file_guards(level_t l) noexcept;
-
     koios::task<size_t> level_number() const noexcept;
-
     koios::task<file_guard> oldest_file(const ::std::vector<file_guard>& files);
     koios::task<file_guard> oldest_file(level_t l);
 

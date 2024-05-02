@@ -51,6 +51,12 @@ retrive_level_and_id_from_sst_name(const ::std::string& name)
     return result;
 }
 
+koios::task<::std::string> level::file_name(const file_guard& f) const
+{
+    auto lk = co_await m_mutex.acquire_shared();
+    co_return m_id_name.at(f.file_id());
+}
+
 level::level(const kvdb_deps& deps) 
    : m_deps{ &deps }, 
      m_levels_file_rep(m_deps->opt()->max_level)
