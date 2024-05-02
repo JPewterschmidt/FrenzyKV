@@ -1,5 +1,6 @@
 #include <ranges>
 #include <format>
+#include <cassert>
 
 #include "frenzykv/db/version_descriptor.h"
 #include "frenzykv/util/uuid.h"
@@ -38,8 +39,18 @@ write_version_descriptor(
 koios::task<::std::vector<::std::string>> 
 read_version_descriptor(seq_readable* file)
 {
-    // TODO
-    co_return {};
+    ::std::vector<::std::string> result;
+    size_t readed{};
+    do
+    {
+        // See also test/version.cc ::name_length
+        ::std::array<::std::byte, 53> buffer{}; 
+        readed = co_await file->read(buffer);
+        result.emplace_back(static_cast<char>(buffer.data()), 52);
+    }
+    while (readed);
+
+    co_return result;
 }
 
 koios::task<> set_current_version_file(const kvdb_deps& deps, const ::std::string& filename)
