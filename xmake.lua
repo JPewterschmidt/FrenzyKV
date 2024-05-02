@@ -14,7 +14,8 @@ add_requires(
     "zstd", 
     "crc32c", 
     "magic_enum", 
-    "libuuid"
+    "libuuid",
+    "protobuf-cpp"
 )
 
 includes(
@@ -45,6 +46,7 @@ target("FrenzyKV")
     )
     add_includedirs( "smhasher/src", { public = true })
     add_files( "smhasher/src/MurmurHash*.cpp")
+    add_rules("protobuf.cpp")
     add_packages(
         "gflags", 
         "concurrentqueue", 
@@ -53,7 +55,8 @@ target("FrenzyKV")
         "zstd", 
         "crc32c", 
         "magic_enum", 
-        "libuuid"
+        "libuuid", 
+        "protobuf-cpp"
     )
     set_warnings("all", "error")
     add_cxflags("-Wconversion", { force = true })
@@ -62,7 +65,9 @@ target("FrenzyKV")
         "io/*.cc", 
         "db/*.cc", 
         "log/*.cc",
-        "persistent/*.cc"
+        "persistent/*.cc", 
+        "proto/*.proto", 
+        { proto_public = false }
     )
 
 target("FrenzyKV-test")

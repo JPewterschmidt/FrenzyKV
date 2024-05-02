@@ -183,6 +183,12 @@ public:
         co_return m_current;
     }
 
+    koios::task<> set_current_version(version_guard v)
+    {
+        auto lk = co_await m_modify_lock.acquire();
+        m_current = ::std::move(v);
+    }
+
     //koios::task<void> GC_with(koios::awaitable_callable_concept auto async_func_file_range)
     koios::task<> GC_with(auto async_func_file_range)
     {

@@ -46,7 +46,7 @@ read_version_descriptor(seq_readable* file)
         // See also test/version.cc ::name_length
         ::std::array<::std::byte, 53> buffer{}; 
         readed = co_await file->read(buffer);
-        result.emplace_back(static_cast<char>(buffer.data()), 52);
+        result.emplace_back(reinterpret_cast<char*>(buffer.data()), 52);
     }
     while (readed);
 
