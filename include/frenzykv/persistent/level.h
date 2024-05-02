@@ -16,9 +16,15 @@
 #include "frenzykv/io/writable.h"
 #include "frenzykv/io/readable.h"
 #include "frenzykv/util/file_guard.h"
+#include "frenzykv/util/uuid.h"
 
 namespace frenzykv
 {
+
+::std::string name_a_sst(level_t l, const file_id_t& id);
+
+::std::optional<::std::pair<level_t, file_id_t>>
+retrive_level_and_id_from_sst_name(const ::std::string& name);
 
 class level
 {
@@ -34,6 +40,8 @@ public:
     koios::task<> start() noexcept;
     koios::task<> finish() noexcept;
 
+    koios::task<::std::string> file_name(const file_guard& f) const;
+
     /*! \brief Return the max number of SSTable of specific level
      *  \retval 0   There's no exact restriction of file number.
      *  \retval !=0 the max number of files.
@@ -45,15 +53,10 @@ public:
      *  \retval !=0 the max size of a sstable.
      */
     koios::task<size_t> allowed_file_size(level_t l) const noexcept;
-    
     koios::task<bool> need_to_comapct(level_t l) const noexcept;
-
     koios::task<size_t> actual_file_number(level_t l) const noexcept;
-
     koios::task<::std::vector<file_guard>> level_file_guards(level_t l) noexcept;
-
     koios::task<size_t> level_number() const noexcept;
-
     koios::task<file_guard> oldest_file(const ::std::vector<file_guard>& files);
     koios::task<file_guard> oldest_file(level_t l);
 
@@ -70,7 +73,6 @@ public:
 
 private:
     koios::task<> delete_file(const file_rep& rep);
-    koios::task<file_id_t> allocate_file_id();
     bool working() const noexcept;
 
     koios::task<bool> level_contains(const file_guard& guard) const
@@ -83,9 +85,7 @@ private:
 private:
     const kvdb_deps* m_deps{};
     ::std::atomic_int m_working{};
-    ::std::unordered_map<file_id_t, ::std::string> m_id_name;
-    ::std::atomic<file_id_t> m_latest_unused_id{};
-    ::std::queue<file_id_t> m_id_recycled;
+    ::std::map<file_id_t, ::std::string> m_id_name;
 
     ::std::vector<::std::vector<::std::unique_ptr<file_rep>>> m_levels_file_rep;
 
