@@ -28,10 +28,8 @@ public:
     koios::task<::std::pair<file_guard, ::std::unique_ptr<seq_writable>>> 
     create_file(level_t level);
 
-    koios::task<> delete_file(const file_rep& rep);
-
-    ::std::unique_ptr<seq_writable> open_write(const file_guard& guard);
-    ::std::unique_ptr<random_readable> open_read(const file_guard& guard);
+    koios::task<::std::unique_ptr<seq_writable>> open_write(const file_guard& guard);
+    koios::task<::std::unique_ptr<random_readable>> open_read(const file_guard& guard);
 
     koios::task<> start() noexcept;
     koios::task<> finish() noexcept;
@@ -40,35 +38,47 @@ public:
      *  \retval 0   There's no exact restriction of file number.
      *  \retval !=0 the max number of files.
      */
-    size_t allowed_file_number(level_t l) const noexcept;
+    koios::task<size_t> allowed_file_number(level_t l) const noexcept;
 
     /*! \brief Return the max bytes size each SSTable of specific level
      *  \retval 0   There's no exact restriction of file number.
      *  \retval !=0 the max size of a sstable.
      */
-    size_t allowed_file_size(level_t l) const noexcept;
+    koios::task<size_t> allowed_file_size(level_t l) const noexcept;
     
-    bool need_to_comapct(level_t l) const noexcept;
+    koios::task<bool> need_to_comapct(level_t l) const noexcept;
 
-    size_t actual_file_number(level_t l) const noexcept;
+    koios::task<size_t> actual_file_number(level_t l) const noexcept;
 
-    ::std::vector<file_guard> level_file_guards(level_t l) noexcept;
+    koios::task<::std::vector<file_guard>> level_file_guards(level_t l) noexcept;
 
-    size_t level_number() const noexcept;
+    koios::task<size_t> level_number() const noexcept;
 
-    file_guard oldest_file(const ::std::vector<file_guard>& files);
-    file_guard oldest_file(level_t l);
+    koios::task<file_guard> oldest_file(const ::std::vector<file_guard>& files);
+    koios::task<file_guard> oldest_file(level_t l);
+
+    /*  \brief Garbage Collect Function
+     *
+     *  This function will delete all the out-dataed files, 
+     *  which were not been refered by any file_guard.
+     *  A version should refer several SSTs.
+     *
+     *  \attention So before version_center been initialized, do not call this function
+     *             Or you will delete all those files.
+     */
+    koios::task<> GC();
 
 private:
+    koios::task<> delete_file(const file_rep& rep);
     koios::task<file_id_t> allocate_file_id();
     bool working() const noexcept;
 
-    bool level_contains(const file_guard& guard) const
+    koios::task<bool> level_contains(const file_guard& guard) const
     {
         return level_contains(guard.rep());
     }
 
-    bool level_contains(const file_rep& rep) const;
+    koios::task<bool> level_contains(const file_rep& rep) const;
 
 private:
     const kvdb_deps* m_deps{};

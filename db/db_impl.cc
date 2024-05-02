@@ -44,6 +44,9 @@ koios::task<::std::error_code>
 db_impl::
 insert(write_batch batch, write_options opt)
 {
+    sequence_number_t seq = m_snapshot_center.get_next_unused_sequence_number(batch.count());
+    batch.set_first_sequence_num(seq);
+
     co_await m_log.insert(batch);
     co_await m_log.may_flush(opt.sync_write);
     
@@ -120,50 +123,57 @@ koios::eager_task<>
 db_impl::
 compact_files(sstable lowlevelt, level_t nextl)
 {
+    // Select files going to be compacted
     ::std::vector<::std::unique_ptr<random_readable>> files;
-    auto merging_tables = m_level.level_file_guards(nextl)
-        | rv::transform(
-            [this, &files](auto&& guard) mutable noexcept { 
-                return files.emplace_back(m_level.open_read(guard)).get();
-            })
-        | rv::transform(
-            [this](auto&& filep) { 
-                assert(filep);
-                return sstable{ m_deps, m_filter_policy.get(), filep }; 
-            })
-        | rv::filter(
-            [&lowlevelt](auto&& tab) { 
-                return lowlevelt.overlapped(tab); 
-            })
-        ;
 
-    ::std::vector<sstable> tables(begin(merging_tables), end(merging_tables));
+    ::std::vector<sstable> tables;
+    for (auto& guard : co_await m_level.level_file_guards(nextl))
+    {
+        random_readable* filep = files.emplace_back(co_await m_level.open_read(guard)).get();
+        sstable potiential_target_table{ m_deps, m_filter_policy.get(), filep };
+        if (lowlevelt.overlapped(potiential_target_table))
+        {
+            tables.emplace_back(::std::move(potiential_target_table));
+        }
+    }
+
     tables.push_back(::std::move(lowlevelt));
     ::std::sort(tables.begin(), tables.end());
 
+    // Do merging.
     auto mem_file = co_await compactor(
-        m_deps, m_level.allowed_file_size(nextl), *m_filter_policy
+        m_deps, co_await m_level.allowed_file_size(nextl), *m_filter_policy
     ).merge_tables(tables);
 
+    // Allocate a real disk file to flush those data to it.
     auto disk_id_file = co_await m_level.create_file(nextl);
     assert(disk_id_file.second);
+
     co_await mem_file->dump_to(*disk_id_file.second);
     co_await disk_id_file.second->sync();
 
-    // TODO: save the file guard
+    // Record and apply version delta. TODO
+    //version_delta delta;
+    //delta.add_compacted_files(merging_tables)
+    //     .add_new_file(disk_id_file.first);
 
+    //version_guard new_version = co_await m_version_center.add_new_version();
+    //new_version += delta;
+
+    // TODO: write a new version descripter
+    
     co_return;
 }
 
 koios::task<> db_impl::may_compact()
 {
-    const size_t level_num = m_level.level_number();
+    const size_t level_num = co_await m_level.level_number();
     for (level_t l{}; l < level_num; ++l)
     {
-        if (m_level.need_to_comapct(l))
+        if (co_await m_level.need_to_comapct(l))
         {
-            auto guard = m_level.oldest_file(l);
-            auto file = m_level.open_read(guard);
+            auto guard = co_await m_level.oldest_file(l);
+            auto file = co_await m_level.open_read(guard);
             assert(file);
             co_await compact_files({ m_deps, m_filter_policy.get(), file.get() }, l);
         }
@@ -194,6 +204,8 @@ db_impl::do_GC()
     //      version center first
     //      level file management second
     co_await m_version_center.GC();
+    co_await m_level.GC();
+
     co_return;
 }
 
@@ -210,8 +222,13 @@ db_impl::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noexc
 koios::task<sequenced_key> 
 db_impl::make_query_key(const_bspan userkey, const read_options& opt)
 {
-    // TODO: combine snapshot_center and version_center
-    co_return {};
+    const auto& snap = opt.snap;
+    co_return { 
+        (snap.valid() 
+            ? snap.sequence_number() 
+            : m_snapshot_center.leatest_used_sequence_number()), 
+        userkey
+    };
 }
 
 } // namespace frenzykv

@@ -13,7 +13,8 @@ add_requires(
     "jemalloc", 
     "zstd", 
     "crc32c", 
-    "magic_enum"
+    "magic_enum", 
+    "libuuid"
 )
 
 includes(
@@ -51,7 +52,8 @@ target("FrenzyKV")
         "spdlog",
         "zstd", 
         "crc32c", 
-        "magic_enum"
+        "magic_enum", 
+        "libuuid"
     )
     set_warnings("all", "error")
     add_cxflags("-Wconversion", { force = true })
