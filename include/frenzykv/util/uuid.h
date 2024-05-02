@@ -27,6 +27,11 @@ public:
     // Lexicaographic order
     friend ::std::strong_ordering operator<=>(const uuid& lhs, const uuid& rhs) noexcept;
 
+    bool operator != (const uuid& other) const noexcept
+    {
+        return ((*this) <=> other) != ::std::strong_ordering::equal;
+    }
+
 private:
     void fill_string() const;
 

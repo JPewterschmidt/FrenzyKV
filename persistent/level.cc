@@ -19,14 +19,14 @@ namespace rv = r::views;
 using namespace ::std::string_literals;
 using namespace ::std::string_view_literals;
 
-static ::std::string name_a_file(level_t l, file_id_t id)
+static ::std::string name_a_file(level_t l, const file_id_t& id)
 {
-    return ::std::format("frzkv-{}-{}-.frzkv", l, id);
+    return ::std::format("frzkv#{}#{}#.frzkvsst", l, id.to_string());
 }
 
 static bool is_name_allcated_here(const ::std::string& name)
 {
-    return name.starts_with("frzkv-") && name.ends_with("-.frzkv");   
+    return name.starts_with("frzkv#") && name.ends_with("#.frzkvsst");   
 }
 
 static 
@@ -38,8 +38,8 @@ retrive_level_and_id_from_name(const ::std::string& name)
         return result;
 
     auto data_view = name 
-        | rv::split("-"s)
-        | rv::transform([](auto&& str) { return ::std::stoi(::std::string{ str.begin(), str.end() }); })
+        | rv::split("#"s)
+        | rv::transform([](auto&& str) { return ::std::string(str.begin(), str.end()); })
         | rv::drop(1)
         | rv::take(2)
         ;
@@ -47,7 +47,7 @@ retrive_level_and_id_from_name(const ::std::string& name)
     auto firsti = begin(data_view);
     auto secondi = next(firsti);
 
-    result.emplace(*firsti, *secondi);
+    result.emplace(::std::stoi(*firsti), file_id_t(*secondi));
 
     return result;
 }
@@ -56,26 +56,6 @@ level::level(const kvdb_deps& deps)
    : m_deps{ &deps }, 
      m_levels_file_rep(m_deps->opt()->max_level)
 {
-}
-
-koios::task<file_id_t> level::allocate_file_id()
-{
-    assert(working());
-    auto shr = co_await m_mutex.acquire_shared();
-    file_id_t result{};
-    if (m_id_recycled.empty())
-    {
-        result = m_latest_unused_id.fetch_add(1);
-    }
-    else 
-    {
-        shr.unlock();
-        auto lk = co_await m_mutex.acquire();
-        result = m_id_recycled.front();
-        m_id_recycled.pop();
-    }
-
-    co_return result;
 }
 
 koios::task<size_t> level::allowed_file_number(level_t l) const noexcept
@@ -100,7 +80,7 @@ level::create_file(level_t level)
     auto shr = co_await m_mutex.acquire_shared();
     assert(level < m_levels_file_rep.size());
     assert(working());
-    file_id_t id = co_await allocate_file_id();
+    file_id_t id{};
     auto name = name_a_file(level, id);
     shr.unlock();
 
@@ -125,9 +105,6 @@ koios::task<> level::delete_file(const file_rep& rep)
 
     auto lk = co_await m_mutex.acquire();
     m_id_name.erase(rep);
-
-    // Recycle file id;
-    m_id_recycled.push(rep.file_id());
 }
 
 koios::task<> level::finish() noexcept
@@ -152,8 +129,6 @@ koios::task<> level::start() noexcept
 
     auto lk = co_await m_mutex.acquire();
 
-    ::std::vector<file_id_t> id_used;
-
     // Go through all the files.
     for (const auto& dir_entry : fs::directory_iterator{ sstables_path() })
     {
@@ -165,18 +140,6 @@ koios::task<> level::start() noexcept
 
         m_levels_file_rep[level_and_id_opt->first]
             .emplace_back(::std::make_unique<file_rep>(level_and_id_opt->first, level_and_id_opt->second));
-
-        id_used.push_back(level_and_id_opt->second);
-    }
-
-    // Calculate the unused id
-    ::std::sort(id_used.begin(), id_used.end());
-    for (auto&& [id1, id2] : id_used | rv::adjacent<2>)
-    {
-        for (file_id_t i = id1 + 1; i < id2; ++i)
-        {
-            m_id_recycled.push(i);
-        }
     }
 
     // Entering working mode.

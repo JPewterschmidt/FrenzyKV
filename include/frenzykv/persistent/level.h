@@ -16,6 +16,7 @@
 #include "frenzykv/io/writable.h"
 #include "frenzykv/io/readable.h"
 #include "frenzykv/util/file_guard.h"
+#include "frenzykv/util/uuid.h"
 
 namespace frenzykv
 {
@@ -70,7 +71,6 @@ public:
 
 private:
     koios::task<> delete_file(const file_rep& rep);
-    koios::task<file_id_t> allocate_file_id();
     bool working() const noexcept;
 
     koios::task<bool> level_contains(const file_guard& guard) const
@@ -83,9 +83,7 @@ private:
 private:
     const kvdb_deps* m_deps{};
     ::std::atomic_int m_working{};
-    ::std::unordered_map<file_id_t, ::std::string> m_id_name;
-    ::std::atomic<file_id_t> m_latest_unused_id{};
-    ::std::queue<file_id_t> m_id_recycled;
+    ::std::map<file_id_t, ::std::string> m_id_name;
 
     ::std::vector<::std::vector<::std::unique_ptr<file_rep>>> m_levels_file_rep;
 
