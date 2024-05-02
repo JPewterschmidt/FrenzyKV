@@ -13,19 +13,21 @@ using namespace koios;
 static toolpex::errret_thrower et;
 
 static toolpex::unique_posix_fd
-open_helper(const auto& opts, const ::std::string& pathstr, mode_t create_mode)
+open_helper(const auto& opts, const ::std::string& pathstr, mode_t create_mode, int extra_opt)
 {
     const int open_flags = O_CREAT 
                          | O_WRONLY
                          | O_APPEND 
-                         | (opts.sync_write ? O_DSYNC : 0);
+                         | (opts.sync_write ? O_DSYNC : 0)
+                         | extra_opt
+                         ;
 
     return { et << ::open(pathstr.c_str(), open_flags, create_mode) };
 }
 
 iouring_writable::
-iouring_writable(::std::filesystem::path path, const kvdb_deps& deps, mode_t create_mode)
-    : posix_base{ open_helper(*deps.opt(), path, create_mode) }, 
+iouring_writable(::std::filesystem::path path, const kvdb_deps& deps, mode_t create_mode, int extra_opt)
+    : posix_base{ open_helper(*deps.opt(), path, create_mode, extra_opt) }, 
       m_deps{ &deps }, 
       m_path{ ::std::move(path) }, 
       m_buffer{ buffer_size_nbytes() }, 

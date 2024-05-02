@@ -20,10 +20,17 @@ namespace frenzykv
 class iouring_writable : public posix_base, public seq_writable
 {
 public:
+    static constexpr mode_t default_create_mode()
+    {
+        return S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH;
+    }
+
+public:
     iouring_writable(::std::filesystem::path path, 
                      const kvdb_deps& opt, 
-                     mode_t create_mode = 
-                        S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+                     mode_t create_mode = default_create_mode(),
+                     int extra_opt = 0
+                    );
     iouring_writable(toolpex::unique_posix_fd fd, const kvdb_deps& opt) noexcept;
 
     const ::std::filesystem::path path() const noexcept { return m_path; }
