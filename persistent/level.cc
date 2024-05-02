@@ -19,7 +19,7 @@ namespace rv = r::views;
 using namespace ::std::string_literals;
 using namespace ::std::string_view_literals;
 
-static ::std::string name_a_file(level_t l, const file_id_t& id)
+::std::string name_a_sst(level_t l, const file_id_t& id)
 {
     return ::std::format("frzkv#{}#{}#.frzkvsst", l, id.to_string());
 }
@@ -29,9 +29,8 @@ static bool is_name_allcated_here(const ::std::string& name)
     return name.starts_with("frzkv#") && name.ends_with("#.frzkvsst");   
 }
 
-static 
 ::std::optional<::std::pair<level_t, file_id_t>>
-retrive_level_and_id_from_name(const ::std::string& name)
+retrive_level_and_id_from_sst_name(const ::std::string& name)
 {
     ::std::optional<::std::pair<level_t, file_id_t>> result;
     if (!is_name_allcated_here(name))
@@ -81,7 +80,7 @@ level::create_file(level_t level)
     assert(level < m_levels_file_rep.size());
     assert(working());
     file_id_t id{};
-    auto name = name_a_file(level, id);
+    auto name = name_a_sst(level, id);
     shr.unlock();
 
     auto file = m_deps->env()->get_seq_writable(sstables_path()/name);
@@ -133,7 +132,7 @@ koios::task<> level::start() noexcept
     for (const auto& dir_entry : fs::directory_iterator{ sstables_path() })
     {
         auto name = dir_entry.path().filename().string();
-        auto level_and_id_opt = retrive_level_and_id_from_name(name);
+        auto level_and_id_opt = retrive_level_and_id_from_sst_name(name);
         if (!level_and_id_opt) 
             continue;
         m_id_name[level_and_id_opt->second] = name;

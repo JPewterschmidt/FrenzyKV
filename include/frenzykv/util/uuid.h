@@ -22,7 +22,7 @@ public:
     uuid& operator=(const uuid& other);
 
     operator ::std::string_view() const { return to_string(); }
-    ::std::string_view to_string() const { fill_string(); return m_str; } 
+    ::std::string_view to_string() const;
 
     // Lexicaographic order
     friend ::std::strong_ordering operator<=>(const uuid& lhs, const uuid& rhs) noexcept;
@@ -30,6 +30,11 @@ public:
     bool operator != (const uuid& other) const noexcept
     {
         return ((*this) <=> other) != ::std::strong_ordering::equal;
+    }
+
+    bool operator == (const uuid& other) const noexcept
+    {
+        return ((*this) <=> other) == ::std::strong_ordering::equal;
     }
 
 private:

@@ -4,6 +4,8 @@
 namespace frenzykv
 {
 
+static constexpr size_t uuid_length = 36;
+
 uuid::uuid() noexcept
 {
     ::uuid_generate(m_uuid);
@@ -12,7 +14,7 @@ uuid::uuid() noexcept
 uuid::uuid(::std::string str)
     : m_str{ ::std::move(str) }
 {
-    const int ret = ::uuid_parse(str.data(), m_uuid);
+    const int ret = ::uuid_parse(m_str.c_str(), m_uuid);
     if (ret) [[unlikely]] throw koios::exception{ "uuid parse failed." };
 }
 
@@ -44,10 +46,16 @@ uuid& uuid::operator=(const uuid& other)
     return *this;
 }
 
+::std::string_view uuid::to_string() const 
+{ 
+    fill_string(); 
+    return ::std::string_view{ m_str.data(), uuid_length };
+}
+
 void uuid::fill_string() const
 {
     if (!m_str.empty()) return;
-    m_str = ::std::string(37, 0);
+    m_str = ::std::string(uuid_length + 1, 0);
     ::uuid_unparse(m_uuid, m_str.data());
 }
 

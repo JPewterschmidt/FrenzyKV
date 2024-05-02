@@ -21,6 +21,11 @@
 namespace frenzykv
 {
 
+::std::string name_a_sst(level_t l, const file_id_t& id);
+
+::std::optional<::std::pair<level_t, file_id_t>>
+retrive_level_and_id_from_sst_name(const ::std::string& name);
+
 class level
 {
 public:
