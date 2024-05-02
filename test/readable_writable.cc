@@ -17,7 +17,8 @@ namespace
     in_mem_rw r{3};
     ::std::string filename = "testfile.txt";
     kvdb_deps deps;
-    iouring_writable w{filename, deps};
+    auto optp = deps.opt();
+    iouring_writable w{filename, *optp};
     
     eager_task<bool> env_setup()
     {

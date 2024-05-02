@@ -4,7 +4,7 @@
 #include "toolpex/unique_posix_fd.h"
 #include "koios/task.h"
 #include "koios/coroutine_mutex.h"
-#include "frenzykv/kvdb_deps.h"
+#include "frenzykv/options.h"
 #include "frenzykv/io/writable.h"
 #include "frenzykv/io/inner_buffer.h"
 #include "frenzykv/posix_base.h"
@@ -27,11 +27,11 @@ public:
 
 public:
     iouring_writable(::std::filesystem::path path, 
-                     const kvdb_deps& opt, 
+                     const options& opt, 
                      mode_t create_mode = default_create_mode(),
                      int extra_opt = 0
                     );
-    iouring_writable(toolpex::unique_posix_fd fd, const kvdb_deps& opt) noexcept;
+    iouring_writable(toolpex::unique_posix_fd fd, const options& opt) noexcept;
 
     const ::std::filesystem::path path() const noexcept { return m_path; }
     virtual koios::task<> close() override;
@@ -58,7 +58,7 @@ private:
     koios::task<> flush_valid();
 
 private:
-    const kvdb_deps* m_deps{};
+    const options* m_opt{};
     ::std::filesystem::path m_path;
     buffer<> m_buffer;
     outbuf_adapter m_streambuf;

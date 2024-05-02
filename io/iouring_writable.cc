@@ -13,7 +13,7 @@ using namespace koios;
 static toolpex::errret_thrower et;
 
 static toolpex::unique_posix_fd
-open_helper(const auto& opts, const ::std::string& pathstr, mode_t create_mode, int extra_opt)
+open_helper(const options& opts, const ::std::string& pathstr, mode_t create_mode, int extra_opt)
 {
     const int open_flags = O_CREAT 
                          | O_WRONLY
@@ -26,9 +26,9 @@ open_helper(const auto& opts, const ::std::string& pathstr, mode_t create_mode, 
 }
 
 iouring_writable::
-iouring_writable(::std::filesystem::path path, const kvdb_deps& deps, mode_t create_mode, int extra_opt)
-    : posix_base{ open_helper(*deps.opt(), path, create_mode, extra_opt) }, 
-      m_deps{ &deps }, 
+iouring_writable(::std::filesystem::path path, const options& opt, mode_t create_mode, int extra_opt)
+    : posix_base{ open_helper(opt, path, create_mode, extra_opt) }, 
+      m_opt{ &opt }, 
       m_path{ ::std::move(path) }, 
       m_buffer{ buffer_size_nbytes() }, 
       m_streambuf{ m_buffer }
@@ -36,9 +36,9 @@ iouring_writable(::std::filesystem::path path, const kvdb_deps& deps, mode_t cre
 }
 
 iouring_writable::
-iouring_writable(toolpex::unique_posix_fd fd, const kvdb_deps& deps) noexcept
+iouring_writable(toolpex::unique_posix_fd fd, const options& opt) noexcept
     : posix_base{ ::std::move(fd) },
-      m_deps{ &deps }, 
+      m_opt{ &opt }, 
       m_buffer{ buffer_size_nbytes() }, 
       m_streambuf{ m_buffer }
 {
@@ -113,12 +113,12 @@ append(::std::span<const char> buffer)
 
 bool iouring_writable::need_buffered() const noexcept
 {
-    return m_deps->opt()->need_buffered_write;
+    return m_opt->need_buffered_write;
 }
 
 size_t iouring_writable::buffer_size_nbytes() const noexcept
 {
-    return need_buffered() ? m_deps->opt()->disk_block_bytes : 0;
+    return need_buffered() ? m_opt->disk_block_bytes : 0;
 }
 
 koios::task<>
