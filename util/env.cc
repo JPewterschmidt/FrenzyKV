@@ -47,6 +47,16 @@ public:
         return ::std::make_unique<iouring_writable>(p, *m_opt);
 	}
 
+    ::std::unique_ptr<seq_writable>
+    get_truncate_seq_writable(const ::std::filesystem::path& p) override
+    {
+        return ::std::make_unique<iouring_writable>(
+            p, *m_opt, 
+            iouring_writable::default_create_mode(), 
+            O_TRUNC
+        );
+    }
+
     koios::task<>
 	delete_file(const fs::path& p) override
 	{
