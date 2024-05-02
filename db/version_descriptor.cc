@@ -39,4 +39,13 @@ read_version_descriptor(seq_readable* file)
     co_return {};
 }
 
+koios::task<> set_current_version_file(const kvdb_deps& deps, const ::std::string& filename)
+{
+    auto file = deps.env()->get_truncate_seq_writable(version_path()/"current_version_descriptor");
+    co_await file->append(filename);
+    co_await file->sync();
+    
+    co_return;
+}
+
 } // namespace frenzykv
