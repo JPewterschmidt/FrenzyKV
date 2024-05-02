@@ -1,5 +1,8 @@
 #include <ranges>
+#include <format>
+
 #include "frenzykv/db/version_descriptor.h"
+#include "frenzykv/util/uuid.h"
 
 namespace rv = ::std::ranges::views;
 using namespace ::std::string_view_literals;
@@ -46,6 +49,18 @@ koios::task<> set_current_version_file(const kvdb_deps& deps, const ::std::strin
     co_await file->sync();
     
     co_return;
+}
+
+static constexpr auto vd_name_pattern = "frzkv#{}#.frzkvver"sv;
+
+::std::string get_version_descriptor_name()
+{
+    return ::std::format(vd_name_pattern, uuid{}.to_string());
+}
+
+bool is_version_descriptor_name(::std::string_view name)
+{
+    return name.ends_with("#.frzkvver");
 }
 
 } // namespace frenzykv

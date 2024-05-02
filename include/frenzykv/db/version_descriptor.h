@@ -17,6 +17,8 @@ koios::task<bool> write_version_descriptor(const version_rep& version, const lev
 koios::task<bool> write_version_descriptor(::std::vector<::std::string> filenames, seq_writable* file);
 koios::task<::std::vector<::std::string>> read_version_descriptor(seq_readable* file);
 koios::task<> set_current_version_file(const kvdb_deps& deps, const ::std::string& filename);
+::std::string get_version_descriptor_name();
+bool is_version_descriptor_name(::std::string_view name);
 
 } // namespace frenzykv
 
