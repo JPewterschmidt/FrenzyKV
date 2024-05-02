@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <iterator>
 
+#include "koios/iouring_awaitables.h"
+
 #include "frenzykv/statistics.h"
 #include "frenzykv/error_category.h"
 #include "frenzykv/options.h"
@@ -168,6 +170,7 @@ compact_files(sstable lowlevelt, level_t nextl)
     auto version_desc = m_deps.env()->get_seq_writable(version_path()/version_desc_name);
     [[maybe_unused]] bool ret = co_await write_version_descriptor(new_version.rep(), m_level, version_desc.get());
     assert(ret);
+    new_version.rep().set_version_desc_name(version_desc_name);
 
     // Set current version
     co_await set_current_version_file(m_deps, version_desc_name);
@@ -212,7 +215,13 @@ db_impl::back_ground_GC(::std::stop_token tk)
 koios::task<> 
 db_impl::do_GC()
 {
-    co_await m_version_center.GC();
+    auto delete_garbage_version_desc = [](const auto& vrep) -> koios::task<> { 
+        assert(vrep.approx_ref_count() == 0);
+        co_await koios::uring::unlink(version_path()/vrep.version_desc_name());
+    };
+
+    // delete those garbage version descriptor files
+    co_await m_version_center.GC_with(delete_garbage_version_desc);
     co_await m_level.GC();
 
     co_return;

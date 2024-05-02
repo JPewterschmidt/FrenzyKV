@@ -74,11 +74,18 @@ public:
         return operator+=(delta);
     }
 
+    void set_version_desc_name(::std::string name) noexcept
+    {
+        m_version_desc_name = ::std::move(name);
+    }
+    
+    ::std::string_view version_desc_name() const noexcept { return m_version_desc_name; }
     auto approx_ref_count() const noexcept { return m_ref.load(::std::memory_order_relaxed); }
 
 private:
     ::std::vector<file_guard> m_files;
     toolpex::ref_count m_ref;
+    ::std::string m_version_desc_name;
 };
 
 class version_guard : public toolpex::move_only
@@ -186,6 +193,7 @@ public:
     koios::task<> set_current_version(version_guard v)
     {
         auto lk = co_await m_modify_lock.acquire();
+        assert(!v.rep().version_desc_name().empty());
         m_current = ::std::move(v);
     }
 
@@ -195,7 +203,7 @@ public:
         namespace rv = ::std::ranges::views;
         auto lk = co_await m_modify_lock.acquire();
 
-        for (const auto& out_dated_version : m_versions 
+        for (const version_rep& out_dated_version : m_versions 
             | rv::take(m_versions.size())
             | rv::filter(is_garbage))
         {
