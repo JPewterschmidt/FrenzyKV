@@ -19,7 +19,7 @@ using namespace koios;
 using namespace frenzykv;
 using namespace ::std::string_view_literals;
 
-koios::task<> file_test()
+koios::eager_task<> file_test()
 {
     ::std::unique_ptr<kvdb_deps> deps = ::std::make_unique<kvdb_deps>();
     auto file = deps->env()->get_seq_writable("test");

@@ -4,6 +4,7 @@
 
 #include "frenzykv/db/version.h"
 #include "frenzykv/db/version_descriptor.h"
+#include "frenzykv/io/in_mem_rw.h"
 
 namespace 
 {
@@ -76,4 +77,27 @@ TEST(version_descriptor_test, name_length)
     ASSERT_EQ(name1.size(), name2.size())  // 52
         << " name1 sz = " << name1.size()
         << " name2 sz = " << name2.size();
+}
+
+static koios::task<bool> descriptor_io_test()
+{
+    ::std::vector namevec{ 
+        get_version_descriptor_name(), 
+        get_version_descriptor_name(), 
+        get_version_descriptor_name(), 
+        get_version_descriptor_name(), 
+    };
+
+    in_mem_rw file;
+
+    co_await write_version_descriptor(namevec, &file);
+    
+    auto vec2 = co_await read_version_descriptor(&file);
+
+    co_return vec2 == namevec;
+}
+
+TEST(version_descriptor, descriptor_io)
+{
+    ASSERT_TRUE(descriptor_io_test().result());
 }

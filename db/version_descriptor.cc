@@ -30,25 +30,27 @@ write_version_descriptor(
     constexpr auto newline = "\n"sv;
     for (const auto& name : filenames)
     {
-        co_await file->append(name);
+        size_t wrote = co_await file->append(name);
+        if (wrote != name.size())
+            co_return false;
         co_await file->append(newline);
     }
     co_await file->flush();
+    co_return true;
 }
 
 koios::task<::std::vector<::std::string>> 
 read_version_descriptor(seq_readable* file)
 {
     ::std::vector<::std::string> result;
-    size_t readed{};
-    do
+    size_t readed{1};
+    while (readed)
     {
         // See also test/version.cc ::name_length
         ::std::array<::std::byte, 53> buffer{}; 
         readed = co_await file->read(buffer);
-        result.emplace_back(reinterpret_cast<char*>(buffer.data()), 52);
+        if (readed) result.emplace_back(reinterpret_cast<char*>(buffer.data()), 52);
     }
-    while (readed);
 
     co_return result;
 }
