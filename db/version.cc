@@ -2,6 +2,7 @@
 #include <cassert>
 
 #include "frenzykv/db/version.h"
+#include "frenzykv/db/version_descriptor.h"
 
 namespace frenzykv
 {
@@ -29,6 +30,16 @@ koios::task<version_guard> version_center::add_new_version()
     auto lk = co_await m_modify_lock.acquire();
     m_current = { m_versions.emplace_back(m_versions.back()) };
     co_return m_current;
+}
+
+koios::task<> version_center::load_current_version()
+{
+    auto lk = co_await m_modify_lock.acquire();
+    version_delta delta = co_await get_current_version(m_file_center->deps());
+    version_rep rep;
+    rep += delta;
+    assert(m_versions.empty());
+    m_current = m_versions.emplace_back(::std::move(rep));
 }
 
 } // namespace frenzykv

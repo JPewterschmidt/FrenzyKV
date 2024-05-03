@@ -34,7 +34,8 @@ db_impl::db_impl(::std::string dbname, const options& opt)
       m_log{ m_deps, m_deps.env()->get_seq_writable(prewrite_log_dir().path()/"0001-test.frzkvlog") }, 
       m_mem{ ::std::make_unique<memtable>(m_deps) }, 
       m_filter_policy{ make_bloom_filter(64) }, 
-      m_level{ m_deps }
+      m_file_center{ m_deps }, 
+      m_version_center{ m_file_center }
 {
 }
 

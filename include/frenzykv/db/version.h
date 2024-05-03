@@ -17,6 +17,7 @@
 #include "frenzykv/types.h"
 #include "frenzykv/kvdb_deps.h"
 #include "frenzykv/util/file_guard.h"
+#include "frenzykv/util/file_center.h"
 
 namespace frenzykv
 {
@@ -59,6 +60,8 @@ private:
 class version_rep
 {
 public:
+    version_rep() = default;
+
     // It should be copyable, used by creating a nwe version based on an old one.
     version_rep(const version_rep& other)
         : m_files{ other.m_files }
@@ -167,11 +170,15 @@ private:
 class version_center
 {
 public:
-    version_center() noexcept = default;
+    version_center(file_center& fc) noexcept
+        : m_file_center{ &fc }
+    {
+    }
 
     version_center(version_center&& other) noexcept
         : m_versions{ ::std::move(other.m_versions) }, 
-          m_current{ ::std::move(other.m_current) }
+          m_current{ ::std::move(other.m_current) }, 
+          m_file_center{ ::std::exchange(other.m_file_center, nullptr) }
     {
     }
 
@@ -179,6 +186,7 @@ public:
     {
         m_versions = ::std::move(other.m_versions);
         m_current = ::std::move(other.m_current);
+        m_file_center = ::std::exchange(other.m_file_center, nullptr);
         return *this;
     }
 
@@ -189,6 +197,8 @@ public:
         auto lk = co_await m_modify_lock.acquire_shared();
         co_return m_current;
     }
+
+    koios::task<> load_current_version();
 
     koios::task<> set_current_version(version_guard v)
     {
@@ -235,6 +245,7 @@ private:
 private:
     ::std::list<version_rep> m_versions;
     version_guard m_current;
+    file_center* m_file_center{};
 
     // If you want to add or remove a version, acquire a unique lock
     // Otherwise acquire a shared lock.

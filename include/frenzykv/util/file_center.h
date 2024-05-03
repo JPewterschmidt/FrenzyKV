@@ -10,9 +10,11 @@
 #include "toolpex/move_only.h"
 
 #include "koios/task.h"
+#include "koios/coroutine_shared_mutex.h"
 
-#include "frenzykv/file_guard.h"
+#include "frenzykv/util/file_guard.h"
 #include "frenzykv/types.h"
+#include "frenzykv/kvdb_deps.h"
 
 namespace frenzykv
 {
@@ -31,10 +33,15 @@ public:
     {
     }
 
+    const kvdb_deps& deps() const noexcept { return *m_deps; }
     koios::task<> load_files();
 
+    koios::task<::std::vector<file_guard>>
+    get_file_guards(::std::ranges::range auto const& names);
+
 private:
-    const kvdb_deps& m_deps;
+    const kvdb_deps* m_deps;
+    koios::shared_mutex m_mutex;
     ::std::map<::std::string, ::std::unique_ptr<file_rep>> m_name_rep;
 };
 

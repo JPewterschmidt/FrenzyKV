@@ -27,7 +27,7 @@ bool is_sst_name(const ::std::string& name)
 retrive_level_and_id_from_sst_name(const ::std::string& name)
 {
     ::std::optional<::std::pair<level_t, file_id_t>> result;
-    if (!is_name_allcated_here(name))
+    if (!is_sst_name(name))
         return result;
 
     auto data_view = name 
@@ -47,6 +47,7 @@ retrive_level_and_id_from_sst_name(const ::std::string& name)
 
 koios::task<> file_center::load_files()
 {
+    auto lk = co_await m_mutex.acquire();
     // Go through all the files.
     for (const auto& dir_entry : fs::directory_iterator{ sstables_path() })
     {
@@ -58,6 +59,22 @@ koios::task<> file_center::load_files()
             level_and_id_opt->first, level_and_id_opt->second, name
         );
     }
+
+    co_return;
+}
+
+koios::task<::std::vector<file_guard>>
+file_center::get_file_guards(::std::ranges::range auto const& names)
+{
+    ::std::vector<file_guard> result;
+    auto lk = co_await m_mutex.acquire_shared();
+
+    for (const auto& name : names)
+    {
+        result.emplace_back(m_name_rep.at(name).get());
+    }
+
+    co_return result;
 }
 
 } // namespace frenzykv
