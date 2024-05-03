@@ -42,9 +42,6 @@ public:
 
     koios::task<::std::string> file_name(const file_guard& f) const;
 
-    // TODO
-    koios::task<file_guard> get_file_guard(const ::std::string& name) const;
-
     /*! \brief Return the max number of SSTable of specific level
      *  \retval 0   There's no exact restriction of file number.
      *  \retval !=0 the max number of files.
@@ -89,7 +86,6 @@ private:
     const kvdb_deps* m_deps{};
     ::std::atomic_int m_working{};
     ::std::map<file_id_t, ::std::string> m_id_name;
-    ::std::unordered_map<::std::string, file_id_t> m_name_id;
 
     ::std::vector<::std::vector<::std::unique_ptr<file_rep>>> m_levels_file_rep;
 

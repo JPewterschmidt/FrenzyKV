@@ -57,12 +57,6 @@ koios::task<::std::string> level::file_name(const file_guard& f) const
     co_return m_id_name.at(f.file_id());
 }
 
-koios::task<file_guard> level::get_file_guard(const ::std::string& name) const
-{
-    auto lk = co_await m_mutex.acquire_shared();
-    co_return m_name_id.at(name);
-}
-
 level::level(const kvdb_deps& deps) 
    : m_deps{ &deps }, 
      m_levels_file_rep(m_deps->opt()->max_level)
@@ -99,8 +93,7 @@ level::create_file(level_t level)
 
     auto lk = co_await m_mutex.acquire();
     m_id_name[id] = name;
-    m_name_id[name] = id;
-    auto& rep = m_levels_file_rep[level].emplace_back(::std::make_unique<file_rep>(level, id));
+    auto& rep = m_levels_file_rep[level].emplace_back(::std::make_unique<file_rep>(level, id, name));
 
     co_return { *rep, ::std::move(file) };
 }
@@ -117,7 +110,6 @@ koios::task<> level::delete_file(const file_rep& rep)
 
     auto lk = co_await m_mutex.acquire();
     m_id_name.erase(rep);
-    m_name_id.erase(name);
 }
 
 koios::task<> level::finish() noexcept
@@ -150,10 +142,9 @@ koios::task<> level::start() noexcept
         if (!level_and_id_opt) 
             continue;
         m_id_name[level_and_id_opt->second] = name;
-        m_name_id[name] = level_and_id_opt->second;
 
         m_levels_file_rep[level_and_id_opt->first]
-            .emplace_back(::std::make_unique<file_rep>(level_and_id_opt->first, level_and_id_opt->second));
+            .emplace_back(::std::make_unique<file_rep>(level_and_id_opt->first, level_and_id_opt->second, name));
     }
 
     // Entering working mode.

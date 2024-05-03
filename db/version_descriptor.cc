@@ -84,11 +84,11 @@ koios::task<version_delta> get_current_version(const kvdb_deps& deps, const leve
     const auto name_vec = co_await read_version_descriptor(version_file.get());
 
     version_delta result;
-    for (const auto& name : name_vec)
-    {
-        result.add_new_files(co_await level.get_file_guard(name);
-    }
-    return result;
+    //for (const auto& name : name_vec)
+    //{
+    //    result.add_new_file(co_await l.get_file_guard(name));
+    //}
+    co_return result;
 }
 
 ::std::string get_version_descriptor_name()

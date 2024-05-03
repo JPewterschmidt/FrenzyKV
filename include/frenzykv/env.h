@@ -63,7 +63,7 @@ public:
 
 inline consteval ::std::string_view current_version_descriptor_name()
 {
-    return "current_version_descriptor"sv;
+    return "current_version_descriptor";
 }
 
 class env_exception : public koios::exception

@@ -15,8 +15,8 @@ class file_rep
 public:
     constexpr file_rep() noexcept = default;
 
-    file_rep(level_t l, file_id_t id) noexcept
-        : m_level{ l }, m_fileid{ id }
+    file_rep(level_t l, file_id_t id, ::std::string name) noexcept
+        : m_level{ l }, m_fileid{ id }, m_name{ ::std::move(name) }
     {
     }
 
@@ -25,9 +25,11 @@ public:
     auto approx_ref_count() const noexcept { return m_ref.load(::std::memory_order_relaxed); }
     file_id_t file_id() const noexcept { return m_fileid; }
     level_t level() const noexcept { return m_level; }
+    ::std::string_view name() const noexcept { return m_name; }
     
     operator file_id_t() const noexcept { return file_id(); }
     operator level_t() const noexcept { return level(); }
+    operator ::std::string_view() const noexcept { return name(); }
 
     bool operator==(const file_rep& other) const noexcept
     {
@@ -51,6 +53,7 @@ private:
     level_t m_level{};
     file_id_t m_fileid{};
     toolpex::ref_count m_ref;
+    ::std::string m_name{};
 };
 
 class file_guard
