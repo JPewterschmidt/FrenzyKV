@@ -12,6 +12,7 @@
 #include "frenzykv/log/logger.h"
 #include "frenzykv/io/in_mem_rw.h"
 #include "frenzykv/util/record_writer_wrapper.h"
+#include "frenzykv/util/file_center.h"
 
 #include "frenzykv/db.h"
 #include "frenzykv/db/kv_entry.h"
@@ -21,7 +22,6 @@
 #include "frenzykv/db/version.h"
 #include "frenzykv/db/snapshot.h"
 
-#include "frenzykv/persistent/level.h"
 #include "frenzykv/persistent/sstable.h"
 
 namespace frenzykv
@@ -42,8 +42,6 @@ public:
 private:
     koios::task<sequenced_key> make_query_key(const_bspan userkey, const read_options& opt);
     koios::task<> flush_imm_to_sstable();
-    koios::task<> may_compact();
-    koios::eager_task<> compact_files(sstable lowlevelt, level_t nextl);
     koios::task<> merge_tables(::std::vector<sstable>& tables, level_t target_l);
 
     koios::task<::std::unique_ptr<in_mem_rw>>
@@ -64,8 +62,8 @@ private:
 
     // other===============================
     ::std::unique_ptr<filter_policy> m_filter_policy;
-    level m_level;
     ::std::stop_source m_bg_gc_stop_src;
+    file_center m_file_center;
     version_center m_version_center;
     snapshot_center m_snapshot_center;
 };  

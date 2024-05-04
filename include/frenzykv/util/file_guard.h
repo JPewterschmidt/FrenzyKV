@@ -5,7 +5,12 @@
 
 #include "toolpex/ref_count.h"
 
+#include "koios/task.h"
+
 #include "frenzykv/types.h"
+#include "frenzykv/env.h"
+#include "frenzykv/io/readable.h"
+#include "frenzykv/io/writable.h"
 
 namespace frenzykv
 {
@@ -15,8 +20,8 @@ class file_rep
 public:
     constexpr file_rep() noexcept = default;
 
-    file_rep(level_t l, file_id_t id) noexcept
-        : m_level{ l }, m_fileid{ id }
+    file_rep(level_t l, file_id_t id, ::std::string name) noexcept
+        : m_level{ l }, m_fileid{ id }, m_name{ ::std::move(name) }
     {
     }
 
@@ -25,9 +30,14 @@ public:
     auto approx_ref_count() const noexcept { return m_ref.load(::std::memory_order_relaxed); }
     file_id_t file_id() const noexcept { return m_fileid; }
     level_t level() const noexcept { return m_level; }
+    ::std::string_view name() const noexcept { return m_name; }
     
     operator file_id_t() const noexcept { return file_id(); }
     operator level_t() const noexcept { return level(); }
+    operator ::std::string_view() const noexcept { return name(); }
+
+    ::std::unique_ptr<random_readable> open_read(env* e) const;
+    ::std::unique_ptr<seq_writable> open_write(env* e) const;
 
     bool operator==(const file_rep& other) const noexcept
     {
@@ -51,6 +61,7 @@ private:
     level_t m_level{};
     file_id_t m_fileid{};
     toolpex::ref_count m_ref;
+    ::std::string m_name{};
 };
 
 class file_guard
@@ -103,9 +114,11 @@ public:
 
     auto& rep() noexcept { assert(m_rep); return *m_rep; }
     const auto& rep() const noexcept { assert(m_rep); return *m_rep; }
+    const ::std::string_view name() const noexcept { assert(m_rep); return m_rep->name(); }
 
     operator file_id_t() const noexcept { return file_id(); }
     operator level_t() const noexcept { return level(); }
+    operator ::std::string_view() const { return name(); }
 
     bool operator==(const file_guard& other) const noexcept
     {
@@ -120,6 +133,18 @@ public:
     bool operator<(const file_guard& other) const noexcept
     {
         return (*m_rep < *other.m_rep);
+    }
+
+    ::std::unique_ptr<random_readable> open_read(env* e) const
+    {
+        assert(m_rep);
+        return m_rep->open_read(e);
+    }
+
+    ::std::unique_ptr<seq_writable> open_write(env* e) const
+    {
+        assert(m_rep);
+        return m_rep->open_write(e);
     }
 
 private:

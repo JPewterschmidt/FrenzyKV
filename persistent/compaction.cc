@@ -1,12 +1,36 @@
 #include <list>
 #include <ranges>
 #include <cassert>
+#include <vector>
+#include <ranges>
 
 #include "frenzykv/persistent/compaction.h"
+#include "frenzykv/persistent/compaction_policy.h"
 #include "frenzykv/persistent/sstable.h"
+
+namespace rv = ::std::ranges::views;
 
 namespace frenzykv
 {
+
+koios::task<::std::unique_ptr<in_mem_rw>> 
+compactor::compact(version_guard version, level_t from)
+{
+    auto policy = make_default_compaction_policy();
+    auto file_guards = policy->compacting_files(version, from);
+
+    auto fileps_view = file_guards
+       | rv::transform([this](auto&& fguard) { 
+             return fguard.open_read(m_deps->env().get());
+         });
+    
+    ::std::vector files(begin(fileps_view), end(fileps_view));
+    ::std::vector<sstable> tables;
+    for (auto& filep : files)
+        tables.emplace_back(*m_deps, m_filter_policy, filep.get());
+
+    co_return co_await merge_tables(tables);
+}
 
 koios::task<::std::unique_ptr<in_mem_rw>>
 compactor::

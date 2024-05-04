@@ -61,6 +61,11 @@ public:
 ::std::filesystem::path config_path();
 ::std::filesystem::path version_path();
 
+inline consteval ::std::string_view current_version_descriptor_name()
+{
+    return "current_version_descriptor";
+}
+
 class env_exception : public koios::exception
 {
 public:

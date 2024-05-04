@@ -12,12 +12,12 @@ namespace frenzykv
 {
 
 koios::task<bool> 
-write_version_descriptor(const version_rep& version, const level& l, seq_writable* file)
+write_version_descriptor(const version_rep& version, seq_writable* file)
 {
     ::std::vector<::std::string> name_vec;
     for (const auto& guard : version.files())
     {
-        name_vec.emplace_back(co_await l.file_name(guard));
+        name_vec.emplace_back(guard);
     }
     co_return co_await write_version_descriptor(::std::move(name_vec), file);
 }
@@ -30,39 +30,66 @@ write_version_descriptor(
     constexpr auto newline = "\n"sv;
     for (const auto& name : filenames)
     {
-        co_await file->append(name);
+        size_t wrote = co_await file->append(name);
+        if (wrote != name.size())
+            co_return false;
         co_await file->append(newline);
     }
     co_await file->flush();
+    co_return true;
 }
 
 koios::task<::std::vector<::std::string>> 
 read_version_descriptor(seq_readable* file)
 {
     ::std::vector<::std::string> result;
-    size_t readed{};
-    do
+    size_t readed{1};
+    while (readed)
     {
         // See also test/version.cc ::name_length
         ::std::array<::std::byte, 53> buffer{}; 
         readed = co_await file->read(buffer);
-        result.emplace_back(reinterpret_cast<char*>(buffer.data()), 52);
+        if (readed) result.emplace_back(reinterpret_cast<char*>(buffer.data()), 52);
     }
-    while (readed);
 
     co_return result;
 }
 
+static constexpr auto vd_name_pattern = "frzkv#{}#.frzkvver"sv;
+static constexpr size_t vd_name_length = 52; // See test of version descriptor
+
 koios::task<> set_current_version_file(const kvdb_deps& deps, const ::std::string& filename)
 {
-    auto file = deps.env()->get_truncate_seq_writable(version_path()/"current_version_descriptor");
+    auto file = deps.env()->get_truncate_seq_writable(version_path()/current_version_descriptor_name());
     co_await file->append(filename);
     co_await file->sync();
     
     co_return;
 }
 
-static constexpr auto vd_name_pattern = "frzkv#{}#.frzkvver"sv;
+koios::task<version_delta> get_current_version(const kvdb_deps& deps)
+{
+    auto file = deps.env()->get_seq_readable(version_path()/current_version_descriptor_name());
+    ::std::string name(vd_name_length, 0);
+    auto sp = ::std::as_writable_bytes(::std::span{name}.subspan(52));
+    const size_t readed = co_await file->read(sp);
+    assert(readed == vd_name_length || readed == 0);
+    if (readed == 0)
+    {
+        co_return {};
+    }
+    name.resize(vd_name_length);
+    auto version_file = deps.env()->get_seq_readable(version_path()/name);
+    assert(version_file->file_size() != 0);
+    const auto name_vec = co_await read_version_descriptor(version_file.get());
+
+    version_delta result;
+    //for (const auto& name : name_vec)
+    //{
+    //    result.add_new_file(co_await l.get_file_guard(name));
+    //}
+    co_return result;
+}
 
 ::std::string get_version_descriptor_name()
 {

@@ -3,8 +3,9 @@
 
 #include "koios/task.h"
 
+#include "frenzykv/types.h"
 #include "frenzykv/io/in_mem_rw.h"
-#include "frenzykv/persistent/level.h"
+#include "frenzykv/db/version.h"
 #include "frenzykv/persistent/sstable.h"
 #include "frenzykv/persistent/sstable_builder.h"
 
@@ -14,11 +15,19 @@ namespace frenzykv
 class compactor
 {
 public:
-    compactor(const kvdb_deps& deps, uintmax_t newfilesizebound, filter_policy& filter) noexcept
-        : m_deps{ &deps }, m_newfilesizebound{ newfilesizebound }, m_filter_policy{ &filter }
+    compactor(const kvdb_deps& deps, 
+              uintmax_t newfilesizebound, 
+              filter_policy& filter) noexcept
+        : m_deps{ &deps }, 
+          m_newfilesizebound{ newfilesizebound }, 
+          m_filter_policy{ &filter }
     {
     }
 
+    koios::task<::std::unique_ptr<in_mem_rw>> 
+    compact(version_guard version, level_t from);
+
+//private: // TODO: rewrite the tests
     /*  \brief  Merge sstables
      *  \param  tables a vector conatins several sstables.
      *  \return A `in_mem_rw` contains mergging result. 
