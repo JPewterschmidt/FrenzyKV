@@ -36,6 +36,9 @@ public:
     operator level_t() const noexcept { return level(); }
     operator ::std::string_view() const noexcept { return name(); }
 
+    ::std::unique_ptr<random_readable> open_read(env* e) const;
+    ::std::unique_ptr<seq_writable> open_write(env* e) const;
+
     bool operator==(const file_rep& other) const noexcept
     {
         if (this == &other) return true;
@@ -130,7 +133,17 @@ public:
         return (*m_rep < *other.m_rep);
     }
 
-    // TODO: openread and openwrite
+    ::std::unique_ptr<random_readable> open_read(env* e) const
+    {
+        assert(m_rep);
+        return m_rep->open_read(e);
+    }
+
+    ::std::unique_ptr<seq_writable> open_write(env* e) const
+    {
+        assert(m_rep);
+        return m_rep->open_write(e);
+    }
 
 private:
     void release() noexcept
