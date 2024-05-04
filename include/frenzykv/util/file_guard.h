@@ -25,9 +25,30 @@ public:
     {
     }
 
+    auto approx_ref_count() const noexcept { return m_ref.load(::std::memory_order_relaxed); }
+
+    file_rep(file_rep&& other) noexcept
+        : m_level{ other.m_level }, 
+          m_fileid{ ::std::move(other.m_fileid) }, 
+          m_name{ ::std::move(other.m_name) }
+    {
+        assert(other.approx_ref_count() == 0);
+    }
+
+    file_rep& operator=(file_rep&& other) noexcept
+    {
+        assert(approx_ref_count() == 0);
+        assert(other.approx_ref_count() == 0);
+
+        m_level = other.m_level;
+        m_fileid = ::std::move(other.m_fileid);
+        m_name = ::std::move(other.m_name);
+
+        return *this;
+    }
+
     auto ref() { return m_ref++; }
     auto deref() { return m_ref--; }
-    auto approx_ref_count() const noexcept { return m_ref.load(::std::memory_order_relaxed); }
     file_id_t file_id() const noexcept { return m_fileid; }
     level_t level() const noexcept { return m_level; }
     ::std::string_view name() const noexcept { return m_name; }
