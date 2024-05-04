@@ -8,6 +8,17 @@
 namespace frenzykv
 {
 
+koios::task<::std::unique_ptr<in_mem_rw>> 
+compactor::compact(version_guard version, level_t from)
+{
+    [[maybe_unused]] const level_t to = from + 1;
+    const auto& files = version.files();
+    
+    // TODO compaction policy
+
+    co_return {};
+}
+
 koios::task<::std::unique_ptr<in_mem_rw>>
 compactor::
 merge_two_tables(sstable& lhs, sstable& rhs)
