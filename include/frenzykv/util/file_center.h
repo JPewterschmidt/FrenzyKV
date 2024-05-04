@@ -39,6 +39,8 @@ public:
     koios::task<::std::vector<file_guard>>
     get_file_guards(::std::ranges::range auto const& names);
 
+    koios::task<file_guard> get_file(const ::std::string& name);
+
 private:
     const kvdb_deps* m_deps;
     koios::shared_mutex m_mutex;

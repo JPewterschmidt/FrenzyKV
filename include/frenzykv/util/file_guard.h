@@ -5,7 +5,12 @@
 
 #include "toolpex/ref_count.h"
 
+#include "koios/task.h"
+
 #include "frenzykv/types.h"
+#include "frenzykv/env.h"
+#include "frenzykv/io/readable.h"
+#include "frenzykv/io/writable.h"
 
 namespace frenzykv
 {
@@ -124,6 +129,8 @@ public:
     {
         return (*m_rep < *other.m_rep);
     }
+
+    // TODO: openread and openwrite
 
 private:
     void release() noexcept

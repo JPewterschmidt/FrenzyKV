@@ -77,4 +77,15 @@ file_center::get_file_guards(::std::ranges::range auto const& names)
     co_return result;
 }
 
+koios::task<file_guard> get_file(const ::std::string& name)
+{
+    auto lk = co_await m_mutex.acquire();
+    if (m_name_rep.conatins(name))
+    {
+        co_return m_name_rep[name];
+    }
+    auto iter = m_name_rep.insert({ name, ::std::make_unique<file_rep>() });
+    co_return iter->second;
+}
+
 } // namespace frenzykv
