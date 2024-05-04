@@ -114,9 +114,11 @@ public:
 
     auto& rep() noexcept { assert(m_rep); return *m_rep; }
     const auto& rep() const noexcept { assert(m_rep); return *m_rep; }
+    const ::std::string_view name() const noexcept { assert(m_rep); return m_rep->name(); }
 
     operator file_id_t() const noexcept { return file_id(); }
     operator level_t() const noexcept { return level(); }
+    operator ::std::string_view() const { return name(); }
 
     bool operator==(const file_guard& other) const noexcept
     {

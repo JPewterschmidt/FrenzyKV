@@ -18,6 +18,11 @@ namespace frenzykv
     return ::std::format("frzkv#{}#{}#.frzkvsst", l, id.to_string());
 }
 
+::std::string name_a_sst(level_t l)
+{
+    return name_a_sst(l, file_id_t{});
+}
+
 bool is_sst_name(const ::std::string& name)
 {
     return name.starts_with("frzkv#") && name.ends_with("#.frzkvsst");   
@@ -77,15 +82,16 @@ file_center::get_file_guards(::std::ranges::range auto const& names)
     co_return result;
 }
 
-koios::task<file_guard> get_file(const ::std::string& name)
+koios::task<file_guard> file_center::get_file(const ::std::string& name)
 {
     auto lk = co_await m_mutex.acquire();
-    if (m_name_rep.conatins(name))
+    if (m_name_rep.contains(name))
     {
-        co_return m_name_rep[name];
+        co_return *m_name_rep[name];
     }
-    auto iter = m_name_rep.insert({ name, ::std::make_unique<file_rep>() });
-    co_return iter->second;
+    auto insert_ret = m_name_rep.insert({ name, ::std::make_unique<file_rep>() });
+    assert(insert_ret.second);
+    co_return *((*(insert_ret.first)).second);
 }
 
 } // namespace frenzykv

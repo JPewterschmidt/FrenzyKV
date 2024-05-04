@@ -4,7 +4,6 @@
 #include "koios/task.h"
 
 #include "frenzykv/io/in_mem_rw.h"
-#include "frenzykv/persistent/level.h"
 #include "frenzykv/persistent/sstable.h"
 #include "frenzykv/persistent/sstable_builder.h"
 

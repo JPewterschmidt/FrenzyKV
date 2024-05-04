@@ -12,12 +12,12 @@ namespace frenzykv
 {
 
 koios::task<bool> 
-write_version_descriptor(const version_rep& version, const level& l, seq_writable* file)
+write_version_descriptor(const version_rep& version, seq_writable* file)
 {
     ::std::vector<::std::string> name_vec;
     for (const auto& guard : version.files())
     {
-        name_vec.emplace_back(co_await l.file_name(guard));
+        name_vec.emplace_back(guard);
     }
     co_return co_await write_version_descriptor(::std::move(name_vec), file);
 }
@@ -67,7 +67,7 @@ koios::task<> set_current_version_file(const kvdb_deps& deps, const ::std::strin
     co_return;
 }
 
-koios::task<version_delta> get_current_version(const kvdb_deps& deps, const level& l)
+koios::task<version_delta> get_current_version(const kvdb_deps& deps)
 {
     auto file = deps.env()->get_seq_readable(version_path()/current_version_descriptor_name());
     ::std::string name(vd_name_length, 0);

@@ -87,7 +87,8 @@ koios::task<> db_impl::flush_imm_to_sstable()
     auto lk = co_await m_mem_mutex.acquire();
     if (m_imm->was_flushed()) co_return;
     
-    [[maybe_unused]] auto [id, file] = co_await m_level.create_file(0);
+    file_guard guard = co_await m_file_center.get_file(name_a_sst(0));
+    auto file = guard.open_write(m_deps.env().get());
     const size_t table_size_bound = 4 * 1024 * 1024;
 
     sstable_builder builder{ 
@@ -104,7 +105,8 @@ koios::task<> db_impl::flush_imm_to_sstable()
         if (add_ret == false)
         {
             co_await builder.finish();
-            [[maybe_unused]] auto [id, file] = co_await m_level.create_file(0);
+            guard = co_await m_file_center.get_file(name_a_sst(0));
+            file = guard.open_write(m_deps.env().get());
             builder = { 
                 m_deps, table_size_bound, 
                 m_filter_policy.get(), file.get()
@@ -118,83 +120,6 @@ koios::task<> db_impl::flush_imm_to_sstable()
     m_imm->set_flushed_flags();
     lk.unlock();
 
-    may_compact().run();
-    
-    co_return;
-}
-
-koios::eager_task<> 
-db_impl::
-compact_files(sstable lowlevelt, level_t nextl)
-{
-    // Select files going to be compacted
-    ::std::vector<::std::unique_ptr<random_readable>> files;
-
-    ::std::vector<sstable> tables;
-    ::std::vector<file_guard> table_guards;
-    for (auto& guard : co_await m_level.level_file_guards(nextl))
-    {
-        random_readable* filep = files.emplace_back(co_await m_level.open_read(guard)).get();
-        sstable potiential_target_table{ m_deps, m_filter_policy.get(), filep };
-        if (lowlevelt.overlapped(potiential_target_table))
-        {
-            tables.emplace_back(::std::move(potiential_target_table));
-            table_guards.push_back(guard);
-        }
-    }
-
-    tables.push_back(::std::move(lowlevelt));
-    ::std::sort(tables.begin(), tables.end());
-
-    // Do merging.
-    auto mem_file = co_await compactor(
-        m_deps, co_await m_level.allowed_file_size(nextl), *m_filter_policy
-    ).merge_tables(tables);
-
-    // Allocate a real disk file to flush those data to it.
-    auto disk_id_file = co_await m_level.create_file(nextl);
-    assert(disk_id_file.second);
-
-    co_await mem_file->dump_to(*disk_id_file.second);
-    co_await disk_id_file.second->sync();
-
-    // Record and apply version delta. TODO
-    version_delta delta;
-    delta.add_compacted_files(table_guards)
-         .add_new_file(disk_id_file.first);
-
-    version_guard new_version = co_await m_version_center.add_new_version();
-    new_version += delta;
-
-    // write a new version descripter
-    ::std::string version_desc_name = get_version_descriptor_name();
-    auto version_desc = m_deps.env()->get_seq_writable(version_path()/version_desc_name);
-    [[maybe_unused]] bool ret = co_await write_version_descriptor(new_version.rep(), m_level, version_desc.get());
-    assert(ret);
-    new_version.rep().set_version_desc_name(version_desc_name);
-
-    // Set current version
-    co_await set_current_version_file(m_deps, version_desc_name);
-    co_await m_version_center.set_current_version(new_version);   
-
-    // TODO: Do GC
-    
-    co_return;
-}
-
-koios::task<> db_impl::may_compact()
-{
-    const size_t level_num = co_await m_level.level_number();
-    for (level_t l{}; l < level_num; ++l)
-    {
-        if (co_await m_level.need_to_comapct(l))
-        {
-            auto guard = co_await m_level.oldest_file(l);
-            auto file = co_await m_level.open_read(guard);
-            assert(file);
-            co_await compact_files({ m_deps, m_filter_policy.get(), file.get() }, l);
-        }
-    }
     co_return;
 }
 
@@ -223,7 +148,7 @@ db_impl::do_GC()
 
     // delete those garbage version descriptor files
     co_await m_version_center.GC_with(delete_garbage_version_desc);
-    co_await m_level.GC();
+    // TODO: file GC
 
     co_return;
 }

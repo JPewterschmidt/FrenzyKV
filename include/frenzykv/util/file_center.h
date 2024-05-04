@@ -20,6 +20,8 @@ namespace frenzykv
 {
 
 ::std::string name_a_sst(level_t l, const file_id_t& id);
+::std::string name_a_sst(level_t l);
+
 bool is_sst_name(const ::std::string& name);
 
 ::std::optional<::std::pair<level_t, file_id_t>>

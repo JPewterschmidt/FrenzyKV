@@ -42,8 +42,6 @@ public:
 private:
     koios::task<sequenced_key> make_query_key(const_bspan userkey, const read_options& opt);
     koios::task<> flush_imm_to_sstable();
-    koios::task<> may_compact();
-    koios::eager_task<> compact_files(sstable lowlevelt, level_t nextl);
     koios::task<> merge_tables(::std::vector<sstable>& tables, level_t target_l);
 
     koios::task<::std::unique_ptr<in_mem_rw>>

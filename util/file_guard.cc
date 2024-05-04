@@ -1,5 +1,5 @@
-#include "frenzukv/env.h"
-#include "frenzykv/util/file_gaurd.h"
+#include "frenzykv/env.h"
+#include "frenzykv/util/file_guard.h"
 
 namespace frenzykv
 {
