@@ -53,8 +53,6 @@ private:
     koios::task<> back_ground_GC(::std::stop_token tk);
     koios::task<> do_GC();
 
-    
-
 private:
     ::std::string m_dbname;
     kvdb_deps m_deps;
@@ -71,6 +69,9 @@ private:
     file_center m_file_center;
     version_center m_version_center;
     snapshot_center m_snapshot_center;
+
+    // GC
+    mutable koios::mutex m_gc_mutex;
 };  
 
 } // namespace frenzykv

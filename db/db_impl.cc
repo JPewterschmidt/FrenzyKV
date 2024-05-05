@@ -116,6 +116,7 @@ db_impl::back_ground_GC(::std::stop_token tk)
 koios::task<> 
 db_impl::do_GC()
 {
+    auto lk = co_await m_gc_mutex.acquire();
     auto delete_garbage_version_desc = [](const auto& vrep) -> koios::task<> { 
         assert(vrep.approx_ref_count() == 0);
         co_await koios::uring::unlink(version_path()/vrep.version_desc_name());
