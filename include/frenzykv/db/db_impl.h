@@ -17,10 +17,12 @@
 #include "frenzykv/db.h"
 #include "frenzykv/db/kv_entry.h"
 #include "frenzykv/db/memtable.h"
+#include "frenzykv/db/memtable_flusher.h"
 #include "frenzykv/db/read_write_options.h"
 #include "frenzykv/db/filter.h"
 #include "frenzykv/db/version.h"
 #include "frenzykv/db/snapshot.h"
+#include "frenzykv/db/garbage_collector.h"
 
 #include "frenzykv/persistent/sstable.h"
 
@@ -50,7 +52,6 @@ private:
     koios::task<::std::unique_ptr<in_mem_rw>>
     merge_two_table(sstable& lhs, sstable& rhs, level_t l);
 
-    koios::task<> back_ground_GC(::std::stop_token tk);
     koios::task<> do_GC();
 
 private:
@@ -58,20 +59,18 @@ private:
     kvdb_deps m_deps;
     logger m_log;
 
-    // mamtable===============================
-    mutable koios::shared_mutex m_mem_mutex;
-    ::std::unique_ptr<memtable> m_mem;
-    ::std::unique_ptr<imm_memtable> m_imm{};
-
     // other===============================
     ::std::unique_ptr<filter_policy> m_filter_policy;
     ::std::stop_source m_bg_gc_stop_src;
     file_center m_file_center;
     version_center m_version_center;
     snapshot_center m_snapshot_center;
+    garbage_collector m_gcer;
 
-    // GC
-    mutable koios::mutex m_gc_mutex;
+    // mamtable===============================
+    mutable koios::shared_mutex m_mem_mutex;
+    ::std::unique_ptr<memtable> m_mem;
+    memtable_flusher m_flusher;
 };  
 
 } // namespace frenzykv

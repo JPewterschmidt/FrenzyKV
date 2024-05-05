@@ -32,10 +32,12 @@ db_impl::db_impl(::std::string dbname, const options& opt)
     : m_dbname{ ::std::move(dbname) }, 
       m_deps{ opt },
       m_log{ m_deps, m_deps.env()->get_seq_writable(prewrite_log_dir().path()/"0001-test.frzkvlog") }, 
-      m_mem{ ::std::make_unique<memtable>(m_deps) }, 
       m_filter_policy{ make_bloom_filter(64) }, 
       m_file_center{ m_deps }, 
-      m_version_center{ m_file_center }
+      m_version_center{ m_file_center },
+      m_gcer{ &m_version_center, &m_file_center }, 
+      m_mem{ ::std::make_unique<memtable>(m_deps) }, 
+      m_flusher{ m_deps, &m_version_center, m_filter_policy.get(), &m_file_center }
 {
 }
 
@@ -76,57 +78,21 @@ insert(write_batch batch, write_options opt)
             co_return ec;
         }
 
-        m_imm = ::std::make_unique<imm_memtable>(::std::move(*m_mem));
+        m_flusher.flush_to_disk(::std::move(m_mem)).run();
         m_mem = ::std::make_unique<memtable>(m_deps);
         auto ec = co_await m_mem->insert(::std::move(batch));
 
         unih.unlock();
-
-        // Will hold the lock
-        flush_imm_to_sstable().run();
 
         co_return ec;
     }
     co_return co_await m_mem->insert(::std::move(batch));
 }
 
-koios::task<> db_impl::flush_imm_to_sstable()
-{
-    // TODO
-
-
-    co_return;
-}
-
-koios::task<> 
-db_impl::back_ground_GC(::std::stop_token tk)
-{
-    while (tk.stop_requested())
-    {
-        const auto period = m_deps.opt()->gc_period_sec;
-        spdlog::debug("background gc sleepping for {}ms", 
-                      ::std::chrono::duration_cast<::std::chrono::milliseconds>(period).count()
-                     );
-        co_await koios::this_task::sleep_for(period);
-        spdlog::debug("background gc wake up.");
-        co_await do_GC();
-    }
-}
-
 koios::task<> 
 db_impl::do_GC()
 {
-    auto lk = co_await m_gc_mutex.acquire();
-    auto delete_garbage_version_desc = [](const auto& vrep) -> koios::task<> { 
-        assert(vrep.approx_ref_count() == 0);
-        co_await koios::uring::unlink(version_path()/vrep.version_desc_name());
-    };
-
-    // delete those garbage version descriptor files
-    co_await m_version_center.GC_with(delete_garbage_version_desc);
-    co_await m_file_center.GC();
-
-    co_return;
+    co_await m_gcer.do_GC();
 }
 
 koios::task<::std::optional<kv_entry>> 
