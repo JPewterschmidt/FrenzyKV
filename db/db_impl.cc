@@ -154,7 +154,7 @@ db_impl::do_GC()
 
     // delete those garbage version descriptor files
     co_await m_version_center.GC_with(delete_garbage_version_desc);
-    // TODO: file GC
+    co_await m_file_center.GC();
 
     co_return;
 }
