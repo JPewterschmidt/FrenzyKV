@@ -39,6 +39,8 @@ public:
     koios::task<::std::optional<kv_entry>> 
     get(const_bspan key, ::std::error_code& ec_out, read_options opt = {}) noexcept override;
 
+    koios::task<> close() override;
+
 private:
     koios::task<sequenced_key> make_query_key(const_bspan userkey, const read_options& opt);
     koios::task<> flush_imm_to_sstable();

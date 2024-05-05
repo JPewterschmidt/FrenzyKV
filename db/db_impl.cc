@@ -44,6 +44,12 @@ db_impl::~db_impl() noexcept
     m_bg_gc_stop_src.request_stop();
 }
 
+koios::task<> db_impl::close()
+{
+    // TODO
+    co_return;
+}
+
 koios::task<::std::error_code> 
 db_impl::
 insert(write_batch batch, write_options opt)

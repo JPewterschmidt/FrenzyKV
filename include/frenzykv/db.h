@@ -47,6 +47,8 @@ public:
 
     virtual koios::task<::std::optional<kv_entry>> 
     get(const_bspan key, ::std::error_code& ec_out, read_options opt = {}) noexcept = 0;
+
+    virtual koios::task<> close() = 0;
 };
 
 ::std::unique_ptr<db_interface> open(toolpex::ip_address::ptr ip, in_port_t port);
