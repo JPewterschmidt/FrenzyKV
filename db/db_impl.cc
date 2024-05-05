@@ -35,9 +35,9 @@ db_impl::db_impl(::std::string dbname, const options& opt)
       m_filter_policy{ make_bloom_filter(64) }, 
       m_file_center{ m_deps }, 
       m_version_center{ m_file_center },
-      m_gcer{ &m_version_center, &m_file_center }, 
       m_mem{ ::std::make_unique<memtable>(m_deps) }, 
-      m_flusher{ m_deps, &m_version_center, m_filter_policy.get(), &m_file_center }
+      m_gcer{ &m_version_center, &m_file_center }, 
+      m_flusher{ m_deps, &m_version_center, m_filter_policy.get(), &m_file_center, &m_gcer }
 {
 }
 

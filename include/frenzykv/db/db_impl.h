@@ -65,11 +65,11 @@ private:
     file_center m_file_center;
     version_center m_version_center;
     snapshot_center m_snapshot_center;
-    garbage_collector m_gcer;
 
     // mamtable===============================
     mutable koios::shared_mutex m_mem_mutex;
     ::std::unique_ptr<memtable> m_mem;
+    garbage_collector m_gcer;
     memtable_flusher m_flusher;
 };  
 

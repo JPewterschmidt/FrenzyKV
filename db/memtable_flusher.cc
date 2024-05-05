@@ -39,10 +39,12 @@ memtable_flusher::need_compaction(level_t l) const
 koios::task<> memtable_flusher::may_compact()
 {
     const level_t max_level = m_deps->opt()->max_level;
+    bool need_gc{};
     for (level_t l{}; l <= max_level; ++l)
     {
         auto [need, ver] = co_await need_compaction(l);
         if (!need) continue;
+        need_gc = true;
         compactor comp{ 
             *m_deps,
             m_deps->opt()->allowed_level_file_size(l), 
@@ -55,6 +57,7 @@ koios::task<> memtable_flusher::may_compact()
         co_await fake_file->dump_to(*fp);
         co_await fp->flush();
     }
+    if (need_gc) m_gcer->do_GC().run();
 }
 
 koios::task<> memtable_flusher::
