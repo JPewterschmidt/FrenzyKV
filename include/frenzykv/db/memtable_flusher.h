@@ -2,6 +2,7 @@
 #define FRENZYKV_MEMTABLE_FLUSHER_H
 
 #include <memory>
+#include <utility>
 
 #include "koios/coroutine_mutex.h"
 
@@ -33,7 +34,8 @@ public:
     koios::task<> flush_to_disk(::std::unique_ptr<memtable> table);
 
 private:
-    koios::task<bool> need_compaction(level_t l) const;
+    koios::task<::std::pair<bool, version_guard>> need_compaction(level_t l) const;
+    koios::task<> may_compact();
 
 private:
     const kvdb_deps* m_deps{};

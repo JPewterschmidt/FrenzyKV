@@ -17,7 +17,8 @@ namespace rv = r::views;
 namespace frenzykv
 {
 
-koios::task<bool> memtable_flusher::need_compaction(level_t l) const
+koios::task<::std::pair<bool, version_guard>> 
+memtable_flusher::need_compaction(level_t l) const
 {
     auto cur_ver = co_await m_version_center->current_version();
     auto level_files_view = cur_ver.files()
@@ -28,7 +29,32 @@ koios::task<bool> memtable_flusher::need_compaction(level_t l) const
         | rv::transform([]([[maybe_unused]] auto&&){ return 1; })
         ;
     const size_t num = r::fold_left(level_files_view, 0, ::std::plus<size_t>{});
-    co_return m_deps->opt()->is_appropriate_level_file_number(l, num);
+
+    co_return { 
+        m_deps->opt()->is_appropriate_level_file_number(l, num), 
+        ::std::move(cur_ver)
+    };
+}
+
+koios::task<> memtable_flusher::may_compact()
+{
+    const level_t max_level = m_deps->opt()->max_level;
+    for (level_t l{}; l <= max_level; ++l)
+    {
+        auto [need, ver] = co_await need_compaction(l);
+        if (!need) continue;
+        compactor comp{ 
+            *m_deps,
+            m_deps->opt()->allowed_level_file_size(l), 
+            m_filter
+        };
+        
+        auto fake_file = co_await comp.compact(::std::move(ver), l);
+        auto file = co_await m_file_center->get_file(name_a_sst(l + 1));
+        auto fp = file.open_write(m_deps->env().get());
+        co_await fake_file->dump_to(*fp);
+        co_await fp->flush();
+    }
 }
 
 koios::task<> memtable_flusher::
@@ -86,6 +112,9 @@ flush_to_disk(::std::unique_ptr<memtable> table)
     // Only after changing the version descriptor (on disk), 
     // the in memory update could be performed.
     cur_ver += delta;
+
+    // Isssue a potiential compaction
+    may_compact().run();
 }
 
 } // namespace frenzykv
