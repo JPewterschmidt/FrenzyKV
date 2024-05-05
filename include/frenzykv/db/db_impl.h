@@ -40,6 +40,7 @@ public:
     get(const_bspan key, ::std::error_code& ec_out, read_options opt = {}) noexcept override;
 
     koios::task<> close() override;
+    koios::task<snapshot> get_snapshot() override;
 
 private:
     koios::task<sequenced_key> make_query_key(const_bspan userkey, const read_options& opt);
@@ -51,6 +52,8 @@ private:
 
     koios::task<> back_ground_GC(::std::stop_token tk);
     koios::task<> do_GC();
+
+    
 
 private:
     ::std::string m_dbname;

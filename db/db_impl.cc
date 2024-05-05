@@ -183,4 +183,9 @@ db_impl::make_query_key(const_bspan userkey, const read_options& opt)
     };
 }
 
+koios::task<snapshot> db_impl::get_snapshot()
+{
+    co_return m_snapshot_center.get_snapshot(co_await m_version_center.current_version());
+}
+
 } // namespace frenzykv
