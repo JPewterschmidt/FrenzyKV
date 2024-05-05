@@ -53,6 +53,9 @@ public:
     const auto& storage() const noexcept { return m_list; }
     const kvdb_deps& deps() const noexcept { return *m_deps; }
 
+    auto begin() const noexcept { return storage().begin(); }
+    auto end() const noexcept { return storage().end(); }
+
 private:
     ::std::error_code insert_impl(kv_entry&& entry);
     ::std::error_code insert_impl(const kv_entry& entry);

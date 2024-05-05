@@ -2,6 +2,7 @@
 #define FRENZYKV_UTIL_FILE_GUARD_H
 
 #include <cassert>
+#include <filesystem>
 
 #include "toolpex/ref_count.h"
 
@@ -140,6 +141,7 @@ public:
     operator file_id_t() const noexcept { return file_id(); }
     operator level_t() const noexcept { return level(); }
     operator ::std::string_view() const { return name(); }
+    operator ::std::filesystem::path() const { return name(); }
 
     bool operator==(const file_guard& other) const noexcept
     {
