@@ -92,41 +92,8 @@ insert(write_batch batch, write_options opt)
 
 koios::task<> db_impl::flush_imm_to_sstable()
 {
-    auto lk = co_await m_mem_mutex.acquire();
-    if (m_imm->was_flushed()) co_return;
-    
-    file_guard guard = co_await m_file_center.get_file(name_a_sst(0));
-    auto file = guard.open_write(m_deps.env().get());
-    const size_t table_size_bound = 4 * 1024 * 1024;
+    // TODO
 
-    sstable_builder builder{ 
-        m_deps, table_size_bound, 
-        m_filter_policy.get(), file.get()
-    };
-    
-    const auto& list = m_imm->storage();
-    for (const auto& item : list)
-    {
-        auto add_ret = co_await builder.add(item.first, item.second);
-
-        // current sstable full
-        if (add_ret == false)
-        {
-            co_await builder.finish();
-            guard = co_await m_file_center.get_file(name_a_sst(0));
-            file = guard.open_write(m_deps.env().get());
-            builder = { 
-                m_deps, table_size_bound, 
-                m_filter_policy.get(), file.get()
-            };
-
-            [[maybe_unused]] auto add_ret2 = co_await builder.add(item.first, item.second);
-            assert(add_ret2);
-        }
-    }
-
-    m_imm->set_flushed_flags();
-    lk.unlock();
 
     co_return;
 }
