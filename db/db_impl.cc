@@ -47,7 +47,7 @@ db_impl::~db_impl() noexcept
 koios::task<> db_impl::close()
 {
     auto lk = co_await m_mem_mutex.acquire();
-    if (m_mem->empty()) co_return;
+    if (co_await m_mem->empty()) co_return;
     // TODO flush whole memtable into disk
     
     co_return;

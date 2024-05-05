@@ -109,10 +109,21 @@ bool memtable::could_fit_in_impl(const write_batch& batch) const noexcept
     return batch_sz + size_bytes_impl() <= bound_size_bytes_impl();
 }
 
+bool memtable::empty_impl() const noexcept
+{
+    return m_list.empty();
+}
+
 koios::task<bool> memtable::could_fit_in(const write_batch& batch) const noexcept
 {
     auto lk = co_await m_list_mutex.acquire_shared();
     co_return could_fit_in_impl(batch);
+}
+
+koios::task<bool> memtable::empty() const
+{
+    auto lk = co_await m_list_mutex.acquire_shared();
+    co_return empty_impl();
 }
 
 koios::task<::std::optional<kv_entry>> 
