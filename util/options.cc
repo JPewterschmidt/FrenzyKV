@@ -31,4 +31,28 @@ namespace frenzykv
             throw koios::exception{"cant' read option file!"};
         set_global_options(content);
     }
+
+    size_t options::allowed_level_file_number(level_t l) const noexcept
+    {
+        if (l >= level_file_number.size()) return 0;
+        return level_file_number[l];
+    }
+
+    size_t options::allowed_level_file_size(level_t l) const noexcept
+    {
+        if (l >= level_file_size.size()) return 0;
+        return level_file_size[l];
+    }
+
+    bool options::is_appropriate_level_file_number(level_t l, size_t num) const noexcept
+    {
+        const size_t val = allowed_level_file_number(l);
+        return val >= num || val == 0;
+    }
+
+    bool options::is_appropriate_level_file_size(level_t l, size_t num) const noexcept
+    {
+        const size_t val = allowed_level_file_size(l);
+        return val >= num || val == 0;
+    }
 }

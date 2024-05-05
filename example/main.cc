@@ -46,8 +46,15 @@ koios::task<> db_test()
     write_batch w;
     w.write("hello", "world");
     co_await db->insert(::std::move(w));
+    read_options ro{ 
+        .snap = co_await db->get_snapshot()
+    };
 
-    auto entry = co_await db->get("hello");
+    write_batch w1;
+    w1.write("hello", "frenzykv");
+    co_await db->insert(::std::move(w1));
+
+    auto entry = co_await db->get("hello", ro);
     if (entry) ::std::cout << entry->to_string_debug() << ::std::endl;
     else ::std::cout << "no value" << ::std::endl;
 

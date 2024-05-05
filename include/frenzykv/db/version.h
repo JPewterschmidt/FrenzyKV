@@ -134,6 +134,7 @@ public:
 
     auto& rep() noexcept { assert(m_rep); return *m_rep; }
     const auto& rep() const noexcept { assert(m_rep); return *m_rep; }
+    decltype(auto) version_desc_name() const noexcept { return rep().version_desc_name(); }
 
     auto& operator*() noexcept { return rep(); }
     const auto& operator*() const noexcept { return rep(); }

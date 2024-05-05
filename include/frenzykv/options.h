@@ -41,6 +41,11 @@ struct options
     ::std::filesystem::path log_path = "frenzy-prewrite-log";
     logging_level log_level = logging_level::DEBUG;
     ::std::string compressor_name = "zstd";
+
+    size_t allowed_level_file_number(level_t l) const noexcept;
+    size_t allowed_level_file_size(level_t l) const noexcept;
+    bool is_appropriate_level_file_number(level_t l, size_t num) const noexcept;
+    bool is_appropriate_level_file_size(level_t l, size_t num) const noexcept;
 };
 
 options get_global_options() noexcept;

@@ -7,6 +7,7 @@
 #include "frenzykv/frenzykv.h"
 #include "frenzykv/write_batch.h"
 #include "frenzykv/db/read_write_options.h"
+#include "frenzykv/db/snapshot.h"
 #include "frenzykv/options.h"
 
 #include "toolpex/ipaddress.h"
@@ -59,6 +60,8 @@ public:
     virtual koios::task<::std::optional<kv_entry>> 
     get(const_bspan key, ::std::error_code& ec_out, read_options opt = {}) noexcept = 0;
 
+    virtual koios::task<snapshot> get_snapshot() = 0;
+    
     virtual koios::task<> close() = 0;
 };
 
