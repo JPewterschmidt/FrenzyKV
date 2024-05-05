@@ -5,6 +5,8 @@
 
 #include "koios/coroutine_mutex.h"
 
+#include "frenzykv/types.h"
+
 #include "frenzykv/kvdb_deps.h"
 #include "frenzykv/db/version.h"
 #include "frenzykv/db/memtable.h"
@@ -27,7 +29,11 @@ public:
     {
     }
 
+    // This function usually called with `.run()`
     koios::task<> flush_to_disk(::std::unique_ptr<memtable> table);
+
+private:
+    koios::task<bool> need_compaction(level_t l) const;
 
 private:
     const kvdb_deps* m_deps{};

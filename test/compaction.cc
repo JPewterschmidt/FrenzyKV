@@ -57,7 +57,7 @@ public:
         fvec.push_back(co_await make_sstable(0, 1000));
         fvec.push_back(co_await make_sstable(500, 1500));
 
-        compactor c(m_deps, 81920, *m_filter);
+        compactor c(m_deps, 81920, m_filter.get());
         auto tables_view = fvec | rv::transform([this](auto&& f){ 
             return sstable(m_deps, m_filter.get(), f.get()); 
         });

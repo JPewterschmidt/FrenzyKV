@@ -7,6 +7,7 @@
 #include <memory>
 #include <optional>
 #include <vector>
+#include <string_view>
 
 #include "toolpex/move_only.h"
 
@@ -23,10 +24,10 @@ namespace frenzykv
 ::std::string name_a_sst(level_t l, const file_id_t& id);
 ::std::string name_a_sst(level_t l);
 
-bool is_sst_name(const ::std::string& name);
+bool is_sst_name(::std::string_view name);
 
 ::std::optional<::std::pair<level_t, file_id_t>>
-retrive_level_and_id_from_sst_name(const ::std::string& name);
+retrive_level_and_id_from_sst_name(::std::string_view name);
 
 class file_center : public toolpex::move_only
 {

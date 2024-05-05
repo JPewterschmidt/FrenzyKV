@@ -17,10 +17,10 @@ class compactor
 public:
     compactor(const kvdb_deps& deps, 
               uintmax_t newfilesizebound, 
-              filter_policy& filter) noexcept
+              filter_policy* filter) noexcept
         : m_deps{ &deps }, 
           m_newfilesizebound{ newfilesizebound }, 
-          m_filter_policy{ &filter }
+          m_filter_policy{ filter }
     {
     }
 

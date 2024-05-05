@@ -1,4 +1,5 @@
 #include <cassert>
+#include <ranges>
 
 #include "frenzykv/env.h"
 
@@ -7,10 +8,28 @@
 
 #include "frenzykv/util/file_center.h"
 
+#include "frenzykv/persistent/compaction.h"
 #include "frenzykv/persistent/sstable_builder.h"
+
+namespace r = ::std::ranges;
+namespace rv = r::views;
 
 namespace frenzykv
 {
+
+koios::task<bool> memtable_flusher::need_compaction(level_t l) const
+{
+    auto cur_ver = co_await m_version_center->current_version();
+    auto level_files_view = cur_ver.files()
+        | rv::transform([](auto&& guard){ return retrive_level_and_id_from_sst_name(guard); })
+        | rv::filter([](auto&& opt)     { return opt.has_value();   })
+        | rv::transform([](auto&& lopt) { return lopt->first;       })
+        | rv::filter([l](auto&& level)  { return level == l;        })
+        | rv::transform([]([[maybe_unused]] auto&&){ return 1; })
+        ;
+    const size_t num = r::fold_left(level_files_view, 0, ::std::plus<size_t>{});
+    co_return m_deps->opt()->is_appropriate_level_file_number(l, num);
+}
 
 koios::task<> memtable_flusher::
 flush_to_disk(::std::unique_ptr<memtable> table)

@@ -36,13 +36,13 @@ namespace frenzykv
     return name_a_sst(l, file_id_t{});
 }
 
-bool is_sst_name(const ::std::string& name)
+bool is_sst_name(::std::string_view name)
 {
     return name.starts_with("frzkv#") && name.ends_with("#.frzkvsst");   
 }
 
 ::std::optional<::std::pair<level_t, file_id_t>>
-retrive_level_and_id_from_sst_name(const ::std::string& name)
+retrive_level_and_id_from_sst_name(::std::string_view name)
 {
     ::std::optional<::std::pair<level_t, file_id_t>> result;
     if (!is_sst_name(name))
