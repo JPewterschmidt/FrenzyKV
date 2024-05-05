@@ -39,17 +39,28 @@ koios::eager_task<> file_test()
     co_return;
 }
 
+koios::task<> db_test()
+{
+    ::std::unique_ptr<db_interface> db = ::std::make_unique<db_impl>("test1", get_global_options());
+    
+    write_batch w;
+    w.write("hello", "world");
+    co_await db->insert(::std::move(w));
+
+    auto entry = co_await db->get("hello");
+    if (entry) ::std::cout << entry->to_string_debug() << ::std::endl;
+    else ::std::cout << "no value" << ::std::endl;
+
+    co_await db->close();
+
+    co_return;
+}
+
 int main()
 {
-    //auto opt = get_global_options();
-    //nlohmann::json j(opt);
-    //::std::ofstream ofs{ "test-config.json" };
-    //ofs << j.dump(4);
-    //::std::cout << j.dump(4) << ::std::endl;
-
     koios::runtime_init(11);
 
-    file_test().result();
+    db_test().result();
     
     koios::runtime_exit();
 }

@@ -64,7 +64,7 @@ public:
         auto result_opt = co_await m_mem.get(k);
         if (!result_opt) co_return false;
         const auto& result = result_opt.value();
-        co_return result.key().sequence_number() >= seq_number && result.value().value().size() == 0;
+        co_return result.key().sequence_number() <= seq_number && result.value().value().size() == 0;
     }
 
     koios::task<bool> delete_test()
@@ -101,7 +101,7 @@ TEST_F(memtable_test, insert)
 TEST_F(memtable_test, get)
 {
     reset();
-    (void)insert_test(100).result();
+    (void)insert_test(98).result();
     ASSERT_TRUE(get_test(99).result());
 }
 

@@ -46,7 +46,10 @@ db_impl::~db_impl() noexcept
 
 koios::task<> db_impl::close()
 {
-    // TODO
+    auto lk = co_await m_mem_mutex.acquire();
+    if (m_mem->empty()) co_return;
+    // TODO flush whole memtable into disk
+    
     co_return;
 }
 
@@ -84,8 +87,7 @@ insert(write_batch batch, write_options opt)
 
         co_return ec;
     }
-
-    co_return {};
+    co_return co_await m_mem->insert(::std::move(batch));
 }
 
 koios::task<> db_impl::flush_imm_to_sstable()

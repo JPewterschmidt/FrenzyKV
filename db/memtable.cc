@@ -44,7 +44,7 @@ static
 table_get(auto&& list, const auto& key) noexcept
 {
     ::std::optional<kv_entry> result{};
-    if (auto iter = list.find_bigger_equal(key); 
+    if (auto iter = list.find_less_equal(key); 
         iter != list.end())
     {
         result.emplace(iter->first, iter->second);
