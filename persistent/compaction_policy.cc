@@ -5,9 +5,10 @@
 namespace frenzykv
 {
 
-::std::unique_ptr<compaction_policy> make_default_compaction_policy()
+::std::unique_ptr<compaction_policy> 
+make_default_compaction_policy(const kvdb_deps& deps, filter_policy* filter)
 {
-    return ::std::make_unique<compaction_policy_oldest>();
+    return ::std::make_unique<compaction_policy_oldest>(deps, filter);
 }
 
 } // namespace frenzykv

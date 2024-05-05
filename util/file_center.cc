@@ -1,14 +1,27 @@
 #include <filesystem>
 #include <cassert>
+#include <ranges>
+#include <functional>
+#include <memory>
+
+#include "koios/iouring_awaitables.h"
 
 #include "frenzykv/env.h"
 #include "frenzykv/util/file_center.h"
+#include "frenzykv/util/file_guard.h"
 
 namespace fs = ::std::filesystem;
 namespace r = ::std::ranges;
 namespace rv = r::views;
 using namespace ::std::string_literals;
 using namespace ::std::string_view_literals;
+
+[[maybe_unused]]
+static bool operator<(const ::std::unique_ptr<frenzykv::file_rep>& lhs, const ::std::unique_ptr<frenzykv::file_rep>& rhs) noexcept
+{
+    assert(!!lhs && !!rhs);
+    return *lhs < *rhs;
+}
 
 namespace frenzykv
 {
@@ -60,9 +73,8 @@ koios::task<> file_center::load_files()
         assert(!is_sst_name(name));
 
         auto level_and_id_opt = retrive_level_and_id_from_sst_name(name);
-        m_name_rep[name] = ::std::make_unique<file_rep>(
-            level_and_id_opt->first, level_and_id_opt->second, name
-        );
+        auto& sp = m_reps.emplace_back(::std::make_unique<file_rep>(level_and_id_opt->first, level_and_id_opt->second, name));
+        m_name_rep[name] = sp.get();
     }
 
     co_return;
@@ -76,7 +88,7 @@ file_center::get_file_guards(::std::ranges::range auto const& names)
 
     for (const auto& name : names)
     {
-        result.emplace_back(m_name_rep.at(name).get());
+        result.emplace_back(m_name_rep.at(name));
     }
 
     co_return result;
@@ -89,9 +101,26 @@ koios::task<file_guard> file_center::get_file(const ::std::string& name)
     {
         co_return *m_name_rep[name];
     }
-    auto insert_ret = m_name_rep.insert({ name, ::std::make_unique<file_rep>() });
+    auto level_and_id_opt = retrive_level_and_id_from_sst_name(name);
+    auto& sp = m_reps.emplace_back(::std::make_unique<file_rep>(level_and_id_opt->first, level_and_id_opt->second, name));
+    auto insert_ret = m_name_rep.insert({ name, sp.get() });
     assert(insert_ret.second);
     co_return *((*(insert_ret.first)).second);
+}
+
+koios::task<> file_center::GC()
+{
+    auto lk = co_await m_mutex.acquire();
+    auto removed = r::remove_if(m_reps, [](auto&& rep){ return rep->approx_ref_count() == 0; });
+    auto names_removed = removed | rv::transform([](auto&& r) { return r->name(); });
+    for (auto name : names_removed)
+    {
+        m_name_rep.erase(name);
+        co_await koios::uring::unlink(sstables_path()/name);
+    }
+    m_reps.erase(begin(removed), end(removed));
+
+    co_return;
 }
 
 } // namespace frenzykv

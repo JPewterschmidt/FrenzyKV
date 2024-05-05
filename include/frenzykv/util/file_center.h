@@ -6,6 +6,7 @@
 #include <string>
 #include <memory>
 #include <optional>
+#include <vector>
 
 #include "toolpex/move_only.h"
 
@@ -43,10 +44,13 @@ public:
 
     koios::task<file_guard> get_file(const ::std::string& name);
 
+    koios::task<> GC();
+
 private:
     const kvdb_deps* m_deps;
     koios::shared_mutex m_mutex;
-    ::std::map<::std::string, ::std::unique_ptr<file_rep>> m_name_rep;
+    ::std::vector<::std::unique_ptr<file_rep>> m_reps;
+    ::std::map<::std::string_view, file_rep*> m_name_rep;
 };
 
 } // namespace frenzykv

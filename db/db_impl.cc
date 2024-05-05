@@ -44,6 +44,15 @@ db_impl::~db_impl() noexcept
     m_bg_gc_stop_src.request_stop();
 }
 
+koios::task<> db_impl::close()
+{
+    auto lk = co_await m_mem_mutex.acquire();
+    if (co_await m_mem->empty()) co_return;
+    // TODO flush whole memtable into disk
+    
+    co_return;
+}
+
 koios::task<::std::error_code> 
 db_impl::
 insert(write_batch batch, write_options opt)
@@ -78,8 +87,7 @@ insert(write_batch batch, write_options opt)
 
         co_return ec;
     }
-
-    co_return {};
+    co_return co_await m_mem->insert(::std::move(batch));
 }
 
 koios::task<> db_impl::flush_imm_to_sstable()
@@ -148,7 +156,7 @@ db_impl::do_GC()
 
     // delete those garbage version descriptor files
     co_await m_version_center.GC_with(delete_garbage_version_desc);
-    // TODO: file GC
+    co_await m_file_center.GC();
 
     co_return;
 }

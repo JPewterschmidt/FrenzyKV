@@ -71,8 +71,8 @@ serialize_to(::std::span<::std::byte> buffer) const noexcept
 ::std::string sequenced_key::to_string_debug() const
 {
     return toolpex::lazy_string_concater{} 
-        + "sequence number: [" + sequence_number() 
-        + "user key: [" + user_key();
+        + "sequence number: [" + sequence_number() + "], "
+        + "user key: [" + user_key() + "]";
 }
 
 size_t kv_user_value::serialized_bytes_size() const noexcept
