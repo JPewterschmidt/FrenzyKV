@@ -54,6 +54,8 @@ private:
 
     koios::task<> do_GC();
 
+    koios::task<::std::optional<kv_entry>> find_from_ssts(const sequenced_key& key, snapshot snap) const;
+
 private:
     ::std::string m_dbname;
     kvdb_deps m_deps;

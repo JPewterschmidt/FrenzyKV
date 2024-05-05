@@ -105,6 +105,60 @@ db_impl::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noexc
     auto result_opt = co_await m_mem->get(skey);
     if (result_opt) co_return result_opt;
 
+    co_return co_await find_from_ssts(key, ::std::move(opt.snap));
+}
+
+koios::task<::std::optional<kv_entry>> 
+db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
+{
+    const version_guard& ver = snap.version();
+    auto files = ver.files();
+    r::sort(files);
+
+    struct sst_with_file
+    {
+        sst_with_file(const kvdb_deps& deps, 
+                      filter_policy* filter, 
+                      ::std::unique_ptr<random_readable> fp, 
+                      level_t ll)
+            : file{ ::std::move(fp) }, 
+              sst{ deps, filter, file.get() }, 
+              l { ll }
+        {
+        }
+
+        ::std::unique_ptr<random_readable> file;
+        sstable sst;
+        level_t l;
+    };
+
+    auto ssts_view = files 
+        | rv::transform([this](auto&& fg) { return ::std::pair{ fg.open_read(m_deps.env().get()), fg.level() }; })
+        | rv::transform([&, this](auto&& fp) { return sst_with_file{ m_deps, m_filter_policy.get(), ::std::move(fp.first), fp.second }; })
+        ;
+
+    // Optimize to parallel finding   
+
+    ::std::vector<kv_entry> potiential_results;
+    level_t cur_level{};
+    for (auto sst_f : ssts_view)
+    {
+        if (sst_f.l != cur_level)
+        {
+            cur_level = sst_f.l;
+            ::std::sort(potiential_results.begin(), potiential_results.end());
+            // TODO Find the nearest
+            potiential_results.clear();
+        }
+
+        auto& sst = sst_f.sst; 
+        co_await sst.parse_meta_data();
+        auto entry_opt = co_await sst.get_kv_entry(key);
+        if (!entry_opt.has_value() || entry_opt->key().sequence_number() > snap.sequence_number())
+            continue;
+        potiential_results.emplace_back(::std::move(entry_opt.value()));
+    }
+
     co_return {};
 }
 
