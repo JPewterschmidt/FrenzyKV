@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <utility>
+#include <atomic>
 
 #include "koios/coroutine_mutex.h"
 
@@ -34,11 +35,11 @@ public:
     }
 
     // This function usually called with `.run()`
-    koios::task<> flush_to_disk(::std::unique_ptr<memtable> table);
+    koios::task<> flush_to_disk(::std::unique_ptr<memtable> table, bool joined_compact = false);
 
 private:
     koios::task<::std::pair<bool, version_guard>> need_compaction(level_t l) const;
-    koios::task<> may_compact();
+    koios::task<> may_compact(bool joined_gc = false);
 
 private:
     const kvdb_deps* m_deps{};

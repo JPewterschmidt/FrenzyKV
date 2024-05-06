@@ -36,7 +36,7 @@ memtable_flusher::need_compaction(level_t l) const
     };
 }
 
-koios::task<> memtable_flusher::may_compact()
+koios::task<> memtable_flusher::may_compact(bool joined_gc)
 {
     const level_t max_level = m_deps->opt()->max_level;
     bool need_gc{};
@@ -57,11 +57,21 @@ koios::task<> memtable_flusher::may_compact()
         co_await fake_file->dump_to(*fp);
         co_await fp->flush();
     }
-    if (need_gc) m_gcer->do_GC().run();
+    if (need_gc) 
+    {
+        if (joined_gc)
+        {
+            co_await m_gcer->do_GC();
+        }
+        else 
+        {
+            m_gcer->do_GC().run();
+        }
+    }
 }
 
 koios::task<> memtable_flusher::
-flush_to_disk(::std::unique_ptr<memtable> table)
+flush_to_disk(::std::unique_ptr<memtable> table, bool joined_compact)
 {
     // Really important lock, the underlying implmentation guarantee that the FIFO execution order.
     // Which natually form the flushing call into a queue.
@@ -117,7 +127,14 @@ flush_to_disk(::std::unique_ptr<memtable> table)
     cur_ver += delta;
 
     // Isssue a potiential compaction
-    may_compact().run();
+    if (joined_compact) 
+    {
+        co_await may_compact();
+    }
+    else 
+    {
+        may_compact().run();
+    }
 }
 
 } // namespace frenzykv
