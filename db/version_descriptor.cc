@@ -6,6 +6,7 @@
 
 #include "frenzykv/db/version_descriptor.h"
 #include "frenzykv/util/uuid.h"
+#include "frenzykv/util/file_center.h"
 
 namespace r = ::std::ranges;
 namespace rv = r::views;
@@ -79,10 +80,10 @@ read_version_descriptor(seq_readable* file)
     size_t readed{1};
     while (readed)
     {
-        // See also test/version.cc ::name_length
-        ::std::array<::std::byte, 53> buffer{}; 
+        ::std::array<::std::byte, sst_name_length()> buffer{}; 
         readed = co_await file->read(buffer);
-        if (readed) result.emplace_back(reinterpret_cast<char*>(buffer.data()), 52);
+        if (readed < sst_name_length()) continue;
+        if (readed) result.emplace_back(reinterpret_cast<char*>(buffer.data()), sst_name_length());
     }
 
     co_return result;
@@ -100,7 +101,7 @@ koios::task<> set_current_version_file(const kvdb_deps& deps, ::std::string_view
     co_return;
 }
 
-koios::task<version_delta> get_current_version(const kvdb_deps& deps)
+koios::task<version_delta> get_current_version(const kvdb_deps& deps, file_center* fc)
 {
     auto file = deps.env()->get_seq_readable(version_path()/current_version_descriptor_name());
     ::std::string name(vd_name_length, 0);
@@ -116,12 +117,12 @@ koios::task<version_delta> get_current_version(const kvdb_deps& deps)
     assert(version_file->file_size() != 0);
     const auto name_vec = co_await read_version_descriptor(version_file.get());
 
-    // TODO
     version_delta result;
-    //for (const auto& name : name_vec)
-    //{
-    //    result.add_new_file(co_await l.get_file_guard(name));
-    //}
+    for (const auto& name : name_vec)
+    {
+        assert(is_sst_name(name));
+        result.add_new_file(co_await fc->get_file(name));
+    }
     co_return result;
 }
 

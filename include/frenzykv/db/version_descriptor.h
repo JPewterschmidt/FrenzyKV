@@ -9,6 +9,7 @@
 
 #include "frenzykv/db/version.h"
 #include "frenzykv/util/file_guard.h"
+#include "frenzykv/util/file_center.h"
 
 namespace frenzykv
 {
@@ -23,7 +24,7 @@ koios::task<bool> append_version_descriptor(const ::std::vector<file_guard>& fil
 koios::task<::std::vector<::std::string>> read_version_descriptor(seq_readable* file);
 
 koios::task<> set_current_version_file(const kvdb_deps& deps, ::std::string_view filename);
-koios::task<version_delta> get_current_version(const kvdb_deps& deps);
+koios::task<version_delta> get_current_version(const kvdb_deps& deps, file_center* fc);
 
 ::std::string get_version_descriptor_name();
 bool is_version_descriptor_name(::std::string_view name);

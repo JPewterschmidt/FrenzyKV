@@ -21,6 +21,12 @@
 namespace frenzykv
 {
 
+inline consteval size_t sst_name_length() noexcept 
+{ 
+    using namespace ::std::string_view_literals;
+    return "frzkv#****0#030f57fe-2405-47e9-a300-588812af06c9#.frzkvsst"sv.size();
+}
+
 ::std::string name_a_sst(level_t l, const file_id_t& id);
 ::std::string name_a_sst(level_t l);
 
@@ -41,7 +47,7 @@ public:
     koios::task<> load_files();
 
     koios::task<::std::vector<file_guard>>
-    get_file_guards(::std::ranges::range auto const& names);
+    get_file_guards(const ::std::vector<::std::string>& names);
 
     koios::task<file_guard> get_file(const ::std::string& name);
 

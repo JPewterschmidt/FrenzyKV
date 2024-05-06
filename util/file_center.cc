@@ -28,7 +28,7 @@ namespace frenzykv
 
 ::std::string name_a_sst(level_t l, const file_id_t& id)
 {
-    return ::std::format("frzkv#{}#{}#.frzkvsst", l, id.to_string());
+    return ::std::format("frzkv#{:*>5}#{}#.frzkvsst", l, id.to_string());
 }
 
 ::std::string name_a_sst(level_t l)
@@ -58,7 +58,9 @@ retrive_level_and_id_from_sst_name(::std::string_view name)
     auto firsti = begin(data_view);
     auto secondi = next(firsti);
 
-    result.emplace(::std::stoi(*firsti), file_id_t(*secondi));
+    auto first_str = *firsti;
+
+    result.emplace(::std::stoi(first_str.substr(first_str.find_first_not_of('*'))), file_id_t(*secondi));
 
     return result;
 }
@@ -81,7 +83,7 @@ koios::task<> file_center::load_files()
 }
 
 koios::task<::std::vector<file_guard>>
-file_center::get_file_guards(::std::ranges::range auto const& names)
+file_center::get_file_guards(const ::std::vector<::std::string>& names)
 {
     ::std::vector<file_guard> result;
     auto lk = co_await m_mutex.acquire_shared();
@@ -102,7 +104,11 @@ koios::task<file_guard> file_center::get_file(const ::std::string& name)
         co_return *m_name_rep[name];
     }
     auto level_and_id_opt = retrive_level_and_id_from_sst_name(name);
-    auto& sp = m_reps.emplace_back(::std::make_unique<file_rep>(level_and_id_opt->first, level_and_id_opt->second, name));
+    auto& sp = m_reps.emplace_back(
+        ::std::make_unique<file_rep>(
+            level_and_id_opt->first, level_and_id_opt->second, name
+        )
+    );
     auto insert_ret = m_name_rep.insert({ name, sp.get() });
     assert(insert_ret.second);
     co_return *((*(insert_ret.first)).second);
