@@ -35,6 +35,8 @@ public:
     db_impl(::std::string dbname, const options& opt);
     ~db_impl() noexcept;
 
+    koios::task<bool> init() override;
+
     koios::task<::std::error_code> 
     insert(write_batch batch, write_options opt = {}) override;
 

@@ -50,6 +50,17 @@ db_impl::~db_impl() noexcept
     m_bg_gc_stop_src.request_stop();
 }
 
+koios::task<bool> db_impl::init() 
+{
+    co_await m_version_center.load_current_version();
+    // TODO: Check pre-write log
+    // TODO: Recorvery
+    co_await do_GC();
+    
+
+    co_return true;
+}
+
 koios::task<> db_impl::close()
 {
     auto lk = co_await m_mem_mutex.acquire();
