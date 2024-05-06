@@ -44,7 +44,7 @@ static
 table_get(auto&& list, const sequenced_key& key) noexcept
 {
     ::std::optional<kv_entry> result{};
-    if (auto iter = list.lower_bound(key); 
+    if (auto iter = list.find_last_less_equal(key); 
         iter != list.end() && iter->first.user_key() == key.user_key())
     {
         result.emplace(iter->first, iter->second);
