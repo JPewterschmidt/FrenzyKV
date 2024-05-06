@@ -116,6 +116,7 @@ koios::task<version_delta> get_current_version(const kvdb_deps& deps)
     assert(version_file->file_size() != 0);
     const auto name_vec = co_await read_version_descriptor(version_file.get());
 
+    // TODO
     version_delta result;
     //for (const auto& name : name_vec)
     //{

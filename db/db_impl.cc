@@ -4,6 +4,9 @@
 #include <vector>
 #include <algorithm>
 #include <iterator>
+#include <filesystem>
+
+#include "toolpex/skip_list.h"
 
 #include "koios/iouring_awaitables.h"
 
@@ -24,6 +27,7 @@
 
 namespace rv = ::std::ranges::views;
 namespace r = ::std::ranges;
+namespace fs = ::std::filesystem;
 
 namespace frenzykv
 {
@@ -51,8 +55,19 @@ koios::task<> db_impl::close()
     auto lk = co_await m_mem_mutex.acquire();
     if (co_await m_mem->empty()) co_return;
     // TODO flush whole memtable into disk
+
+    co_await m_flusher.flush_to_disk(::std::move(m_mem), true);
+    co_await delete_all_prewrite_log();
     
     co_return;
+}
+
+koios::task<> db_impl::delete_all_prewrite_log()
+{
+    for (const auto& dir_entry : fs::directory_iterator(prewrite_log_path()))
+    {
+        co_await koios::uring::unlink(dir_entry);
+    }
 }
 
 koios::task<::std::error_code> 
@@ -78,11 +93,14 @@ insert(write_batch batch, write_options opt)
             co_return ec;
         }
 
-        m_flusher.flush_to_disk(::std::move(m_mem)).run();
+        // We need make sure that user won't searching a K when that key are waiting to be flushed.
+
+        auto flushing_file = ::std::move(m_mem);
         m_mem = ::std::make_unique<memtable>(m_deps);
+        unih.unlock();
         auto ec = co_await m_mem->insert(::std::move(batch));
 
-        unih.unlock();
+        co_await m_flusher.flush_to_disk(::std::move(flushing_file));
 
         co_return ec;
     }
@@ -101,6 +119,72 @@ db_impl::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noexc
     const sequenced_key skey = co_await this->make_query_key(key, opt);
     auto result_opt = co_await m_mem->get(skey);
     if (result_opt) co_return result_opt;
+
+    co_return co_await find_from_ssts(key, ::std::move(opt.snap));
+}
+
+koios::task<::std::optional<kv_entry>> 
+db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
+{
+    const version_guard& ver = snap.version();
+    auto files = ver.files();
+    r::sort(files);
+
+    struct sst_with_file
+    {
+        sst_with_file(const kvdb_deps& deps, 
+                      filter_policy* filter, 
+                      ::std::unique_ptr<random_readable> fp, 
+                      level_t ll)
+            : file{ ::std::move(fp) }, 
+              sst{ deps, filter, file.get() }, 
+              l { ll }
+        {
+        }
+
+        ::std::unique_ptr<random_readable> file;
+        sstable sst;
+        level_t l;
+    };
+
+    auto ssts_view = files 
+        | rv::transform([this](auto&& fg) { 
+              return ::std::pair{ 
+                  fg.open_read(m_deps.env().get()), fg.level() 
+              }; 
+          })
+        | rv::transform([&, this](auto&& fp) { 
+              return sst_with_file{ 
+                  m_deps, m_filter_policy.get(), ::std::move(fp.first), fp.second 
+              }; 
+          })
+        ;
+
+    toolpex::skip_list<sequenced_key, kv_user_value> potiential_results(16);
+    level_t cur_level{};
+    for (auto sst_f : ssts_view)
+    {
+        if (sst_f.l != cur_level)
+        {
+            cur_level = sst_f.l;
+            auto iter = potiential_results.find_last_less_equal(key);
+            if (iter != potiential_results.end())
+            {
+                co_return kv_entry{::std::move(iter->first), ::std::move(iter->second)};
+            }
+            potiential_results.clear();
+        }
+
+        auto& sst = sst_f.sst; 
+        co_await sst.parse_meta_data();
+        auto entry_opt = co_await sst.get_kv_entry(key);
+        if (!entry_opt.has_value() || entry_opt->key().sequence_number() > snap.sequence_number())
+            continue;
+        potiential_results.insert(
+            ::std::move(entry_opt->key()), 
+            ::std::move(entry_opt->value())
+        );
+    }
 
     co_return {};
 }

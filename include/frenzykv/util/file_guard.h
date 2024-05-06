@@ -75,7 +75,8 @@ public:
 
     bool operator<(const file_rep& other) const noexcept
     {
-        // For set difference
+        if (level() < other.level()) return true;
+        else if (level() > other.level()) return false;
         return file_id() < other.file_id();
     }
 

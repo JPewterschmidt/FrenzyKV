@@ -41,11 +41,11 @@ insert_impl(const kv_entry& b)
 
 static 
 ::std::optional<kv_entry> 
-table_get(auto&& list, const auto& key) noexcept
+table_get(auto&& list, const sequenced_key& key) noexcept
 {
     ::std::optional<kv_entry> result{};
-    if (auto iter = list.find_less_equal(key); 
-        iter != list.end())
+    if (auto iter = list.find_last_less_equal(key); 
+        iter != list.end() && iter->first.user_key() == key.user_key())
     {
         result.emplace(iter->first, iter->second);
     }
