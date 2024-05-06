@@ -133,8 +133,16 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
     };
 
     auto ssts_view = files 
-        | rv::transform([this](auto&& fg) { return ::std::pair{ fg.open_read(m_deps.env().get()), fg.level() }; })
-        | rv::transform([&, this](auto&& fp) { return sst_with_file{ m_deps, m_filter_policy.get(), ::std::move(fp.first), fp.second }; })
+        | rv::transform([this](auto&& fg) { 
+              return ::std::pair{ 
+                  fg.open_read(m_deps.env().get()), fg.level() 
+              }; 
+          })
+        | rv::transform([&, this](auto&& fp) { 
+              return sst_with_file{ 
+                  m_deps, m_filter_policy.get(), ::std::move(fp.first), fp.second 
+              }; 
+          })
         ;
 
     // Optimize to parallel finding   
