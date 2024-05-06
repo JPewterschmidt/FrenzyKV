@@ -35,7 +35,7 @@ namespace frenzykv
 db_impl::db_impl(::std::string dbname, const options& opt)
     : m_dbname{ ::std::move(dbname) }, 
       m_deps{ opt },
-      m_log{ m_deps, m_deps.env()->get_seq_writable(prewrite_log_dir().path()/"0001-test.frzkvlog") }, 
+      m_log{ m_deps }, 
       m_filter_policy{ make_bloom_filter(64) }, 
       m_file_center{ m_deps }, 
       m_version_center{ m_file_center },
@@ -48,6 +48,27 @@ db_impl::db_impl(::std::string dbname, const options& opt)
 db_impl::~db_impl() noexcept
 {
     m_bg_gc_stop_src.request_stop();
+}
+
+koios::task<bool> db_impl::init() 
+{
+    co_await m_version_center.load_current_version();
+    if (co_await m_log.empty())
+    {
+        co_return true;
+    }
+    
+    auto envp = m_deps.env();
+    write_batch b = co_await recover(envp.get());
+    co_await m_log.truncate_file();
+    co_await m_mem->insert(::std::move(b));
+
+    auto lk = co_await m_mem_mutex.acquire();
+    auto memp = ::std::exchange(m_mem, ::std::make_unique<memtable>(m_deps));
+    lk.unlock();
+    co_await m_flusher.flush_to_disk(::std::move(memp), true);
+
+    co_return true;
 }
 
 koios::task<> db_impl::close()

@@ -21,6 +21,8 @@ class db_interface
 public:
     virtual ~db_interface() noexcept {}
 
+    virtual koios::task<bool> init() = 0;
+
     virtual koios::task<::std::error_code> 
     insert(write_batch batch, write_options opt = {}) = 0;
 

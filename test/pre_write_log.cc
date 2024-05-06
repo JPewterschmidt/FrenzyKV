@@ -1,10 +1,16 @@
-#include "gtest/gtest.h"
-#include "frenzykv/log/logger.h"
-#include "frenzykv/write_batch.h"
-#include "frenzykv/env.h"
-#include "koios/iouring_awaitables.h"
-#include "toolpex/errret_thrower.h"
 #include <string>
+
+#include "gtest/gtest.h"
+
+#include "toolpex/errret_thrower.h"
+
+#include "koios/iouring_awaitables.h"
+
+#include "frenzykv/env.h"
+#include "frenzykv/write_batch.h"
+
+#include "frenzykv/log/logger.h"
+#include "frenzykv/io/inner_buffer.h"
 
 using namespace frenzykv;
 using namespace ::std::string_literals;
@@ -37,31 +43,23 @@ koios::task<bool> write(logger& l)
     co_return true;
 }
 
-koios::task<toolpex::unique_posix_fd> open_file()
+koios::eager_task<bool> read(env* e)
 {
-    toolpex::errret_thrower et;
-    co_return et << ::open("pre_write_test.txt", O_RDWR);
-}
+    auto file = e->get_seq_readable(prewrite_log_path()/prewrite_log_name());
+    buffer<> buf(file->file_size());
+    const uintmax_t readed = co_await file->read(buf.writable_span());
+    assert(readed == file->file_size());
+    buf.commit(readed);
 
-koios::eager_task<bool> read()
-{
-    auto fd = co_await open_file();
-    ::std::array<::std::byte, 1024> buffer{};
-    co_await koios::uring::read(fd, ::std::as_writable_bytes(::std::span{buffer}));
-    size_t first_entey_sz = serialized_entry_size(buffer.data());
+    size_t first_entey_sz = serialized_entry_size(buf.valid_span().data());
 
-    kv_entry entry1{ buffer };
+    kv_entry entry1{ buf.valid_span() };
     bool result = (entry1.key().user_key() == "xxxx"sv);
 
-    kv_entry entry2{ ::std::span{ buffer }.subspan(first_entey_sz) };
+    kv_entry entry2{ buf.valid_span().subspan(first_entey_sz) };
     result &= (entry2.key().user_key() == "aaaa"sv);
 
     co_return result;
-}
-
-koios::eager_task<> clean()
-{
-    co_await koios::uring::unlink("pre_write_test.txt");
 }
 
 } // annoymous namespace
@@ -69,9 +67,10 @@ koios::eager_task<> clean()
 TEST(pre_write_log, basic)
 {
     kvdb_deps deps;
-    logger l(deps, deps.env()->get_seq_writable("pre_write_test.txt"));
+    logger l(deps);
     ASSERT_TRUE(write(l).result());
-    ASSERT_TRUE(read().result());
+    auto e = deps.env();
+    ASSERT_TRUE(read(e.get()).result());
 
-    clean().result();
+    l.delete_file().result();
 }
