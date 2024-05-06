@@ -68,7 +68,7 @@ append_version_descriptor(
             co_return false;
         co_await file->append(newline);
     }
-    co_await file->flush();
+    co_await file->sync();
     co_return true;
 }
 
@@ -91,7 +91,7 @@ read_version_descriptor(seq_readable* file)
 static constexpr auto vd_name_pattern = "frzkv#{}#.frzkvver"sv;
 static constexpr size_t vd_name_length = 52; // See test of version descriptor
 
-koios::task<> set_current_version_file(const kvdb_deps& deps, const ::std::string& filename)
+koios::task<> set_current_version_file(const kvdb_deps& deps, ::std::string_view filename)
 {
     auto file = deps.env()->get_truncate_seq_writable(version_path()/current_version_descriptor_name());
     co_await file->append(filename);
@@ -104,7 +104,7 @@ koios::task<version_delta> get_current_version(const kvdb_deps& deps)
 {
     auto file = deps.env()->get_seq_readable(version_path()/current_version_descriptor_name());
     ::std::string name(vd_name_length, 0);
-    auto sp = ::std::as_writable_bytes(::std::span{name}.subspan(52));
+    auto sp = ::std::as_writable_bytes(::std::span{name.data(), name.size()}.subspan(0, 52));
     const size_t readed = co_await file->read(sp);
     assert(readed == vd_name_length || readed == 0);
     if (readed == 0)

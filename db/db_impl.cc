@@ -52,6 +52,11 @@ db_impl::~db_impl() noexcept
 
 koios::task<bool> db_impl::init() 
 {
+    if (m_inited.load())
+        co_return true;
+
+    m_inited.store(true);
+
     co_await m_version_center.load_current_version();
     if (co_await m_log.empty())
     {
@@ -95,6 +100,8 @@ koios::task<::std::error_code>
 db_impl::
 insert(write_batch batch, write_options opt)
 {
+    co_await init();
+
     sequence_number_t seq = m_snapshot_center.get_next_unused_sequence_number(batch.count());
     batch.set_first_sequence_num(seq);
 
@@ -137,11 +144,13 @@ db_impl::do_GC()
 koios::task<::std::optional<kv_entry>> 
 db_impl::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noexcept
 {
+    co_await init();
+
     const sequenced_key skey = co_await this->make_query_key(key, opt);
     auto result_opt = co_await m_mem->get(skey);
     if (result_opt) co_return result_opt;
 
-    co_return co_await find_from_ssts(key, ::std::move(opt.snap));
+    co_return co_await find_from_ssts(skey, ::std::move(opt.snap));
 }
 
 koios::task<::std::optional<kv_entry>> 
@@ -224,6 +233,7 @@ db_impl::make_query_key(const_bspan userkey, const read_options& opt)
 
 koios::task<snapshot> db_impl::get_snapshot()
 {
+    co_await init();
     co_return m_snapshot_center.get_snapshot(co_await m_version_center.current_version());
 }
 

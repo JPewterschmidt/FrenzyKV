@@ -54,7 +54,7 @@ koios::task<> db_test()
     w1.write("hello", "frenzykv");
     co_await db->insert(::std::move(w1));
 
-    auto entry = co_await db->get("hello", ro);
+    auto entry = co_await db->get("shit", ro);
     if (entry) ::std::cout << entry->to_string_debug() << ::std::endl;
     else ::std::cout << "no value" << ::std::endl;
 

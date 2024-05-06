@@ -76,6 +76,8 @@ private:
     ::std::unique_ptr<memtable> m_mem;
     garbage_collector m_gcer;
     memtable_flusher m_flusher;
+
+    ::std::atomic_bool m_inited{};
 };  
 
 } // namespace frenzykv

@@ -60,13 +60,10 @@ private:
 class version_rep
 {
 public:
-    version_rep() = default;
+    version_rep();
 
     // It should be copyable, used by creating a nwe version based on an old one.
-    version_rep(const version_rep& other)
-        : m_files{ other.m_files }
-    {
-    }
+    version_rep(const version_rep& other);
 
     const auto& files() const noexcept { return m_files; }
     auto ref() noexcept { return m_ref++; }
@@ -82,7 +79,7 @@ public:
         m_version_desc_name = ::std::move(name);
     }
     
-    ::std::string_view version_desc_name() const noexcept { return m_version_desc_name; }
+    ::std::string_view version_desc_name() const noexcept { assert(!m_version_desc_name.empty()); return m_version_desc_name; }
     auto approx_ref_count() const noexcept { return m_ref.load(::std::memory_order_relaxed); }
 
 private:
@@ -199,7 +196,7 @@ public:
         co_return m_current;
     }
 
-    koios::task<> load_current_version();
+    koios::eager_task<> load_current_version();
 
     koios::task<> set_current_version(version_guard v)
     {

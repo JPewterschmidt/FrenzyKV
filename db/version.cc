@@ -10,6 +10,17 @@ namespace frenzykv
 namespace r = ::std::ranges;
 namespace rv = r::views;
 
+version_rep::version_rep()
+    : m_version_desc_name{ get_version_descriptor_name() }
+{
+}
+
+version_rep::version_rep(const version_rep& other)
+    : m_files{ other.m_files }, 
+      m_version_desc_name{ get_version_descriptor_name() }
+{
+}
+
 version_rep& version_rep::operator+=(const version_delta& delta) 
 {
     ::std::vector<file_guard> new_versions_files = delta.added_files();
@@ -20,7 +31,6 @@ version_rep& version_rep::operator+=(const version_delta& delta)
                           compacted_files.begin(), compacted_files.end(), 
                           ::std::back_inserter(new_versions_files));
 
-    assert(!new_versions_files.empty());
     m_files = ::std::move(new_versions_files);
     return *this;
 }
@@ -32,7 +42,7 @@ koios::task<version_guard> version_center::add_new_version()
     co_return m_current;
 }
 
-koios::task<> version_center::load_current_version()
+koios::eager_task<> version_center::load_current_version()
 {
     auto lk = co_await m_modify_lock.acquire();
     assert(m_versions.empty());

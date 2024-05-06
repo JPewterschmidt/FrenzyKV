@@ -31,7 +31,7 @@ memtable_flusher::need_compaction(level_t l) const
     const size_t num = r::fold_left(level_files_view, 0, ::std::plus<size_t>{});
 
     co_return { 
-        m_deps->opt()->is_appropriate_level_file_number(l, num), 
+        !m_deps->opt()->is_appropriate_level_file_number(l, num), 
         ::std::move(cur_ver)
     };
 }
@@ -121,6 +121,7 @@ flush_to_disk(::std::unique_ptr<memtable> table, bool joined_compact)
     auto ver_file = m_deps->env()->get_seq_writable(version_path()/ver_filename);
     [[maybe_unused]] bool appending_ret = co_await append_version_descriptor(delta.added_files(), ver_file.get());
     assert(appending_ret);
+    co_await set_current_version_file(*m_deps, ver_filename);
 
     // Only after changing the version descriptor (on disk), 
     // the in memory update could be performed.

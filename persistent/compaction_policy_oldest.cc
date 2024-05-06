@@ -34,6 +34,10 @@ compacting_files(const version_guard& vc, level_t from) const
             guard_oldest_file = fguard;
         }
     }
+    
+    // If there is no any file to be comapcted.
+    if (!guard_oldest_file.valid()) co_return {};
+
     auto fp = result.emplace_back(::std::move(guard_oldest_file)).open_read(m_deps->env().get());
     sstable from_l_sst(*m_deps, m_filter, fp.get());
     [[maybe_unused]] bool pr = co_await from_l_sst.parse_meta_data(); assert(pr);

@@ -139,6 +139,7 @@ public:
     const auto& rep() const noexcept { assert(m_rep); return *m_rep; }
     const ::std::string_view name() const noexcept { assert(m_rep); return m_rep->name(); }
 
+    bool valid() const noexcept { return !!m_rep; }
     operator file_id_t() const noexcept { return file_id(); }
     operator level_t() const noexcept { return level(); }
     operator ::std::string_view() const { return name(); }
