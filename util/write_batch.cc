@@ -8,6 +8,11 @@
 namespace frenzykv
 {
 
+void write_batch::write(kv_entry entry)
+{
+    m_entries.emplace_back(::std::move(entry));
+}
+
 void write_batch::write(const_bspan key, const_bspan value)
 {
     m_entries.emplace_back(first_sequence_num() + m_entries.size(), key, value);

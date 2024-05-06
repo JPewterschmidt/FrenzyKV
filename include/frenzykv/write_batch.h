@@ -14,6 +14,7 @@ namespace frenzykv
     public:
         constexpr write_batch() noexcept = default;
         write_batch(const_bspan key, const_bspan value) { write(key, value); }
+        void    write(kv_entry entry);
         void    write(const_bspan key, const_bspan value);
         void    write(::std::string_view key, ::std::string_view value); // Basically for debugging
         void    write(write_batch other);
