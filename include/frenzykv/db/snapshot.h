@@ -20,7 +20,7 @@ public:
     {
     }
 
-    sequence_number_t sequence_number() const noexcept { return m_seq; }
+    sequence_number_t sequence_number() const noexcept { assert(valid()); return m_seq; }
     const version_guard& version() const noexcept { return m_version; }
     constexpr bool valid() const noexcept { return m_seq != 0; }
 

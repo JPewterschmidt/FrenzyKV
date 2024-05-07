@@ -7,6 +7,7 @@
 #include <memory>
 #include <optional>
 #include <vector>
+#include <list>
 #include <string_view>
 
 #include "toolpex/move_only.h"
@@ -20,6 +21,12 @@
 
 namespace frenzykv
 {
+
+inline consteval size_t sst_name_length() noexcept 
+{ 
+    using namespace ::std::string_view_literals;
+    return "frzkv#****0#030f57fe-2405-47e9-a300-588812af06c9#.frzkvsst"sv.size();
+}
 
 ::std::string name_a_sst(level_t l, const file_id_t& id);
 ::std::string name_a_sst(level_t l);
@@ -41,7 +48,7 @@ public:
     koios::task<> load_files();
 
     koios::task<::std::vector<file_guard>>
-    get_file_guards(::std::ranges::range auto const& names);
+    get_file_guards(const ::std::vector<::std::string>& names);
 
     koios::task<file_guard> get_file(const ::std::string& name);
 
@@ -50,8 +57,12 @@ public:
 private:
     const kvdb_deps* m_deps;
     koios::shared_mutex m_mutex;
-    ::std::vector<::std::unique_ptr<file_rep>> m_reps;
-    ::std::map<::std::string_view, file_rep*> m_name_rep;
+
+    // The reason why we need use a unique_ptr wrapper
+    // is because we want to keep the address of those reps
+    // stable. cause the `version_guard`s refer them by addresses.
+    ::std::list<::std::unique_ptr<file_rep>> m_reps;
+    ::std::map<::std::string, file_rep*> m_name_rep;
 };
 
 } // namespace frenzykv

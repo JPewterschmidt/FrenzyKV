@@ -60,13 +60,10 @@ private:
 class version_rep
 {
 public:
-    version_rep() = default;
+    version_rep(::std::string_view desc_name);
 
     // It should be copyable, used by creating a nwe version based on an old one.
-    version_rep(const version_rep& other)
-        : m_files{ other.m_files }
-    {
-    }
+    version_rep(const version_rep& other);
 
     const auto& files() const noexcept { return m_files; }
     auto ref() noexcept { return m_ref++; }
@@ -82,7 +79,7 @@ public:
         m_version_desc_name = ::std::move(name);
     }
     
-    ::std::string_view version_desc_name() const noexcept { return m_version_desc_name; }
+    ::std::string_view version_desc_name() const noexcept { assert(!m_version_desc_name.empty()); return m_version_desc_name; }
     auto approx_ref_count() const noexcept { return m_ref.load(::std::memory_order_relaxed); }
 
 private:
@@ -131,6 +128,8 @@ public:
         if (m_rep) m_rep->ref();
         return *this;
     }
+
+    bool valid() const noexcept { return !!m_rep; }
 
     auto& rep() noexcept { assert(m_rep); return *m_rep; }
     const auto& rep() const noexcept { assert(m_rep); return *m_rep; }
@@ -193,13 +192,13 @@ public:
 
     koios::task<version_guard> add_new_version();
 
-    koios::task<version_guard> current_version() noexcept
+    koios::task<version_guard> current_version() const noexcept
     {
         auto lk = co_await m_modify_lock.acquire_shared();
         co_return m_current;
     }
 
-    koios::task<> load_current_version();
+    koios::eager_task<> load_current_version();
 
     koios::task<> set_current_version(version_guard v)
     {
@@ -216,17 +215,17 @@ public:
 
         for (const version_rep& out_dated_version : m_versions 
             | rv::take(m_versions.size())
-            | rv::filter(is_garbage))
+            | rv::filter(is_garbage_in_mem))
         {
             co_await async_func_file_range(out_dated_version);
         }
-        GC_impl();
+        in_mem_GC_impl();
     }
 
     koios::task<> GC()
     {
         auto lk = co_await m_modify_lock.acquire();
-        GC_impl();
+        in_mem_GC_impl();
     }
 
     koios::task<size_t> size() const
@@ -236,12 +235,12 @@ public:
     }
 
 private:
-    static bool is_garbage(const version_rep& vg)
+    static bool is_garbage_in_mem(const version_rep& vg)
     {
         return vg.approx_ref_count() == 0;
     }
 
-    void GC_impl() { ::std::erase_if(m_versions, is_garbage); }
+    void in_mem_GC_impl() { ::std::erase_if(m_versions, is_garbage_in_mem); }
 
 private:
     ::std::list<version_rep> m_versions;

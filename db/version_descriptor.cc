@@ -6,6 +6,7 @@
 
 #include "frenzykv/db/version_descriptor.h"
 #include "frenzykv/util/uuid.h"
+#include "frenzykv/util/file_center.h"
 
 namespace r = ::std::ranges;
 namespace rv = r::views;
@@ -68,7 +69,7 @@ append_version_descriptor(
             co_return false;
         co_await file->append(newline);
     }
-    co_await file->flush();
+    co_await file->sync();
     co_return true;
 }
 
@@ -79,10 +80,11 @@ read_version_descriptor(seq_readable* file)
     size_t readed{1};
     while (readed)
     {
-        // See also test/version.cc ::name_length
-        ::std::array<::std::byte, 53> buffer{}; 
+        // buffer length = sst_name_length() + length of '\n'
+        ::std::array<::std::byte, sst_name_length() + 1> buffer{}; 
         readed = co_await file->read(buffer);
-        if (readed) result.emplace_back(reinterpret_cast<char*>(buffer.data()), 52);
+        if (readed < sst_name_length()) continue;
+        if (readed) result.emplace_back(reinterpret_cast<char*>(buffer.data()), sst_name_length());
     }
 
     co_return result;
@@ -91,7 +93,7 @@ read_version_descriptor(seq_readable* file)
 static constexpr auto vd_name_pattern = "frzkv#{}#.frzkvver"sv;
 static constexpr size_t vd_name_length = 52; // See test of version descriptor
 
-koios::task<> set_current_version_file(const kvdb_deps& deps, const ::std::string& filename)
+koios::task<> set_current_version_file(const kvdb_deps& deps, ::std::string_view filename)
 {
     auto file = deps.env()->get_truncate_seq_writable(version_path()/current_version_descriptor_name());
     co_await file->append(filename);
@@ -100,11 +102,11 @@ koios::task<> set_current_version_file(const kvdb_deps& deps, const ::std::strin
     co_return;
 }
 
-koios::task<version_delta> get_current_version(const kvdb_deps& deps)
+koios::task<::std::optional<::std::string>> current_descriptor_name(const kvdb_deps& deps)
 {
     auto file = deps.env()->get_seq_readable(version_path()/current_version_descriptor_name());
     ::std::string name(vd_name_length, 0);
-    auto sp = ::std::as_writable_bytes(::std::span{name}.subspan(52));
+    auto sp = ::std::as_writable_bytes(::std::span{name.data(), name.size()}.subspan(0, 52));
     const size_t readed = co_await file->read(sp);
     assert(readed == vd_name_length || readed == 0);
     if (readed == 0)
@@ -112,17 +114,29 @@ koios::task<version_delta> get_current_version(const kvdb_deps& deps)
         co_return {};
     }
     name.resize(vd_name_length);
-    auto version_file = deps.env()->get_seq_readable(version_path()/name);
-    assert(version_file->file_size() != 0);
+
+    co_return name;
+}
+
+koios::task<version_delta> get_version(const kvdb_deps& deps, ::std::string_view desc_name, file_center* fc)
+{
+    auto version_file = deps.env()->get_seq_readable(version_path()/desc_name);
     const auto name_vec = co_await read_version_descriptor(version_file.get());
 
-    // TODO
     version_delta result;
-    //for (const auto& name : name_vec)
-    //{
-    //    result.add_new_file(co_await l.get_file_guard(name));
-    //}
+    for (const auto& desc_name : name_vec)
+    {
+        assert(is_sst_name(desc_name));
+        result.add_new_file(co_await fc->get_file(desc_name));
+    }
     co_return result;
+}
+
+koios::task<version_delta> get_current_version(const kvdb_deps& deps, file_center* fc)
+{
+    auto name_opt = co_await current_descriptor_name(deps);
+    if (!name_opt) co_return {};
+    co_return co_await get_version(deps, *name_opt, fc);
 }
 
 ::std::string get_version_descriptor_name()

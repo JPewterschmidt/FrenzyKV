@@ -1,5 +1,9 @@
+#include <cassert>
+
 #include "frenzykv/env.h"
 #include "frenzykv/util/file_guard.h"
+
+namespace fs = ::std::filesystem;
 
 namespace frenzykv
 {
@@ -14,6 +18,12 @@ file_rep::open_read(env* e) const
 file_rep::open_write(env* e) const
 {
     return e->get_seq_writable(sstables_path()/name());
+}
+
+::std::filesystem::file_time_type 
+file_rep::last_write_time() const
+{
+    return fs::last_write_time(sstables_path()/name());
 }
 
 } // namespace frenzykv

@@ -53,7 +53,9 @@ public:
     file_id_t file_id() const noexcept { return m_fileid; }
     level_t level() const noexcept { return m_level; }
     ::std::string_view name() const noexcept { return m_name; }
+    ::std::filesystem::file_time_type last_write_time() const;
     
+    bool valid() const noexcept { return !m_name.empty(); }
     operator file_id_t() const noexcept { return file_id(); }
     operator level_t() const noexcept { return level(); }
     operator ::std::string_view() const noexcept { return name(); }
@@ -92,8 +94,8 @@ class file_guard
 public:
     constexpr file_guard() noexcept = default;
 
-    file_guard(file_rep* rep) noexcept : m_rep{ rep } { }
-    file_guard(file_rep& rep) noexcept : m_rep{ &rep } { }
+    file_guard(file_rep* rep) noexcept : m_rep{ rep } { m_rep->ref(); }
+    file_guard(file_rep& rep) noexcept : m_rep{ &rep } { m_rep->ref(); }
 
     ~file_guard() noexcept { release(); }
 
@@ -139,10 +141,12 @@ public:
     const auto& rep() const noexcept { assert(m_rep); return *m_rep; }
     const ::std::string_view name() const noexcept { assert(m_rep); return m_rep->name(); }
 
+    bool valid() const noexcept { return !!m_rep; }
     operator file_id_t() const noexcept { return file_id(); }
     operator level_t() const noexcept { return level(); }
     operator ::std::string_view() const { return name(); }
     operator ::std::filesystem::path() const { return name(); }
+    auto last_write_time() const { assert(valid()); return m_rep->last_write_time(); }
 
     bool operator==(const file_guard& other) const noexcept
     {
@@ -169,6 +173,20 @@ public:
     {
         assert(m_rep);
         return m_rep->open_write(e);
+    }
+
+public:
+    template<::std::size_t Level>
+    static bool with_level(const file_guard& fg) noexcept
+    {
+        return fg.level() == Level;
+    }
+
+    static auto with_level_predicator(level_t l) noexcept
+    {
+        return [=](const file_guard& fg) noexcept {
+            return fg.level() == l;
+        };
     }
 
 private:

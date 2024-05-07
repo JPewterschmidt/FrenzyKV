@@ -28,7 +28,7 @@ namespace frenzykv
 
 ::std::string name_a_sst(level_t l, const file_id_t& id)
 {
-    return ::std::format("frzkv#{}#{}#.frzkvsst", l, id.to_string());
+    return ::std::format("frzkv#{:*>5}#{}#.frzkvsst", l, id.to_string());
 }
 
 ::std::string name_a_sst(level_t l)
@@ -58,7 +58,9 @@ retrive_level_and_id_from_sst_name(::std::string_view name)
     auto firsti = begin(data_view);
     auto secondi = next(firsti);
 
-    result.emplace(::std::stoi(*firsti), file_id_t(*secondi));
+    auto first_str = *firsti;
+
+    result.emplace(::std::stoi(first_str.substr(first_str.find_first_not_of('*'))), file_id_t(*secondi));
 
     return result;
 }
@@ -70,7 +72,7 @@ koios::task<> file_center::load_files()
     for (const auto& dir_entry : fs::directory_iterator{ sstables_path() })
     {
         auto name = dir_entry.path().filename().string();
-        assert(!is_sst_name(name));
+        assert(is_sst_name(name));
 
         auto level_and_id_opt = retrive_level_and_id_from_sst_name(name);
         auto& sp = m_reps.emplace_back(::std::make_unique<file_rep>(level_and_id_opt->first, level_and_id_opt->second, name));
@@ -81,13 +83,14 @@ koios::task<> file_center::load_files()
 }
 
 koios::task<::std::vector<file_guard>>
-file_center::get_file_guards(::std::ranges::range auto const& names)
+file_center::get_file_guards(const ::std::vector<::std::string>& names)
 {
     ::std::vector<file_guard> result;
     auto lk = co_await m_mutex.acquire_shared();
 
     for (const auto& name : names)
     {
+        assert(is_sst_name(name));
         result.emplace_back(m_name_rep.at(name));
     }
 
@@ -96,29 +99,34 @@ file_center::get_file_guards(::std::ranges::range auto const& names)
 
 koios::task<file_guard> file_center::get_file(const ::std::string& name)
 {
+    assert(is_sst_name(name));
     auto lk = co_await m_mutex.acquire();
     if (m_name_rep.contains(name))
     {
         co_return *m_name_rep[name];
     }
     auto level_and_id_opt = retrive_level_and_id_from_sst_name(name);
-    auto& sp = m_reps.emplace_back(::std::make_unique<file_rep>(level_and_id_opt->first, level_and_id_opt->second, name));
+    auto& sp = m_reps.emplace_back(
+        ::std::make_unique<file_rep>(
+            level_and_id_opt->first, level_and_id_opt->second, name
+        )
+    );
     auto insert_ret = m_name_rep.insert({ name, sp.get() });
-    assert(insert_ret.second);
+    assert(insert_ret.second); // TODO May triggered
     co_return *((*(insert_ret.first)).second);
 }
 
 koios::task<> file_center::GC()
 {
     auto lk = co_await m_mutex.acquire();
-    auto removed = r::remove_if(m_reps, [](auto&& rep){ return rep->approx_ref_count() == 0; });
-    auto names_removed = removed | rv::transform([](auto&& r) { return r->name(); });
-    for (auto name : names_removed)
+    auto removing = r::partition(m_reps, [](auto&& rep){ return rep->approx_ref_count() != 0; });
+    auto names_removing = removing | rv::transform([](auto&& r) { assert(r->approx_ref_count() == 0); return r->name(); });
+    for (auto name : names_removing)
     {
-        m_name_rep.erase(name);
+        m_name_rep.erase(::std::string(name));
         co_await koios::uring::unlink(sstables_path()/name);
     }
-    m_reps.erase(begin(removed), end(removed));
+    m_reps.erase(begin(removing), end(removing));
 
     co_return;
 }

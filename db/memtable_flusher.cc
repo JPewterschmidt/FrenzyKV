@@ -31,7 +31,7 @@ memtable_flusher::need_compaction(level_t l) const
     const size_t num = r::fold_left(level_files_view, 0, ::std::plus<size_t>{});
 
     co_return { 
-        m_deps->opt()->is_appropriate_level_file_number(l, num), 
+        !m_deps->opt()->is_appropriate_level_file_number(l, num), 
         ::std::move(cur_ver)
     };
 }
@@ -40,6 +40,7 @@ koios::task<> memtable_flusher::may_compact(bool joined_gc)
 {
     const level_t max_level = m_deps->opt()->max_level;
     bool need_gc{};
+    auto env = m_deps->env();
     for (level_t l{}; l <= max_level; ++l)
     {
         auto [need, ver] = co_await need_compaction(l);
@@ -51,11 +52,25 @@ koios::task<> memtable_flusher::may_compact(bool joined_gc)
             m_filter
         };
         
-        auto fake_file = co_await comp.compact(::std::move(ver), l);
+        // Do the actual compaction
+        auto [fake_file, delta] = co_await comp.compact(::std::move(ver), l);
         auto file = co_await m_file_center->get_file(name_a_sst(l + 1));
-        auto fp = file.open_write(m_deps->env().get());
+        delta.add_new_file(file);
+        auto fp = file.open_write(env.get());
         co_await fake_file->dump_to(*fp);
         co_await fp->flush();
+
+        // Add a new version
+        const auto cur_v = co_await m_version_center->add_new_version() += delta;
+
+        // Write new version to version descriptor
+        const auto new_desc_name = cur_v.version_desc_name();
+        auto new_desc = env->get_seq_writable(version_path()/new_desc_name);
+        [[maybe_unused]] bool write_ret = co_await write_version_descriptor(*cur_v, new_desc.get());
+        assert(write_ret);
+
+        // Set current version
+        co_await set_current_version_file(*m_deps, new_desc_name);
     }
     if (need_gc) 
     {
@@ -78,6 +93,7 @@ flush_to_disk(::std::unique_ptr<memtable> table, bool joined_compact)
     // So this is an easy Consumer/Producer module.
     auto lk = co_await m_mutex.acquire();
     auto cur_ver = co_await m_version_center->current_version();
+    assert(cur_ver.valid());
     
     auto sst_guard = co_await m_file_center->get_file(name_a_sst(0));
     auto file = m_deps->env()->get_seq_writable(sstables_path()/sst_guard);
@@ -121,6 +137,7 @@ flush_to_disk(::std::unique_ptr<memtable> table, bool joined_compact)
     auto ver_file = m_deps->env()->get_seq_writable(version_path()/ver_filename);
     [[maybe_unused]] bool appending_ret = co_await append_version_descriptor(delta.added_files(), ver_file.get());
     assert(appending_ret);
+    co_await set_current_version_file(*m_deps, ver_filename);
 
     // Only after changing the version descriptor (on disk), 
     // the in memory update could be performed.

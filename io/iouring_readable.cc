@@ -13,7 +13,7 @@ namespace frenzykv
 static toolpex::errret_thrower et;
 
 iouring_readable::iouring_readable(const ::std::filesystem::path& p, const options& opt)
-    : posix_base{ et << ::open(p.c_str(), O_RDONLY | O_CLOEXEC) }, 
+    : posix_base{ et << ::open(p.c_str(), O_CREAT | O_RDONLY | O_CLOEXEC, file::default_create_mode()) }, 
       m_opt{ &opt }
 {
     typename ::stat st{};

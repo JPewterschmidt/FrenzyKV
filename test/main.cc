@@ -19,12 +19,16 @@ int main(int argc, char** argv)
     if (ifs)
     {
         ifs >> config_j;
-        ::std::cout << argv[0] << ": ./test-config.json Got it." << ::std::endl;
+        ::std::cout << argv[0] << ": ./test-config.json Got it. But change root path to /tmp/frenzykv-unit-tests" << ::std::endl;
+        config_j["root_path"] = "/tmp/frenzykv-unit-tests";
         frenzykv::set_global_options(config_j);
         running_with_user_config = true;
     }
     else
     {
+        auto opts = frenzykv::get_global_options();
+        opts.root_path = "/tmp/frenzykv-unit-tests";
+        frenzykv::set_global_options(::std::move(opts));
         ::std::cout << argv[0] << ": Unittests will run with defualt config." << ::std::endl;
     }
 

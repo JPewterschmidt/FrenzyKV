@@ -52,9 +52,16 @@ db_impl::~db_impl() noexcept
 
 koios::task<bool> db_impl::init() 
 {
+    if (m_inited.load())
+        co_return true;
+
+    m_inited.store(true);
+
+    co_await m_file_center.load_files();
     co_await m_version_center.load_current_version();
     if (co_await m_log.empty())
     {
+        co_await m_gcer.do_GC();
         co_return true;
     }
     
@@ -67,6 +74,7 @@ koios::task<bool> db_impl::init()
     auto memp = ::std::exchange(m_mem, ::std::make_unique<memtable>(m_deps));
     lk.unlock();
     co_await m_flusher.flush_to_disk(::std::move(memp), true);
+    co_await m_gcer.do_GC();
 
     co_return true;
 }
@@ -75,10 +83,10 @@ koios::task<> db_impl::close()
 {
     auto lk = co_await m_mem_mutex.acquire();
     if (co_await m_mem->empty()) co_return;
-    // TODO flush whole memtable into disk
 
     co_await m_flusher.flush_to_disk(::std::move(m_mem), true);
     co_await delete_all_prewrite_log();
+    co_await m_gcer.do_GC();
     
     co_return;
 }
@@ -95,6 +103,8 @@ koios::task<::std::error_code>
 db_impl::
 insert(write_batch batch, write_options opt)
 {
+    co_await init();
+
     sequence_number_t seq = m_snapshot_center.get_next_unused_sequence_number(batch.count());
     batch.set_first_sequence_num(seq);
 
@@ -137,17 +147,19 @@ db_impl::do_GC()
 koios::task<::std::optional<kv_entry>> 
 db_impl::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noexcept
 {
+    co_await init();
+
     const sequenced_key skey = co_await this->make_query_key(key, opt);
     auto result_opt = co_await m_mem->get(skey);
     if (result_opt) co_return result_opt;
 
-    co_return co_await find_from_ssts(key, ::std::move(opt.snap));
+    co_return co_await find_from_ssts(skey, ::std::move(opt.snap));
 }
 
 koios::task<::std::optional<kv_entry>> 
 db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
 {
-    const version_guard& ver = snap.version();
+    version_guard ver = snap.valid() ? snap.version() : co_await m_version_center.current_version();
     auto files = ver.files();
     r::sort(files);
 
@@ -174,6 +186,7 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
                   fg.open_read(m_deps.env().get()), fg.level() 
               }; 
           })
+        | rv::filter([](auto&& fp) { return fp.first->file_size() != 0; })
         | rv::transform([&, this](auto&& fp) { 
               return sst_with_file{ 
                   m_deps, m_filter_policy.get(), ::std::move(fp.first), fp.second 
@@ -182,24 +195,32 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
         ;
 
     toolpex::skip_list<sequenced_key, kv_user_value> potiential_results(16);
+
+    auto find_from_potiential_results = [&potiential_results, &key] mutable -> koios::task<::std::optional<kv_entry>> { 
+        ::std::optional<kv_entry> result;
+        auto iter = potiential_results.find_last_less_equal(key);
+        if (iter != potiential_results.end())
+        {
+            co_return result.emplace(::std::move(iter->first), ::std::move(iter->second));
+        }
+        co_return result;
+    };
+
     level_t cur_level{};
     for (auto sst_f : ssts_view)
     {
         if (sst_f.l != cur_level)
         {
             cur_level = sst_f.l;
-            auto iter = potiential_results.find_last_less_equal(key);
-            if (iter != potiential_results.end())
-            {
-                co_return kv_entry{::std::move(iter->first), ::std::move(iter->second)};
-            }
+            if (auto ret = co_await find_from_potiential_results(); ret.has_value())
+                co_return ret;
             potiential_results.clear();
         }
 
         auto& sst = sst_f.sst; 
         co_await sst.parse_meta_data();
         auto entry_opt = co_await sst.get_kv_entry(key);
-        if (!entry_opt.has_value() || entry_opt->key().sequence_number() > snap.sequence_number())
+        if (!entry_opt.has_value() || (snap.valid() && entry_opt->key().sequence_number() > snap.sequence_number()))
             continue;
         potiential_results.insert(
             ::std::move(entry_opt->key()), 
@@ -207,7 +228,7 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
         );
     }
 
-    co_return {};
+    co_return co_await find_from_potiential_results();
 }
 
 koios::task<sequenced_key> 
@@ -224,6 +245,7 @@ db_impl::make_query_key(const_bspan userkey, const read_options& opt)
 
 koios::task<snapshot> db_impl::get_snapshot()
 {
+    co_await init();
     co_return m_snapshot_center.get_snapshot(co_await m_version_center.current_version());
 }
 

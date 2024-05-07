@@ -33,6 +33,12 @@ public:
     }
 
     virtual koios::task<::std::error_code> 
+    insert(::std::string_view key, ::std::string_view value, write_options opt = {}) 
+    { 
+        return insert(::std::as_bytes(::std::span{key}), ::std::as_bytes(::std::span{value}), ::std::move(opt)); 
+    }
+
+    virtual koios::task<::std::error_code> 
     remove_from_db(const_bspan key, write_options opt = {})
     {
         write_batch b;
