@@ -72,7 +72,7 @@ koios::task<> file_center::load_files()
     for (const auto& dir_entry : fs::directory_iterator{ sstables_path() })
     {
         auto name = dir_entry.path().filename().string();
-        assert(!is_sst_name(name));
+        assert(is_sst_name(name));
 
         auto level_and_id_opt = retrive_level_and_id_from_sst_name(name);
         auto& sp = m_reps.emplace_back(::std::make_unique<file_rep>(level_and_id_opt->first, level_and_id_opt->second, name));
@@ -90,6 +90,7 @@ file_center::get_file_guards(const ::std::vector<::std::string>& names)
 
     for (const auto& name : names)
     {
+        assert(is_sst_name(name));
         result.emplace_back(m_name_rep.at(name));
     }
 
@@ -98,6 +99,7 @@ file_center::get_file_guards(const ::std::vector<::std::string>& names)
 
 koios::task<file_guard> file_center::get_file(const ::std::string& name)
 {
+    assert(is_sst_name(name));
     auto lk = co_await m_mutex.acquire();
     if (m_name_rep.contains(name))
     {
@@ -110,7 +112,7 @@ koios::task<file_guard> file_center::get_file(const ::std::string& name)
         )
     );
     auto insert_ret = m_name_rep.insert({ name, sp.get() });
-    assert(insert_ret.second);
+    assert(insert_ret.second); // TODO May triggered
     co_return *((*(insert_ret.first)).second);
 }
 

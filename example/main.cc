@@ -41,20 +41,10 @@ koios::eager_task<> file_test()
 
 koios::task<> db_test()
 {
-    ::std::unique_ptr<db_interface> db = ::std::make_unique<db_impl>("test1", get_global_options());
+    auto dbimpl = ::std::make_unique<db_impl>("test1", get_global_options());
+    db_interface* db = dbimpl.get();
     
-    write_batch w;
-    w.write("hello", "world");
-    co_await db->insert(::std::move(w));
-    read_options ro{ 
-        .snap = co_await db->get_snapshot()
-    };
-
-    write_batch w1;
-    w1.write("hello", "frenzykv");
-    co_await db->insert(::std::move(w1));
-
-    auto entry = co_await db->get("shit", ro);
+    auto entry = co_await db->get("hello");
     if (entry) ::std::cout << entry->to_string_debug() << ::std::endl;
     else ::std::cout << "no value" << ::std::endl;
 

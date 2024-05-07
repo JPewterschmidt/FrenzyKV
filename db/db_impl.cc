@@ -57,9 +57,11 @@ koios::task<bool> db_impl::init()
 
     m_inited.store(true);
 
+    co_await m_file_center.load_files();
     co_await m_version_center.load_current_version();
     if (co_await m_log.empty())
     {
+        co_await m_gcer.do_GC();
         co_return true;
     }
     
@@ -72,6 +74,7 @@ koios::task<bool> db_impl::init()
     auto memp = ::std::exchange(m_mem, ::std::make_unique<memtable>(m_deps));
     lk.unlock();
     co_await m_flusher.flush_to_disk(::std::move(memp), true);
+    co_await m_gcer.do_GC();
 
     co_return true;
 }
@@ -80,10 +83,10 @@ koios::task<> db_impl::close()
 {
     auto lk = co_await m_mem_mutex.acquire();
     if (co_await m_mem->empty()) co_return;
-    // TODO flush whole memtable into disk
 
     co_await m_flusher.flush_to_disk(::std::move(m_mem), true);
     co_await delete_all_prewrite_log();
+    co_await m_gcer.do_GC();
     
     co_return;
 }
@@ -156,7 +159,7 @@ db_impl::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noexc
 koios::task<::std::optional<kv_entry>> 
 db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
 {
-    const version_guard& ver = snap.version();
+    version_guard ver = snap.valid() ? snap.version() : co_await m_version_center.current_version();
     auto files = ver.files();
     r::sort(files);
 

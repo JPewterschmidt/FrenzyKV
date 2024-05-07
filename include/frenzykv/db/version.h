@@ -190,7 +190,7 @@ public:
 
     koios::task<version_guard> add_new_version();
 
-    koios::task<version_guard> current_version() noexcept
+    koios::task<version_guard> current_version() const noexcept
     {
         auto lk = co_await m_modify_lock.acquire_shared();
         co_return m_current;

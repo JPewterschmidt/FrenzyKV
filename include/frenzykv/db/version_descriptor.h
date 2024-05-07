@@ -29,6 +29,8 @@ koios::task<version_delta> get_current_version(const kvdb_deps& deps, file_cente
 ::std::string get_version_descriptor_name();
 bool is_version_descriptor_name(::std::string_view name);
 
+koios::task<::std::string> current_descriptor_name(const kvdb_deps& deps);
+
 } // namespace frenzykv
 
 #endif

@@ -101,7 +101,7 @@ koios::task<> set_current_version_file(const kvdb_deps& deps, ::std::string_view
     co_return;
 }
 
-koios::task<version_delta> get_current_version(const kvdb_deps& deps, file_center* fc)
+koios::task<::std::string> current_descriptor_name(const kvdb_deps& deps)
 {
     auto file = deps.env()->get_seq_readable(version_path()/current_version_descriptor_name());
     ::std::string name(vd_name_length, 0);
@@ -113,6 +113,13 @@ koios::task<version_delta> get_current_version(const kvdb_deps& deps, file_cente
         co_return {};
     }
     name.resize(vd_name_length);
+
+    co_return name;
+}
+
+koios::task<version_delta> get_current_version(const kvdb_deps& deps, file_center* fc)
+{
+    auto name = co_await current_descriptor_name(deps);
     auto version_file = deps.env()->get_seq_readable(version_path()/name);
     assert(version_file->file_size() != 0);
     const auto name_vec = co_await read_version_descriptor(version_file.get());
