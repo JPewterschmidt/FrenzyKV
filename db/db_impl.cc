@@ -195,24 +195,32 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
         ;
 
     toolpex::skip_list<sequenced_key, kv_user_value> potiential_results(16);
+
+    auto find_from_potiential_results = [&potiential_results, &key] mutable -> koios::task<::std::optional<kv_entry>> { 
+        ::std::optional<kv_entry> result;
+        auto iter = potiential_results.find_last_less_equal(key);
+        if (iter != potiential_results.end())
+        {
+            co_return result.emplace(::std::move(iter->first), ::std::move(iter->second));
+        }
+        co_return result;
+    };
+
     level_t cur_level{};
     for (auto sst_f : ssts_view)
     {
         if (sst_f.l != cur_level)
         {
             cur_level = sst_f.l;
-            auto iter = potiential_results.find_last_less_equal(key);
-            if (iter != potiential_results.end())
-            {
-                co_return kv_entry{::std::move(iter->first), ::std::move(iter->second)};
-            }
+            if (auto ret = co_await find_from_potiential_results(); ret.has_value())
+                co_return ret;
             potiential_results.clear();
         }
 
         auto& sst = sst_f.sst; 
         co_await sst.parse_meta_data();
         auto entry_opt = co_await sst.get_kv_entry(key);
-        if (!entry_opt.has_value() || entry_opt->key().sequence_number() > snap.sequence_number())
+        if (!entry_opt.has_value() || (snap.valid() && entry_opt->key().sequence_number() > snap.sequence_number()))
             continue;
         potiential_results.insert(
             ::std::move(entry_opt->key()), 
@@ -220,7 +228,7 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
         );
     }
 
-    co_return {};
+    co_return co_await find_from_potiential_results();
 }
 
 koios::task<sequenced_key> 

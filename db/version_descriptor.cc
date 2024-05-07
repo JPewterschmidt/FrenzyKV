@@ -80,7 +80,8 @@ read_version_descriptor(seq_readable* file)
     size_t readed{1};
     while (readed)
     {
-        ::std::array<::std::byte, sst_name_length()> buffer{}; 
+        // buffer length = sst_name_length() + length of '\n'
+        ::std::array<::std::byte, sst_name_length() + 1> buffer{}; 
         readed = co_await file->read(buffer);
         if (readed < sst_name_length()) continue;
         if (readed) result.emplace_back(reinterpret_cast<char*>(buffer.data()), sst_name_length());
