@@ -13,11 +13,13 @@ namespace rv = ::std::ranges::views;
 namespace frenzykv
 {
 
-koios::task<::std::unique_ptr<in_mem_rw>> 
+koios::task<::std::pair<::std::unique_ptr<in_mem_rw>, version_delta>>
 compactor::compact(version_guard version, level_t from)
 {
     auto policy = make_default_compaction_policy(*m_deps, m_filter_policy);
     auto file_guards = co_await policy->compacting_files(version, from);
+    version_delta compacted;
+    compacted.add_compacted_files(file_guards);
 
     auto fileps_view = file_guards
        | rv::transform([this](auto&& fguard) { 
@@ -29,7 +31,9 @@ compactor::compact(version_guard version, level_t from)
     for (auto& filep : files)
         tables.emplace_back(*m_deps, m_filter_policy, filep.get());
 
-    co_return co_await merge_tables(tables);
+    // To prevent ICE, See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=114850
+    auto newfile = co_await merge_tables(tables);
+    co_return { ::std::move(newfile), ::std::move(compacted) };
 }
 
 koios::task<::std::unique_ptr<in_mem_rw>>

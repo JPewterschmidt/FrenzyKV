@@ -26,8 +26,11 @@ version_rep& version_rep::operator+=(const version_delta& delta)
 {
     ::std::vector<file_guard> new_versions_files = delta.added_files();
 
-    const auto& old_files = files();
-    const auto& compacted_files = delta.compacted_files();
+    auto old_files = files();
+    auto compacted_files = delta.compacted_files();
+    r::sort(old_files);
+    r::sort(compacted_files);
+
     ::std::set_difference(old_files.begin(), old_files.end(), 
                           compacted_files.begin(), compacted_files.end(), 
                           ::std::back_inserter(new_versions_files));
@@ -39,7 +42,9 @@ version_rep& version_rep::operator+=(const version_delta& delta)
 koios::task<version_guard> version_center::add_new_version()
 {
     auto lk = co_await m_modify_lock.acquire();
-    m_current = { m_versions.emplace_back(m_versions.back()) };
+    auto& new_ver = m_versions.emplace_back(m_versions.back());
+    new_ver.set_version_desc_name(get_version_descriptor_name());
+    m_current = { new_ver };
     co_return m_current;
 }
 

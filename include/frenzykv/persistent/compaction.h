@@ -1,6 +1,8 @@
 #ifndef FRENZYKV_PERSISTENT_COMPACTION_H
 #define FRENZYKV_PERSISTENT_COMPACTION_H
 
+#include <utility>
+
 #include "koios/task.h"
 
 #include "frenzykv/types.h"
@@ -24,7 +26,7 @@ public:
     {
     }
 
-    koios::task<::std::unique_ptr<in_mem_rw>> 
+    koios::task<::std::pair<::std::unique_ptr<in_mem_rw>, version_delta>>
     compact(version_guard version, level_t from);
 
 //private: // TODO: rewrite the tests

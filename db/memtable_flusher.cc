@@ -40,6 +40,7 @@ koios::task<> memtable_flusher::may_compact(bool joined_gc)
 {
     const level_t max_level = m_deps->opt()->max_level;
     bool need_gc{};
+    auto env = m_deps->env();
     for (level_t l{}; l <= max_level; ++l)
     {
         auto [need, ver] = co_await need_compaction(l);
@@ -51,11 +52,25 @@ koios::task<> memtable_flusher::may_compact(bool joined_gc)
             m_filter
         };
         
-        auto fake_file = co_await comp.compact(::std::move(ver), l);
+        // Do the actual compaction
+        auto [fake_file, delta] = co_await comp.compact(::std::move(ver), l);
         auto file = co_await m_file_center->get_file(name_a_sst(l + 1));
-        auto fp = file.open_write(m_deps->env().get());
+        delta.add_new_file(file);
+        auto fp = file.open_write(env.get());
         co_await fake_file->dump_to(*fp);
         co_await fp->flush();
+
+        // Add a new version
+        const auto cur_v = co_await m_version_center->add_new_version() += delta;
+
+        // Write new version to version descriptor
+        const auto new_desc_name = cur_v.version_desc_name();
+        auto new_desc = env->get_seq_writable(version_path()/new_desc_name);
+        [[maybe_unused]] bool write_ret = co_await write_version_descriptor(*cur_v, new_desc.get());
+        assert(write_ret);
+
+        // Set current version
+        co_await set_current_version_file(*m_deps, new_desc_name);
     }
     if (need_gc) 
     {
