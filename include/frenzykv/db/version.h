@@ -60,7 +60,7 @@ private:
 class version_rep
 {
 public:
-    version_rep();
+    version_rep(::std::string_view desc_name);
 
     // It should be copyable, used by creating a nwe version based on an old one.
     version_rep(const version_rep& other);

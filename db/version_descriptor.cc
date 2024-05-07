@@ -117,23 +117,25 @@ koios::task<::std::optional<::std::string>> current_descriptor_name(const kvdb_d
     co_return name;
 }
 
+koios::task<version_delta> get_version(const kvdb_deps& deps, ::std::string_view desc_name, file_center* fc)
+{
+    auto version_file = deps.env()->get_seq_readable(version_path()/desc_name);
+    const auto name_vec = co_await read_version_descriptor(version_file.get());
+
+    version_delta result;
+    for (const auto& desc_name : name_vec)
+    {
+        assert(is_sst_name(desc_name));
+        result.add_new_file(co_await fc->get_file(desc_name));
+    }
+    co_return result;
+}
+
 koios::task<version_delta> get_current_version(const kvdb_deps& deps, file_center* fc)
 {
     auto name_opt = co_await current_descriptor_name(deps);
     if (!name_opt) co_return {};
-    const auto& name = *name_opt;
-
-    auto version_file = deps.env()->get_seq_readable(version_path()/name);
-    assert(version_file->file_size() != 0);
-    const auto name_vec = co_await read_version_descriptor(version_file.get());
-
-    version_delta result;
-    for (const auto& name : name_vec)
-    {
-        assert(is_sst_name(name));
-        result.add_new_file(co_await fc->get_file(name));
-    }
-    co_return result;
+    co_return co_await get_version(deps, *name_opt, fc);
 }
 
 ::std::string get_version_descriptor_name()

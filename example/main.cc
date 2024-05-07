@@ -24,7 +24,7 @@ koios::task<> db_test()
     auto dbimpl = ::std::make_unique<db_impl>("test1", get_global_options());
     db_interface* db = dbimpl.get();
     
-    co_await db->insert("hello", "world");
+    //co_await db->insert("hello", "world");
 
     auto entry = co_await db->get("hello");
     if (entry) ::std::cout << entry->to_string_debug() << ::std::endl;
