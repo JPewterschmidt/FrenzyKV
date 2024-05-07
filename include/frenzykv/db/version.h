@@ -129,6 +129,8 @@ public:
         return *this;
     }
 
+    bool valid() const noexcept { return !!m_rep; }
+
     auto& rep() noexcept { assert(m_rep); return *m_rep; }
     const auto& rep() const noexcept { assert(m_rep); return *m_rep; }
     decltype(auto) version_desc_name() const noexcept { return rep().version_desc_name(); }
@@ -213,17 +215,17 @@ public:
 
         for (const version_rep& out_dated_version : m_versions 
             | rv::take(m_versions.size())
-            | rv::filter(is_garbage))
+            | rv::filter(is_garbage_in_mem))
         {
             co_await async_func_file_range(out_dated_version);
         }
-        GC_impl();
+        in_mem_GC_impl();
     }
 
     koios::task<> GC()
     {
         auto lk = co_await m_modify_lock.acquire();
-        GC_impl();
+        in_mem_GC_impl();
     }
 
     koios::task<size_t> size() const
@@ -233,12 +235,12 @@ public:
     }
 
 private:
-    static bool is_garbage(const version_rep& vg)
+    static bool is_garbage_in_mem(const version_rep& vg)
     {
         return vg.approx_ref_count() == 0;
     }
 
-    void GC_impl() { ::std::erase_if(m_versions, is_garbage); }
+    void in_mem_GC_impl() { ::std::erase_if(m_versions, is_garbage_in_mem); }
 
 private:
     ::std::list<version_rep> m_versions;

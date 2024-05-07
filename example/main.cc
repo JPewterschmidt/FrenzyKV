@@ -19,31 +19,13 @@ using namespace koios;
 using namespace frenzykv;
 using namespace ::std::string_view_literals;
 
-koios::eager_task<> file_test()
-{
-    ::std::unique_ptr<kvdb_deps> deps = ::std::make_unique<kvdb_deps>();
-    auto file = deps->env()->get_seq_writable("test");
-
-    co_await file->append("123");
-    co_await file->close();
-    
-    auto file2 = deps->env()->get_seq_readable("test");
-    ::std::string buffer(53, 0);
-    ::std::span<char> bs{ buffer.data(), buffer.size() };
-    
-    size_t readed = co_await file2->read(::std::as_writable_bytes(bs));
-    ::std::cout << readed << ::std::endl;
-
-    co_await uring::unlink("test");
-
-    co_return;
-}
-
 koios::task<> db_test()
 {
     auto dbimpl = ::std::make_unique<db_impl>("test1", get_global_options());
     db_interface* db = dbimpl.get();
     
+    co_await db->insert("hello", "world");
+
     auto entry = co_await db->get("hello");
     if (entry) ::std::cout << entry->to_string_debug() << ::std::endl;
     else ::std::cout << "no value" << ::std::endl;

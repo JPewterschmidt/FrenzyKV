@@ -92,8 +92,8 @@ class file_guard
 public:
     constexpr file_guard() noexcept = default;
 
-    file_guard(file_rep* rep) noexcept : m_rep{ rep } { }
-    file_guard(file_rep& rep) noexcept : m_rep{ &rep } { }
+    file_guard(file_rep* rep) noexcept : m_rep{ rep } { m_rep->ref(); }
+    file_guard(file_rep& rep) noexcept : m_rep{ &rep } { m_rep->ref(); }
 
     ~file_guard() noexcept { release(); }
 

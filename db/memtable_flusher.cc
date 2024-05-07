@@ -78,6 +78,7 @@ flush_to_disk(::std::unique_ptr<memtable> table, bool joined_compact)
     // So this is an easy Consumer/Producer module.
     auto lk = co_await m_mutex.acquire();
     auto cur_ver = co_await m_version_center->current_version();
+    assert(cur_ver.valid());
     
     auto sst_guard = co_await m_file_center->get_file(name_a_sst(0));
     auto file = m_deps->env()->get_seq_writable(sstables_path()/sst_guard);

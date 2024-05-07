@@ -119,14 +119,14 @@ koios::task<file_guard> file_center::get_file(const ::std::string& name)
 koios::task<> file_center::GC()
 {
     auto lk = co_await m_mutex.acquire();
-    auto removed = r::remove_if(m_reps, [](auto&& rep){ return rep->approx_ref_count() == 0; });
-    auto names_removed = removed | rv::transform([](auto&& r) { return r->name(); });
-    for (auto name : names_removed)
+    auto removing = r::partition(m_reps, [](auto&& rep){ return rep->approx_ref_count() != 0; });
+    auto names_removing = removing | rv::transform([](auto&& r) { assert(r->approx_ref_count() == 0); return r->name(); });
+    for (auto name : names_removing)
     {
-        m_name_rep.erase(name);
+        m_name_rep.erase(::std::string(name));
         co_await koios::uring::unlink(sstables_path()/name);
     }
-    m_reps.erase(begin(removed), end(removed));
+    m_reps.erase(begin(removing), end(removing));
 
     co_return;
 }
