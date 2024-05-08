@@ -98,7 +98,7 @@ append(::std::span<const ::std::byte> buffer)
     
     if (buffer.size_bytes() >= m_buffer.left())
     {
-        co_await uring::append_all(m_fd, m_buffer.valid_span());
+        co_await uring::append_all(m_fd, buffer);
         co_return buffer.size_bytes();
     }
     if (!m_buffer.append(buffer))

@@ -55,10 +55,10 @@ koios::task<> memtable_flusher::may_compact(bool joined_gc)
         // Do the actual compaction
         auto [fake_file, delta] = co_await comp.compact(::std::move(ver), l);
         auto file = co_await m_file_center->get_file(name_a_sst(l + 1));
-        delta.add_new_file(file);
         auto fp = co_await file.open_write(env.get());
         co_await fake_file->dump_to(*fp);
         co_await fp->sync();
+        delta.add_new_file(::std::move(file));
 
         // Add a new version
         const auto cur_v = co_await m_version_center->add_new_version() += delta;
