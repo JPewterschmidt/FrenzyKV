@@ -47,6 +47,7 @@ db_impl::db_impl(::std::string dbname, const options& opt)
 
 db_impl::~db_impl() noexcept
 {
+    close().result();
     m_bg_gc_stop_src.request_stop();
 }
 
@@ -86,6 +87,10 @@ koios::task<bool> db_impl::init()
 
 koios::task<> db_impl::close()
 {
+    if (!m_inited.load())
+        co_return;
+    
+    m_inited = false;
     auto lk = co_await m_mem_mutex.acquire();
     if (co_await m_mem->empty()) co_return;
 
