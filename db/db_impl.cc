@@ -95,7 +95,10 @@ koios::task<> db_impl::close()
     if (co_await m_mem->empty()) co_return;
 
     co_await m_flusher.flush_to_disk(::std::move(m_mem), true);
-    [[maybe_unused]] bool write_ret = co_await write_leatest_sequence_number(m_deps, m_snapshot_center.leatest_used_sequence_number());
+    [[maybe_unused]] bool write_ret = co_await write_leatest_sequence_number(
+        m_deps, 
+        m_snapshot_center.leatest_used_sequence_number()
+    );
     assert(write_ret);
     co_await delete_all_prewrite_log();
     co_await m_gcer.do_GC();
@@ -179,40 +182,10 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
     auto files = ver.files();
     r::sort(files);
 
-    struct sst_with_file
-    {
-        sst_with_file(const kvdb_deps& deps, 
-                      filter_policy* filter, 
-                      ::std::unique_ptr<random_readable> fp, 
-                      level_t ll)
-            : file{ ::std::move(fp) }, 
-              sst{ deps, filter, file.get() }, 
-              l { ll }
-        {
-        }
-
-        ::std::unique_ptr<random_readable> file;
-        sstable sst;
-        level_t l;
-    };
-
-    auto ssts_view = files 
-        | rv::transform([this](auto&& fg) { 
-              return ::std::pair{ 
-                  fg.open_read(m_deps.env().get()), fg.level() 
-              }; 
-          })
-        | rv::filter([](auto&& fp) { return fp.first->file_size() != 0; })
-        | rv::transform([&, this](auto&& fp) { 
-              return sst_with_file{ 
-                  m_deps, m_filter_policy.get(), ::std::move(fp.first), fp.second 
-              }; 
-          })
-        ;
-
     toolpex::skip_list<sequenced_key, kv_user_value> potiential_results(16);
 
-    auto find_from_potiential_results = [&potiential_results, &key] mutable -> koios::task<::std::optional<kv_entry>> { 
+    auto find_from_potiential_results = 
+    [&potiential_results, &key] mutable -> koios::task<::std::optional<kv_entry>> { 
         ::std::optional<kv_entry> result;
         auto iter = potiential_results.find_last_less_equal(key);
         if (iter != potiential_results.end() && !iter->second.is_tomb_stone())
@@ -223,17 +196,20 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
     };
 
     level_t cur_level{};
-    for (auto sst_f : ssts_view)
+    auto env = m_deps.env();
+    for (auto fg : files)
     {
-        if (sst_f.l != cur_level)
+        if (level_t l = fg.level(); l != cur_level) 
         {
-            cur_level = sst_f.l;
+            cur_level = l;
             if (auto ret = co_await find_from_potiential_results(); ret.has_value())
                 co_return ret;
             potiential_results.clear();
         }
+        auto filep = co_await fg.open_read(env.get());
+        if (filep->file_size() == 0) continue;
+        sstable sst(m_deps, m_filter_policy.get(), ::std::move(filep));
 
-        auto& sst = sst_f.sst; 
         co_await sst.parse_meta_data();
         auto entry_opt = co_await sst.get_kv_entry(key);
         if (!entry_opt.has_value() 

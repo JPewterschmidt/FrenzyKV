@@ -23,8 +23,11 @@ koios::task<> db_test()
 {
     auto dbimpl = ::std::make_unique<db_impl>("test1", get_global_options());
     db_interface* db = dbimpl.get();
-    
-    co_await db->init();
+
+    for (size_t i{}; i < 100000; ++i)
+    {
+        co_await db->insert(::std::to_string(i), ::std::to_string(i));
+    }
 
     co_await db->close();
 
@@ -33,7 +36,7 @@ koios::task<> db_test()
 
 int main()
 {
-    koios::runtime_init(11);
+    koios::runtime_init(1);
 
     db_test().result();
     

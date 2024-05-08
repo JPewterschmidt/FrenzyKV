@@ -35,7 +35,7 @@ koios::eager_task<::std::unique_ptr<iouring_writable>> make_real_file()
     ::std::string filename = ::std::format("testfile{}", count++);
     const auto& p = opened_files.emplace_back(filename);
     auto optp = deps.opt();
-    co_return ::std::make_unique<iouring_writable>(p, *optp);
+    co_return ::std::make_unique<iouring_writable>(p, *optp, file::default_create_mode(), O_TRUNC);
 }
 
 koios::task<bool> in_mem_test_body(random_readable& file)

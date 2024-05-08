@@ -16,7 +16,7 @@ namespace frenzykv
 
 koios::task<::std::vector<file_guard>>
 compaction_policy_oldest::
-compacting_files(const version_guard& vc, level_t from) const
+compacting_files(version_guard vc, level_t from) const
 {
     ::std::vector<file_guard> result;
 
@@ -45,16 +45,15 @@ compacting_files(const version_guard& vc, level_t from) const
     // If there is no any file to be comapcted.
     if (result.empty()) co_return {};
 
-    auto fp = result.front().open_read(env.get());
-    sstable from_l_sst(*m_deps, m_filter, fp.get());
+    sstable from_l_sst(*m_deps, m_filter, co_await result.front().open_read(env.get()));
     [[maybe_unused]] bool pr = co_await from_l_sst.parse_meta_data(); assert(pr);
 
     // Find overlapped tables from next level
     for (const auto& fguard : files | rv::filter(file_guard::with_level_predicator(from + 1)))
     {
-        ::std::unique_ptr<random_readable> fp = fguard.open_read(env.get());
-        sstable next_l_sst(*m_deps, m_filter, fp.get());
-        co_await next_l_sst.parse_meta_data();
+        sstable next_l_sst(*m_deps, m_filter, co_await fguard.open_read(env.get()));
+        [[maybe_unused]] bool parse_ret = co_await next_l_sst.parse_meta_data();
+        assert(parse_ret);
 
         if (from_l_sst.overlapped(next_l_sst))
         {

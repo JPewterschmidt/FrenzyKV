@@ -66,6 +66,10 @@ public:
             filter_policy* filter, 
             random_readable* file);
 
+    sstable(const kvdb_deps& deps, 
+            filter_policy* filter, 
+            ::std::unique_ptr<random_readable> file);
+
     /*! \brief Searching specific user key from this memtable
      *  
      *  \return A ::std::optional<block_segment> 
@@ -114,6 +118,7 @@ private:
     koios::task<bool>   generate_block_offsets(mbo_t mbo);  // Required by `parse_meta_data()`
     
 private:
+    ::std::unique_ptr<random_readable> m_self_managed_file{};
     const kvdb_deps* m_deps{};
     bool m_meta_data_parsed{};
     random_readable* m_file;

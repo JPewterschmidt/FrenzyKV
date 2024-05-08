@@ -495,6 +495,7 @@ static ::std::span<char> block_content(::std::string& storage)
 {
     assert(m_finish == false);
     m_finish = true;
+    assert(!empty());
     assert(m_seg_count);
 
     // Finish the last block segment builder.

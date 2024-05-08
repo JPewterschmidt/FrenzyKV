@@ -1,6 +1,7 @@
 #include <string>
 #include <iterator>
 #include <ranges>
+#include <cassert>
 
 #include "toolpex/exceptions.h"
 #include "frenzykv/persistent/sstable.h"
@@ -25,11 +26,25 @@ sstable::sstable(const kvdb_deps& deps,
     assert(m_filter);
 }
 
+sstable::sstable(const kvdb_deps& deps, 
+                 filter_policy* filter, 
+                 ::std::unique_ptr<random_readable> file)
+    : m_self_managed_file{ ::std::move(file) }, 
+      m_deps{ &deps }, 
+      m_file{ m_self_managed_file.get() }, 
+      m_filter{ filter },
+      m_compressor{ get_compressor(*m_deps->opt(), m_deps->opt()->compressor_name) }
+{
+    assert(m_compressor);
+    assert(m_filter);
+}
+
 koios::task<bool> sstable::parse_meta_data()
 {
     if (m_meta_data_parsed) co_return true;
     
-    const uintmax_t filesz = m_file->file_size();
+    const uintmax_t filesz = m_file->file_size(); 
+    assert(filesz);
     const size_t footer_sz = sizeof(mbo_t) + sizeof(mgn_t);
     ::std::string buffer(footer_sz, 0);
     co_await m_file->read({ buffer.data(), buffer.size() }, filesz - footer_sz);

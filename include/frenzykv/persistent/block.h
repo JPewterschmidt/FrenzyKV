@@ -225,6 +225,7 @@ public:
     bool was_compressed() const noexcept { return m_compressed; }
     size_t bytes_size() const noexcept { return m_storage.size(); }
     auto compressor() const noexcept { return m_compressor; }
+    bool empty() const noexcept { return !m_current_seg_builder; }
 
 private:
     ::std::string m_storage;

@@ -21,15 +21,15 @@ compactor::compact(version_guard version, level_t from)
     version_delta compacted;
     compacted.add_compacted_files(file_guards);
 
-    auto fileps_view = file_guards
+    auto fileps_view_aw = file_guards
        | rv::transform([this](auto&& fguard) { 
              return fguard.open_read(m_deps->env().get());
          });
     
-    ::std::vector files(begin(fileps_view), end(fileps_view));
+    ::std::vector files_aw(begin(fileps_view_aw), end(fileps_view_aw));
     ::std::vector<sstable> tables;
-    for (auto& filep : files)
-        tables.emplace_back(*m_deps, m_filter_policy, filep.get());
+    for (auto& filep_aw : files_aw)
+        tables.emplace_back(*m_deps, m_filter_policy, co_await filep_aw);
 
     // To prevent ICE, See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=114850
     auto newfile = co_await merge_tables(tables);
