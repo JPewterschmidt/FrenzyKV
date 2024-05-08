@@ -4,6 +4,7 @@
 #include <optional>
 #include <vector>
 #include <utility>
+#include <list>
 
 #include "koios/task.h"
 
@@ -132,7 +133,7 @@ private:
     size_t m_get_call_count{};
 };
 
-koios::task<::std::vector<kv_entry>>
+koios::task<::std::list<kv_entry>>
 get_entries_from_sstable(sstable& table);
 
 } // namespace frenzykv

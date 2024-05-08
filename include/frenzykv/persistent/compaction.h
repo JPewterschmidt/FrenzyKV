@@ -26,6 +26,8 @@ public:
     {
     }
 
+    // Non of business of sequence_number, cause the snapshot mechinaism 
+    // keep those files of version alive
     koios::task<::std::pair<::std::unique_ptr<in_mem_rw>, version_delta>>
     compact(version_guard version, level_t from);
 

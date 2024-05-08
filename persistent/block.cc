@@ -8,11 +8,13 @@
 #include <cassert>
 #include <iterator>
 #include <array>
+#include <ranges>
 
 namespace frenzykv
 {
 
-namespace rv = ::std::ranges::views;
+namespace r = ::std::ranges;
+namespace rv = r::views;
 
 using ppl_t = uint16_t;
 using ril_t = uint32_t;
@@ -103,19 +105,40 @@ bool block_segment::less_than_this_public_prefix(const_bspan user_prefix) const 
     return cmp_ret == ::std::strong_ordering::less;
 }
 
-koios::generator<kv_entry> 
-entries_from_block_segment(const block_segment& seg)
+static koios::generator<kv_entry> 
+entries_from_block_segment_impl(const_bspan uk_from_seg, r::range auto&& items)
 {
     // including 2 bytes of user key len
-    auto uk_from_seg = seg.public_prefix();
     uk_from_seg = uk_from_seg.subspan(user_key_length_bytes_size);
-    for (const auto& item : seg.items())
+    for (const auto& item : items)
     {
         ::std::span seq_buffer{ item.data(), sizeof(sequence_number_t) };
         sequence_number_t seq = toolpex::decode_big_endian_from<sequence_number_t>(::std::as_bytes(seq_buffer));
         auto uv_with_len = item.subspan(sizeof(seq));
         uv_with_len = serialized_user_value_from_value_len(uv_with_len);
         co_yield kv_entry{ seq, uk_from_seg, kv_user_value::parse(uv_with_len) };
+    }
+}
+
+koios::generator<kv_entry> 
+entries_from_block_segment(const block_segment& seg)
+{
+    auto pp = seg.public_prefix();
+    const auto& items = seg.items();
+    for (auto kv : entries_from_block_segment_impl(pp, items))
+    {
+        co_yield kv;
+    }
+}
+
+koios::generator<kv_entry> 
+entries_from_block_segment_reverse(const block_segment& seg)
+{
+    auto pp = seg.public_prefix();
+    const auto& items = seg.items();
+    for (auto kv : entries_from_block_segment_impl(pp, items | rv::reverse))
+    {
+        co_yield kv;
     }
 }
 

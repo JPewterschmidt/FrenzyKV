@@ -46,7 +46,7 @@ compacting_files(version_guard vc, level_t from) const
     if (result.empty()) co_return {};
 
     sstable from_l_sst(*m_deps, m_filter, co_await result.front().open_read(env.get()));
-    [[maybe_unused]] bool pr = co_await from_l_sst.parse_meta_data(); assert(pr);
+    [[maybe_unused]] bool parse_ret = co_await from_l_sst.parse_meta_data(); assert(parse_ret);
 
     // Find overlapped tables from next level
     for (const auto& fguard : files | rv::filter(file_guard::with_level_predicator(from + 1)))

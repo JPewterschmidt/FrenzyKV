@@ -118,6 +118,7 @@ private:
 };
 
 koios::generator<kv_entry> entries_from_block_segment(const block_segment& seg);
+koios::generator<kv_entry> entries_from_block_segment_reverse(const block_segment& seg);
 
 /*! \brief  Block obejct
  *  Lazy evaluation. But it will parse the meta data during construction.
