@@ -56,10 +56,7 @@ koios::task<::std::optional<kv_entry>> memtable::
 get(const sequenced_key& key) const noexcept
 {
     auto lk = co_await m_list_mutex.acquire_shared();
-    auto ret = table_get(m_list, key);
-    if (ret && !ret->is_tomb_stone()) 
-        co_return ret;
-    co_return {};
+    co_return table_get(m_list, key);
 }
 
 koios::task<size_t> memtable::count() const

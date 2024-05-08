@@ -158,7 +158,11 @@ db_impl::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noexc
 
     const sequenced_key skey = co_await this->make_query_key(key, opt);
     auto result_opt = co_await m_mem->get(skey);
-    if (result_opt) co_return result_opt;
+    if (result_opt) 
+    {
+        if (!result_opt->is_tomb_stone()) co_return result_opt;
+        co_return {};
+    }
 
     co_return co_await find_from_ssts(skey, ::std::move(opt.snap));
 }
@@ -206,7 +210,7 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
     auto find_from_potiential_results = [&potiential_results, &key] mutable -> koios::task<::std::optional<kv_entry>> { 
         ::std::optional<kv_entry> result;
         auto iter = potiential_results.find_last_less_equal(key);
-        if (iter != potiential_results.end())
+        if (iter != potiential_results.end() && !iter->second.is_tomb_stone())
         {
             co_return result.emplace(::std::move(iter->first), ::std::move(iter->second));
         }
@@ -227,8 +231,11 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
         auto& sst = sst_f.sst; 
         co_await sst.parse_meta_data();
         auto entry_opt = co_await sst.get_kv_entry(key);
-        if (!entry_opt.has_value() || (snap.valid() && entry_opt->key().sequence_number() > snap.sequence_number()))
+        if (!entry_opt.has_value() 
+            || (snap.valid() && entry_opt->key().sequence_number() > snap.sequence_number()))
+        {
             continue;
+        }
         potiential_results.insert(
             ::std::move(entry_opt->key()), 
             ::std::move(entry_opt->value())
