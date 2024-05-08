@@ -59,6 +59,10 @@ koios::task<bool> db_impl::init()
 
     co_await m_file_center.load_files();
     co_await m_version_center.load_current_version();
+
+    sequence_number_t seq_from_seqfile = co_await get_leatest_sequence_number(m_deps);
+    m_snapshot_center.set_init_leatest_used_sequence_number(seq_from_seqfile);
+
     if (co_await m_log.empty())
     {
         co_await m_gcer.do_GC();
@@ -66,10 +70,10 @@ koios::task<bool> db_impl::init()
     }
     
     auto envp = m_deps.env();
-    auto [batch, max_seq] = co_await recover(envp.get());
+    auto [batch, max_seq_from_log] = co_await recover(envp.get());
     co_await m_log.truncate_file();
     co_await m_mem->insert(::std::move(batch));
-    m_snapshot_center.set_leatest_used_sequence_number_from_recovery(max_seq);
+    m_snapshot_center.set_init_leatest_used_sequence_number(max_seq_from_log);
 
     auto lk = co_await m_mem_mutex.acquire();
     auto memp = ::std::exchange(m_mem, ::std::make_unique<memtable>(m_deps));
@@ -86,6 +90,8 @@ koios::task<> db_impl::close()
     if (co_await m_mem->empty()) co_return;
 
     co_await m_flusher.flush_to_disk(::std::move(m_mem), true);
+    [[maybe_unused]] bool write_ret = co_await write_leatest_sequence_number(m_deps, m_snapshot_center.leatest_used_sequence_number());
+    assert(write_ret);
     co_await delete_all_prewrite_log();
     co_await m_gcer.do_GC();
     

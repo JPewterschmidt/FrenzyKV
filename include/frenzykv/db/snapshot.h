@@ -37,21 +37,21 @@ public:
         return { leatest_used_sequence_number(), ::std::move(version) };
     }
 
-    sequence_number_t leatest_used_sequence_number() const noexcept { return m_newest_seq.load(); }
+    sequence_number_t leatest_used_sequence_number() const noexcept 
+    { 
+        return m_newest_unused_seq.load() - 1;
+    }
 
     sequence_number_t get_next_unused_sequence_number(size_t count = 1) noexcept 
     { 
         assert(count < ::std::numeric_limits<sequence_number_t>::max());
-        return m_newest_seq.fetch_add(static_cast<sequence_number_t>(count)); 
+        return m_newest_unused_seq.fetch_add(static_cast<sequence_number_t>(count)); 
     }
 
-    void set_leatest_used_sequence_number_from_recovery(sequence_number_t seq) noexcept
-    {
-        m_newest_seq.store(seq);
-    }
+    void set_init_leatest_used_sequence_number(sequence_number_t seq) noexcept;
 
 private:
-    ::std::atomic<sequence_number_t> m_newest_seq{1};
+    ::std::atomic<sequence_number_t> m_newest_unused_seq{1};
 };
 
 } // namesapce frenzykv

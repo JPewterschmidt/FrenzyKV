@@ -32,8 +32,8 @@ koios::task<version_delta> get_version(const kvdb_deps& deps, ::std::string_view
 ::std::string get_version_descriptor_name();
 bool is_version_descriptor_name(::std::string_view name);
 
-koios::task<bool> write_leatest_sequence_number(const kvdb_deps* deps, sequence_number_t seq);
-koios::task<sequence_number_t> get_leatest_sequence_number(const kvdb_deps* deps);
+koios::task<bool> write_leatest_sequence_number(const kvdb_deps& deps, sequence_number_t seq);
+koios::task<sequence_number_t> get_leatest_sequence_number(const kvdb_deps& deps);
 
 } // namespace frenzykv
 
