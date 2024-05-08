@@ -1,6 +1,7 @@
 #include "frenzykv/io/iouring_writable.h"
 #include "frenzykv/error_category.h"
 #include "toolpex/errret_thrower.h"
+#include "toolpex/functional.h"
 #include "koios/iouring_awaitables.h"
 #include <fcntl.h>
 #include <cassert>
@@ -95,12 +96,20 @@ append(::std::span<const ::std::byte> buffer)
     
     co_await flush_valid();
     
-    if (buffer.size_bytes() > m_buffer.capacity())
+    if (buffer.size_bytes() >= m_buffer.left())
     {
-        co_await uring::append_all(m_fd, m_buffer.valid_span());
+        co_await uring::append_all(m_fd, buffer);
+        co_return buffer.size_bytes();
     }
     if (!m_buffer.append(buffer))
-        throw koios::exception{"iouring_writable append error"};
+    {
+        throw koios::exception{::std::string(
+            toolpex::lazy_string_concater{} 
+            + "iouring_writable append error, appending size = " 
+            + buffer.size() 
+            + ", buffer left = " + m_buffer.left()
+        )};
+    }
     co_return buffer.size_bytes();
 }
 

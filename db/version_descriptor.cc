@@ -3,6 +3,9 @@
 #include <cassert>
 #include <string>
 #include <iterator>
+#include <utility>
+
+#include "toolpex/encode.h"
 
 #include "frenzykv/db/version_descriptor.h"
 #include "frenzykv/util/uuid.h"
@@ -147,6 +150,35 @@ koios::task<version_delta> get_current_version(const kvdb_deps& deps, file_cente
 bool is_version_descriptor_name(::std::string_view name)
 {
     return name.ends_with("#.frzkvver");
+}
+
+static constexpr ::std::string_view seq_name = "seqnum";
+
+koios::task<bool> 
+write_leatest_sequence_number(const kvdb_deps& deps, sequence_number_t seq)
+{
+    auto env = deps.env();
+    auto file = env->get_truncate_seq_writable(version_path()/seq_name);
+    ::std::array<::std::byte, sizeof(sequence_number_t)> buffer{};
+    toolpex::encode_little_endian_to(seq, buffer);
+    if (co_await file->append(buffer) != sizeof(sequence_number_t))
+        co_return false;
+
+    co_await file->flush();
+
+    co_return true;
+}
+
+koios::task<sequence_number_t> 
+get_leatest_sequence_number(const kvdb_deps& deps)
+{
+    auto env = deps.env();
+    auto file = env->get_seq_readable(version_path()/seq_name);
+    ::std::array<::std::byte, sizeof(sequence_number_t)> buffer{};
+    if (size_t readed = co_await file->read(buffer); readed == sizeof(sequence_number_t))
+        co_return toolpex::decode_little_endian_from<sequence_number_t>(buffer);
+
+    co_return 0;
 }
 
 } // namespace frenzykv

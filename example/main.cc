@@ -23,12 +23,19 @@ koios::task<> db_test()
 {
     auto dbimpl = ::std::make_unique<db_impl>("test1", get_global_options());
     db_interface* db = dbimpl.get();
-    
-    co_await db->insert("hello", "world");
 
-    auto entry = co_await db->get("hello");
-    if (entry) ::std::cout << entry->to_string_debug() << ::std::endl;
-    else ::std::cout << "no value" << ::std::endl;
+    //for (size_t i{}; i < 1000; ++i)
+    //{
+    //    co_await db->insert(::std::to_string(i), ::std::to_string(i));
+    //}
+
+    auto k = ::std::to_string(500);
+    auto opt = co_await db->get(k);
+    if (opt)
+    {
+        ::std::cout << opt->to_string_debug() << ::std::endl;
+    }
+    else ::std::cout << "not found" << ::std::endl;
 
     co_await db->close();
 
@@ -37,7 +44,7 @@ koios::task<> db_test()
 
 int main()
 {
-    koios::runtime_init(11);
+    koios::runtime_init(1);
 
     db_test().result();
     

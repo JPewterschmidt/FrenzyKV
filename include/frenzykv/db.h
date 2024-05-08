@@ -38,6 +38,12 @@ public:
         return insert(::std::as_bytes(::std::span{key}), ::std::as_bytes(::std::span{value}), ::std::move(opt)); 
     }
 
+    virtual koios::task<::std::error_code>
+    remove_from_db(::std::string_view key, write_options opt = {})
+    {
+        return remove_from_db(::std::as_bytes(::std::span{ key }), ::std::move(opt));
+    }
+
     virtual koios::task<::std::error_code> 
     remove_from_db(const_bspan key, write_options opt = {})
     {

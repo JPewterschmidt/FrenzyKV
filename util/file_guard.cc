@@ -1,5 +1,7 @@
 #include <cassert>
 
+#include "koios/this_task.h"
+
 #include "frenzykv/env.h"
 #include "frenzykv/util/file_guard.h"
 
@@ -8,16 +10,22 @@ namespace fs = ::std::filesystem;
 namespace frenzykv
 {
 
-::std::unique_ptr<random_readable> 
+koios::task<::std::unique_ptr<random_readable>>
 file_rep::open_read(env* e) const
 {
-    return e->get_random_readable(sstables_path()/name());
+    auto ret = e->get_random_readable(sstables_path()/name());
+    if (ret->file_size() == 0)
+    {
+        co_await koios::this_task::yield();
+    }
+    assert(ret->file_size() != 0);
+    co_return ret;
 }
 
-::std::unique_ptr<seq_writable> 
+koios::task<::std::unique_ptr<seq_writable>>
 file_rep::open_write(env* e) const
 {
-    return e->get_seq_writable(sstables_path()/name());
+    co_return e->get_seq_writable(sstables_path()/name());
 }
 
 ::std::filesystem::file_time_type 

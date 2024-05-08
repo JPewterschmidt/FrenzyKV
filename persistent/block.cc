@@ -8,11 +8,13 @@
 #include <cassert>
 #include <iterator>
 #include <array>
+#include <ranges>
 
 namespace frenzykv
 {
 
-namespace rv = ::std::ranges::views;
+namespace r = ::std::ranges;
+namespace rv = r::views;
 
 using ppl_t = uint16_t;
 using ril_t = uint32_t;
@@ -30,6 +32,13 @@ static bool filled_with_zero(const ::std::byte* p)
     static ::std::array<::std::byte, Len> example{};
     int ret = ::std::memcmp(p, example.data(), Len);
     return ret == 0;
+}
+
+block_segment::block_segment(const_bspan block_seg_storage)
+    : m_storage{ block_seg_storage }
+{
+    if ((m_parse_result = parse()) == parse_result_t::error) 
+        throw koios::exception{"block_segment: parse fail"};
 }
 
 parse_result_t block_segment::parse()
@@ -96,19 +105,41 @@ bool block_segment::less_than_this_public_prefix(const_bspan user_prefix) const 
     return cmp_ret == ::std::strong_ordering::less;
 }
 
-koios::generator<kv_entry> 
-entries_from_block_segment(const block_segment& seg)
+static koios::generator<kv_entry> 
+entries_from_block_segment_impl(const_bspan uk_from_seg, r::range auto&& items)
 {
     // including 2 bytes of user key len
-    auto uk_from_seg = seg.public_prefix();
     uk_from_seg = uk_from_seg.subspan(user_key_length_bytes_size);
-    for (const auto& item : seg.items())
+    for (const auto& item : items)
     {
         ::std::span seq_buffer{ item.data(), sizeof(sequence_number_t) };
         sequence_number_t seq = toolpex::decode_big_endian_from<sequence_number_t>(::std::as_bytes(seq_buffer));
         auto uv_with_len = item.subspan(sizeof(seq));
         uv_with_len = serialized_user_value_from_value_len(uv_with_len);
         co_yield kv_entry{ seq, uk_from_seg, kv_user_value::parse(uv_with_len) };
+    }
+}
+
+koios::generator<kv_entry> 
+entries_from_block_segment(const block_segment& seg)
+{
+    auto pp = seg.public_prefix();
+    const auto& items = seg.items();
+    for (auto kv : entries_from_block_segment_impl(pp, items))
+    {
+        co_yield kv;
+    }
+}
+
+koios::generator<kv_entry> 
+entries_from_block_segment_reverse(const block_segment& seg)
+{
+    auto pp = seg.public_prefix();
+    const auto& items = seg.items();
+    auto rview = items | rv::reverse;
+    for (auto kv : entries_from_block_segment_impl(pp, rview))
+    {
+        co_yield kv;
     }
 }
 
@@ -402,8 +433,8 @@ void block_segment_builder::finish()
 {
     if (m_finish) [[unlikely]] return;
 
-    // Write the BTL
-    ::std::array<char, sizeof(btl_t)> buffer{};
+    // Write the empty RIL
+    ::std::array<char, sizeof(ril_t)> buffer{};
     m_storage.append(buffer.data(), buffer.size());
     m_finish = true;
 }
@@ -439,7 +470,7 @@ bool block_builder::add(const sequenced_key& key, const kv_user_value& value)
     // Segment end, need a new segment.
     if (!m_current_seg_builder->add(key, value))
     {
-        // This call will write 4 zero-filled bytes to the end of `m_storage`, 
+        // This call will write 4 zero-filled bytes (RIL) to the end of `m_storage`, 
         // indicates termination of the current block segment.
         m_current_seg_builder->finish();
 
@@ -470,6 +501,11 @@ bool block_builder::add(const sequenced_key& key, const kv_user_value& value)
         [[maybe_unused]] bool add_result = m_current_seg_builder->add(key, value);
         assert(add_result);
     }
+    // Do not add something like 
+    // `m_current_seg_builder->finish()` here
+    // cause this function will be called in a loop, to migrate those KVs into sstable
+    // this function only covers a very tiny part of that process.
+    // No need current seg finish here.
 
     return true;
 }
@@ -483,7 +519,12 @@ static ::std::span<char> block_content(::std::string& storage)
 {
     assert(m_finish == false);
     m_finish = true;
+    assert(!empty());
     assert(m_seg_count);
+
+    // Finish the last block segment builder.
+    assert(m_current_seg_builder);
+    m_current_seg_builder->finish();
 
     // If the last sbso point to exactly the end of data area, then delete it.
     if (m_sbsos.back() == m_storage.size())

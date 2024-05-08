@@ -24,6 +24,9 @@ version_rep::version_rep(const version_rep& other)
 
 version_rep& version_rep::operator+=(const version_delta& delta) 
 {
+    if (delta.empty())
+        return *this;
+
     ::std::vector<file_guard> new_versions_files = delta.added_files();
 
     auto old_files = files();
@@ -57,7 +60,7 @@ koios::eager_task<> version_center::load_current_version()
 
     // Load current version
     version_delta delta = co_await get_current_version(deps, m_file_center);
-    m_current = (m_versions.emplace_back(*co_await current_descriptor_name(deps)) += delta);
+    m_current = (m_versions.emplace_back((co_await current_descriptor_name(deps)).value_or(get_version_descriptor_name())) += delta);
     const ::std::string_view cvd_name = m_current.version_desc_name();
     
     // Load other versions for GC
@@ -69,6 +72,39 @@ koios::eager_task<> version_center::load_current_version()
             m_versions.emplace_front(name) += co_await get_version(deps, name, m_file_center);
         }
     }
+}
+
+version_center::version_center(version_center&& other) noexcept
+    : m_versions{ ::std::move(other.m_versions) }, 
+      m_current{ ::std::move(other.m_current) }, 
+      m_file_center{ ::std::exchange(other.m_file_center, nullptr) }
+{
+}
+
+version_center& version_center::operator=(version_center&& other) noexcept
+{
+    m_versions = ::std::move(other.m_versions);
+    m_current = ::std::move(other.m_current);
+    m_file_center = ::std::exchange(other.m_file_center, nullptr);
+    return *this;
+}
+
+koios::task<version_guard> version_center::current_version() const noexcept
+{
+    auto lk = co_await m_modify_lock.acquire_shared();
+    co_return m_current;
+}
+
+koios::task<> version_center::set_current_version(version_guard v)
+{
+    auto lk = co_await m_modify_lock.acquire();
+    assert(!v.rep().version_desc_name().empty());
+    m_current = ::std::move(v);
+}
+
+void version_center::in_mem_GC_impl() 
+{ 
+    ::std::erase_if(m_versions, is_garbage_in_mem); 
 }
 
 } // namespace frenzykv

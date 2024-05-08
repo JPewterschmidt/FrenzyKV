@@ -77,7 +77,8 @@ public:
         co_await m_mem.insert(::std::move(b));
         sequenced_key k(100, "abc1");
 
-        co_return !(co_await m_mem.get(k)).has_value();
+        auto opt = co_await m_mem.get(k);
+        co_return !opt.has_value() || opt->is_tomb_stone();
     }
 
 private:

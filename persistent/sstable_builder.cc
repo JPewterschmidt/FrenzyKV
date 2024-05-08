@@ -96,20 +96,24 @@ koios::task<bool> sstable_builder::add(
 
 koios::task<bool> sstable_builder::flush_current_block(bool need_flush)
 {
-    auto block_storage = m_block_builder.finish();
-    m_block_builder = { *m_deps, m_block_builder.compressor() };
-    
-    ::std::span cb{ block_storage };
-    size_t wrote = co_await m_file->append(::std::as_bytes(cb));
+    bool result{};
+    if (!m_block_builder.empty())
+    {
+        auto block_storage = m_block_builder.finish();
+        m_block_builder = { *m_deps, m_block_builder.compressor() };
+        
+        ::std::span cb{ block_storage };
+        size_t wrote = co_await m_file->append(::std::as_bytes(cb));
+
+        result = (wrote == block_storage.size());
+        if (result) m_bytes_appended_to_file += wrote;
+    }
 
     if (need_flush)
     {
         //  Has to make sure the contents has been successfully wrote.
         co_await m_file->flush(); 
     }
-
-    const bool result{ wrote == block_storage.size() };
-    if (result) m_bytes_appended_to_file += wrote;
 
     co_return result;
 }

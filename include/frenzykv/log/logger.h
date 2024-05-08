@@ -4,6 +4,8 @@
 #include <string>
 #include <string_view>
 #include <filesystem>
+#include <utility>
+
 #include "frenzykv/kvdb_deps.h"
 #include "frenzykv/write_batch.h"
 #include "frenzykv/env.h"
@@ -36,7 +38,8 @@ private:
     ::std::unique_ptr<seq_writable> m_log_file;
 };
 
-koios::task<write_batch> recover(env* e) noexcept;
+koios::task<::std::pair<write_batch, sequence_number_t>> 
+recover(env* e) noexcept;
 
 } // namespace frenzykv
 

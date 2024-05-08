@@ -15,7 +15,7 @@ public:
     }
 
     koios::task<::std::vector<file_guard>>
-    compacting_files(const version_guard& vc, level_t from) const override;
+    compacting_files(version_guard vc, level_t from) const override;
 
 private:
     const kvdb_deps* m_deps{};

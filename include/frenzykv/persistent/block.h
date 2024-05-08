@@ -90,12 +90,7 @@ class block_segment
 {
 public:
     constexpr block_segment() noexcept = default;
-    block_segment(const_bspan block_seg_storage)
-        : m_storage{ block_seg_storage }
-    {
-        if ((m_parse_result = parse()) == parse_result_t::error) 
-            throw koios::exception{"block_segment: parse fail"};
-    }
+    block_segment(const_bspan block_seg_storage);
 
     /*! \brief  determine the parse situation.
      *  \attention The content retrived by this class could be used only this functiuon return `parse_result_t::success`
@@ -123,6 +118,7 @@ private:
 };
 
 koios::generator<kv_entry> entries_from_block_segment(const block_segment& seg);
+koios::generator<kv_entry> entries_from_block_segment_reverse(const block_segment& seg);
 
 /*! \brief  Block obejct
  *  Lazy evaluation. But it will parse the meta data during construction.
@@ -230,6 +226,7 @@ public:
     bool was_compressed() const noexcept { return m_compressed; }
     size_t bytes_size() const noexcept { return m_storage.size(); }
     auto compressor() const noexcept { return m_compressor; }
+    bool empty() const noexcept { return !m_current_seg_builder; }
 
 private:
     ::std::string m_storage;

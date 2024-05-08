@@ -76,7 +76,7 @@ public:
     size_t capacity() const noexcept { return m_capa; }
     size_t left() const noexcept { return m_left; }
     size_t size() const noexcept { return capacity() - left(); }
-    bool full() const noexcept { return m_capa == m_left; }
+    bool full() const noexcept { return left() == 0; }
     bool valid() const noexcept 
     { 
         return m_storage != nullptr && capacity() != 0; 

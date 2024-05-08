@@ -3,6 +3,12 @@
 namespace frenzykv
 {
 
-
+void snapshot_center::
+set_init_leatest_used_sequence_number(sequence_number_t seq) noexcept
+{
+    sequence_number_t cur_seq = leatest_used_sequence_number();
+    if (cur_seq >= seq + 1) return;
+    m_newest_unused_seq.store(seq + 1);
+}
 
 } // namespace frenzykv

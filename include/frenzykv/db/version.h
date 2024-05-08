@@ -52,6 +52,8 @@ public:
     const auto& compacted_files() const noexcept { return m_compacted; }
     const auto& added_files() const noexcept { return m_added; }
 
+    bool empty() const noexcept { return m_compacted.empty() && m_added.empty(); }
+
 private:
     ::std::vector<file_guard> m_compacted;
     ::std::vector<file_guard> m_added;
@@ -175,37 +177,12 @@ public:
     {
     }
 
-    version_center(version_center&& other) noexcept
-        : m_versions{ ::std::move(other.m_versions) }, 
-          m_current{ ::std::move(other.m_current) }, 
-          m_file_center{ ::std::exchange(other.m_file_center, nullptr) }
-    {
-    }
-
-    version_center& operator=(version_center&& other) noexcept
-    {
-        m_versions = ::std::move(other.m_versions);
-        m_current = ::std::move(other.m_current);
-        m_file_center = ::std::exchange(other.m_file_center, nullptr);
-        return *this;
-    }
-
+    version_center(version_center&& other) noexcept;
+    version_center& operator=(version_center&& other) noexcept;
     koios::task<version_guard> add_new_version();
-
-    koios::task<version_guard> current_version() const noexcept
-    {
-        auto lk = co_await m_modify_lock.acquire_shared();
-        co_return m_current;
-    }
-
+    koios::task<version_guard> current_version() const noexcept;
     koios::eager_task<> load_current_version();
-
-    koios::task<> set_current_version(version_guard v)
-    {
-        auto lk = co_await m_modify_lock.acquire();
-        assert(!v.rep().version_desc_name().empty());
-        m_current = ::std::move(v);
-    }
+    koios::task<> set_current_version(version_guard v);
 
     //koios::task<void> GC_with(koios::awaitable_callable_concept auto async_func_file_range)
     koios::task<> GC_with(auto async_func_file_range)
@@ -240,7 +217,7 @@ private:
         return vg.approx_ref_count() == 0;
     }
 
-    void in_mem_GC_impl() { ::std::erase_if(m_versions, is_garbage_in_mem); }
+    void in_mem_GC_impl();
 
 private:
     ::std::list<version_rep> m_versions;

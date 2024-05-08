@@ -18,8 +18,10 @@ namespace frenzykv
 class compaction_policy
 {
 public:
+    virtual ~compaction_policy() noexcept {}
+
     virtual koios::task<::std::vector<file_guard>>
-    compacting_files(const version_guard& vc, level_t from) const = 0; 
+    compacting_files(version_guard vc, level_t from) const = 0; 
 };
 
 ::std::unique_ptr<compaction_policy> 

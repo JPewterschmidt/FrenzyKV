@@ -1,6 +1,8 @@
 #include <string>
 #include <iterator>
 #include <ranges>
+#include <cassert>
+#include <list>
 
 #include "toolpex/exceptions.h"
 #include "frenzykv/persistent/sstable.h"
@@ -25,11 +27,25 @@ sstable::sstable(const kvdb_deps& deps,
     assert(m_filter);
 }
 
+sstable::sstable(const kvdb_deps& deps, 
+                 filter_policy* filter, 
+                 ::std::unique_ptr<random_readable> file)
+    : m_self_managed_file{ ::std::move(file) }, 
+      m_deps{ &deps }, 
+      m_file{ m_self_managed_file.get() }, 
+      m_filter{ filter },
+      m_compressor{ get_compressor(*m_deps->opt(), m_deps->opt()->compressor_name) }
+{
+    assert(m_compressor);
+    assert(m_filter);
+}
+
 koios::task<bool> sstable::parse_meta_data()
 {
     if (m_meta_data_parsed) co_return true;
     
-    const uintmax_t filesz = m_file->file_size();
+    const uintmax_t filesz = m_file->file_size(); 
+    assert(filesz);
     const size_t footer_sz = sizeof(mbo_t) + sizeof(mgn_t);
     ::std::string buffer(footer_sz, 0);
     co_await m_file->read({ buffer.data(), buffer.size() }, filesz - footer_sz);
@@ -212,7 +228,7 @@ get_kv_entry(const sequenced_key& user_key)
     if (!seg_opt) co_return {};
     const auto& seg = seg_opt->first;
     
-    for (kv_entry entry : entries_from_block_segment(seg))
+    for (kv_entry entry : entries_from_block_segment_reverse(seg))
     {
         if (entry.key().sequence_number() <= user_key.sequence_number()) 
             co_return entry;
@@ -278,11 +294,11 @@ block_offsets() const noexcept
         co_yield p;
 }
 
-koios::task<::std::vector<kv_entry>>
+koios::task<::std::list<kv_entry>>
 get_entries_from_sstable(sstable& table)
 {
     co_await table.parse_meta_data();
-    ::std::vector<kv_entry> result;
+    ::std::list<kv_entry> result;
     for (auto blk_off : table.block_offsets())
     {
         auto blk_opt = co_await table.get_block(blk_off);
@@ -294,7 +310,6 @@ get_entries_from_sstable(sstable& table)
     }
     assert(::std::is_sorted(result.begin(), result.end()));
 
-    ::std::sort(result.begin(), result.end());
     co_return result;
 }
 
