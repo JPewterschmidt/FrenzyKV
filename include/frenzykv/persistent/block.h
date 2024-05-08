@@ -90,12 +90,7 @@ class block_segment
 {
 public:
     constexpr block_segment() noexcept = default;
-    block_segment(const_bspan block_seg_storage)
-        : m_storage{ block_seg_storage }
-    {
-        if ((m_parse_result = parse()) == parse_result_t::error) 
-            throw koios::exception{"block_segment: parse fail"};
-    }
+    block_segment(const_bspan block_seg_storage);
 
     /*! \brief  determine the parse situation.
      *  \attention The content retrived by this class could be used only this functiuon return `parse_result_t::success`

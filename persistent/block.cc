@@ -32,6 +32,13 @@ static bool filled_with_zero(const ::std::byte* p)
     return ret == 0;
 }
 
+block_segment::block_segment(const_bspan block_seg_storage)
+    : m_storage{ block_seg_storage }
+{
+    if ((m_parse_result = parse()) == parse_result_t::error) 
+        throw koios::exception{"block_segment: parse fail"};
+}
+
 parse_result_t block_segment::parse()
 {
     const ::std::byte* current = m_storage.data();
@@ -402,8 +409,8 @@ void block_segment_builder::finish()
 {
     if (m_finish) [[unlikely]] return;
 
-    // Write the BTL
-    ::std::array<char, sizeof(btl_t)> buffer{};
+    // Write the empty RIL
+    ::std::array<char, sizeof(ril_t)> buffer{};
     m_storage.append(buffer.data(), buffer.size());
     m_finish = true;
 }
@@ -439,7 +446,7 @@ bool block_builder::add(const sequenced_key& key, const kv_user_value& value)
     // Segment end, need a new segment.
     if (!m_current_seg_builder->add(key, value))
     {
-        // This call will write 4 zero-filled bytes to the end of `m_storage`, 
+        // This call will write 4 zero-filled bytes (RIL) to the end of `m_storage`, 
         // indicates termination of the current block segment.
         m_current_seg_builder->finish();
 
@@ -470,6 +477,11 @@ bool block_builder::add(const sequenced_key& key, const kv_user_value& value)
         [[maybe_unused]] bool add_result = m_current_seg_builder->add(key, value);
         assert(add_result);
     }
+    // Do not add something like 
+    // `m_current_seg_builder->finish()` here
+    // cause this function will be called in a loop, to migrate those KVs into sstable
+    // this function only covers a very tiny part of that process.
+    // No need current seg finish here.
 
     return true;
 }
@@ -484,6 +496,10 @@ static ::std::span<char> block_content(::std::string& storage)
     assert(m_finish == false);
     m_finish = true;
     assert(m_seg_count);
+
+    // Finish the last block segment builder.
+    assert(m_current_seg_builder);
+    m_current_seg_builder->finish();
 
     // If the last sbso point to exactly the end of data area, then delete it.
     if (m_sbsos.back() == m_storage.size())
