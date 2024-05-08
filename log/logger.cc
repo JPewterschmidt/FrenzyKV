@@ -69,7 +69,8 @@ koios::task<> logger::may_flush(bool force) noexcept
     }
 }
 
-koios::task<write_batch> recover(env* e) noexcept
+koios::task<::std::pair<write_batch, sequence_number_t>> 
+recover(env* e) noexcept
 {
     ::std::error_code ec;
     if (uintmax_t sz = fs::file_size(prewrite_log_path()/prewrite_log_name(), ec);
@@ -86,13 +87,19 @@ koios::task<write_batch> recover(env* e) noexcept
     assert(readed == filesz);
     buf.commit(readed);
 
+    sequence_number_t max_seq{};
     write_batch result;
     for (auto kv : kv_entries_from_buffer(buf.valid_span()))
     {
+        if (const auto cur_seq = kv.key().sequence_number();
+            cur_seq > max_seq)
+        {
+            max_seq = cur_seq;
+        }
         result.write(::std::move(kv));
     }
     
-    co_return result;
+    co_return { result, max_seq };
 }
 
 koios::eager_task<> logger::delete_file()

@@ -52,6 +52,8 @@ public:
     const auto& compacted_files() const noexcept { return m_compacted; }
     const auto& added_files() const noexcept { return m_added; }
 
+    bool empty() const noexcept { return m_compacted.empty() && m_added.empty(); }
+
 private:
     ::std::vector<file_guard> m_compacted;
     ::std::vector<file_guard> m_added;

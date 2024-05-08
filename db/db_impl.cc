@@ -66,9 +66,10 @@ koios::task<bool> db_impl::init()
     }
     
     auto envp = m_deps.env();
-    write_batch b = co_await recover(envp.get());
+    auto [batch, max_seq] = co_await recover(envp.get());
     co_await m_log.truncate_file();
-    co_await m_mem->insert(::std::move(b));
+    co_await m_mem->insert(::std::move(batch));
+    m_snapshot_center.set_leatest_used_sequence_number_from_recovery(max_seq);
 
     auto lk = co_await m_mem_mutex.acquire();
     auto memp = ::std::exchange(m_mem, ::std::make_unique<memtable>(m_deps));

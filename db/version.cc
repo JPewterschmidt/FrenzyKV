@@ -24,6 +24,9 @@ version_rep::version_rep(const version_rep& other)
 
 version_rep& version_rep::operator+=(const version_delta& delta) 
 {
+    if (delta.empty())
+        return *this;
+
     ::std::vector<file_guard> new_versions_files = delta.added_files();
 
     auto old_files = files();
@@ -57,7 +60,7 @@ koios::eager_task<> version_center::load_current_version()
 
     // Load current version
     version_delta delta = co_await get_current_version(deps, m_file_center);
-    m_current = (m_versions.emplace_back(*co_await current_descriptor_name(deps)) += delta);
+    m_current = (m_versions.emplace_back((co_await current_descriptor_name(deps)).value_or(get_version_descriptor_name())) += delta);
     const ::std::string_view cvd_name = m_current.version_desc_name();
     
     // Load other versions for GC

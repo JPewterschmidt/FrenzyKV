@@ -45,6 +45,11 @@ public:
         return m_newest_seq.fetch_add(static_cast<sequence_number_t>(count)); 
     }
 
+    void set_leatest_used_sequence_number_from_recovery(sequence_number_t seq) noexcept
+    {
+        m_newest_seq.store(seq);
+    }
+
 private:
     ::std::atomic<sequence_number_t> m_newest_seq{1};
 };
