@@ -136,7 +136,8 @@ entries_from_block_segment_reverse(const block_segment& seg)
 {
     auto pp = seg.public_prefix();
     const auto& items = seg.items();
-    for (auto kv : entries_from_block_segment_impl(pp, items | rv::reverse))
+    auto rview = items | rv::reverse;
+    for (auto kv : entries_from_block_segment_impl(pp, rview))
     {
         co_yield kv;
     }
