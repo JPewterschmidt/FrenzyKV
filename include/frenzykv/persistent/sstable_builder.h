@@ -57,8 +57,9 @@ public:
     koios::task<bool> add(const kv_entry& kv) { return add(kv.key(), kv.value()); }
     bool was_finish() const noexcept { return m_finish; }
     koios::task<bool> finish();
-    bool reach_the_size_limit() const noexcept { return m_size_wrote >= m_size_limit; }
+    bool reach_the_size_limit() const noexcept { return m_size_flushed >= m_size_limit; }
     uintmax_t size_limit() const noexcept { return m_size_limit; }
+    bool empty() const noexcept;
 
 private:
     koios::task<bool> flush_current_block(bool need_flush = true);
@@ -68,7 +69,7 @@ private:
     const kvdb_deps* m_deps;
     bool m_finish{};
     uintmax_t m_size_limit{};
-    uintmax_t m_size_wrote{};
+    uintmax_t m_size_flushed{};
     filter_policy* m_filter{};
     ::std::string m_first_uk{};
     ::std::string m_last_uk{};

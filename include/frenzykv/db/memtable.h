@@ -75,39 +75,11 @@ private:
 private:
     const kvdb_deps* m_deps{};
 
-    friend class imm_memtable;
     toolpex::skip_list<sequenced_key, kv_user_value> m_list;
 
     size_t m_bound_size_bytes{};
     size_t m_size_bytes{};
     mutable koios::shared_mutex m_list_mutex;
-};
-
-class imm_memtable
-{
-public:
-    imm_memtable(memtable&& m) noexcept
-        : m_list{ ::std::move(m.m_list) }, 
-          m_size_bytes{ m.m_size_bytes }
-    {
-    }
-
-    imm_memtable(imm_memtable&&) noexcept = default;
-
-    koios::task<::std::optional<kv_entry>> get(const sequenced_key& key) const noexcept;
-    koios::task<size_t> size_bytes() const noexcept
-    {
-        co_return m_size_bytes;
-    }
-
-    const auto& storage() const noexcept { return m_list; }
-    void set_flushed_flags() noexcept { m_flushed = true; }
-    bool was_flushed() const noexcept { return m_flushed; }
-
-private:
-    toolpex::skip_list<sequenced_key, kv_user_value> m_list;
-    const size_t m_size_bytes{};
-    bool m_flushed{};
 };
 
 } // namespace frenzykv

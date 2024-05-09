@@ -126,29 +126,12 @@ insert(write_batch batch, write_options opt)
     co_await m_log.insert(batch);
     co_await m_log.may_flush(opt.sync_write);
     
-    // Not doing mem-imm trasformation, only need shared lock
-    auto shah = co_await m_mem_mutex.acquire_shared();
+    auto lk = co_await m_mem_mutex.acquire();
     if (! co_await m_mem->could_fit_in(batch))
     {
-        // Need do memtable transformation
-        shah.unlock();
-        auto unih = co_await m_mem_mutex.acquire();
-        if (co_await m_mem->could_fit_in(batch))
-        {
-            auto ec = co_await m_mem->insert(batch);
-            co_return ec;
-        }
-
-        // We need make sure that user won't searching a K when that key are waiting to be flushed.
-
         auto flushing_file = ::std::move(m_mem);
         m_mem = ::std::make_unique<memtable>(m_deps);
-        unih.unlock();
-        auto ec = co_await m_mem->insert(::std::move(batch));
-
         co_await m_flusher.flush_to_disk(::std::move(flushing_file));
-
-        co_return ec;
     }
     co_return co_await m_mem->insert(::std::move(batch));
 }

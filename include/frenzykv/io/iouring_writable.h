@@ -20,8 +20,6 @@ namespace frenzykv
 class iouring_writable : public posix_base, public seq_writable
 {
 public:
-
-public:
     iouring_writable(::std::filesystem::path path, 
                      const options& opt, 
                      mode_t create_mode = file::default_create_mode(),
@@ -58,6 +56,7 @@ private:
     ::std::filesystem::path m_path;
     buffer<> m_buffer;
     outbuf_adapter m_streambuf;
+    uintmax_t m_wrote{};
 };
 
 } // namespace frenzykv

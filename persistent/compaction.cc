@@ -3,6 +3,7 @@
 #include <cassert>
 #include <vector>
 #include <ranges>
+#include <algorithm>
 
 #include "frenzykv/persistent/compaction.h"
 #include "frenzykv/persistent/compaction_policy.h"
@@ -46,8 +47,11 @@ merge_two_tables(sstable& lhs, sstable& rhs)
 
     ::std::vector<::std::unique_ptr<in_mem_rw>> result;
 
-    ::std::list<kv_entry> lhs_entries = co_await get_entries_from_sstable(lhs);
-    ::std::list<kv_entry> rhs_entries = co_await get_entries_from_sstable(rhs);
+    ::std::list<kv_entry> lhs_entries; 
+    ::std::list<kv_entry> rhs_entries; 
+
+    if (!lhs.empty()) lhs_entries = co_await get_entries_from_sstable(lhs);
+    if (!rhs.empty()) rhs_entries = co_await get_entries_from_sstable(rhs);
 
     ::std::list<kv_entry> merged;
     ::std::merge(::std::move_iterator{ lhs_entries.begin() }, ::std::move_iterator{ lhs_entries.end() }, 
@@ -60,19 +64,24 @@ merge_two_tables(sstable& lhs, sstable& rhs)
                     }), 
                  merged.end());
 
-    auto file = ::std::make_unique<in_mem_rw>(m_newfilesizebound);
-    sstable_builder builder{ 
-        *m_deps, m_newfilesizebound, 
-        m_filter_policy, file.get() 
-    };
-    for (const auto& entry : merged | rv::reverse)
+    ::std::erase_if(merged, is_tomb_stone<kv_entry>);
+
+    if (!merged.empty())
     {
-        [[maybe_unused]] bool add_ret = co_await builder.add(entry);
-        assert(add_ret);
+        auto file = ::std::make_unique<in_mem_rw>(m_newfilesizebound);
+        sstable_builder builder{ 
+            *m_deps, m_newfilesizebound, 
+            m_filter_policy, file.get() 
+        };
+        for (const auto& entry : merged | rv::reverse)
+        {
+            [[maybe_unused]] bool add_ret = co_await builder.add(entry);
+            assert(add_ret);
+        }
+        co_await builder.finish();
+        co_return file;
     }
-    co_await builder.finish();
-    
-    co_return file;
+    co_return {};
 }
 
 } // namespace frenzykv

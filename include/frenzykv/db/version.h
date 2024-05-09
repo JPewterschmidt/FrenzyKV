@@ -190,6 +190,7 @@ public:
         namespace rv = ::std::ranges::views;
         auto lk = co_await m_modify_lock.acquire();
 
+        spdlog::debug("version_center::GC_with start");
         for (const version_rep& out_dated_version : m_versions 
             | rv::take(m_versions.size())
             | rv::filter(is_garbage_in_mem))
@@ -197,12 +198,15 @@ public:
             co_await async_func_file_range(out_dated_version);
         }
         in_mem_GC_impl();
+        spdlog::debug("version_center::GC_with completed");
     }
 
     koios::task<> GC()
     {
         auto lk = co_await m_modify_lock.acquire();
+        spdlog::debug("version_center::GC start");
         in_mem_GC_impl();
+        spdlog::debug("version_center::GC completed");
     }
 
     koios::task<size_t> size() const

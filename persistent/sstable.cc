@@ -40,12 +40,23 @@ sstable::sstable(const kvdb_deps& deps,
     assert(m_filter);
 }
 
+bool sstable::empty() const noexcept
+{
+    assert(m_meta_data_parsed);
+    return m_file == nullptr || m_file->file_size() == 0;
+}
+
 koios::task<bool> sstable::parse_meta_data()
 {
     if (m_meta_data_parsed) co_return true;
     
     const uintmax_t filesz = m_file->file_size(); 
-    assert(filesz);
+    if (filesz == 0) // Empty file
+    {
+        m_meta_data_parsed = true;
+        co_return true;
+    }
+
     const size_t footer_sz = sizeof(mbo_t) + sizeof(mgn_t);
     ::std::string buffer(footer_sz, 0);
     co_await m_file->read({ buffer.data(), buffer.size() }, filesz - footer_sz);
@@ -61,8 +72,11 @@ koios::task<bool> sstable::parse_meta_data()
 
     // For meta Block
     buffer = ::std::string(filesz - mbo - sizeof(mbo_t) - sizeof(mgn_t), 0);
+    auto sp = ::std::as_bytes(::std::span{buffer});
     co_await m_file->read({ buffer.data(), buffer.size() }, mbo);
-    block meta_block{ ::std::as_bytes(::std::span{buffer}) };
+
+    assert(block_integrity_check(sp));
+    block meta_block{ sp };
     assert(meta_block.special_segments_count() == 1);
     for (block_segment seg : meta_block.segments_in_single_interval())
     {

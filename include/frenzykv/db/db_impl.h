@@ -48,7 +48,6 @@ public:
 
 private:
     koios::task<sequenced_key> make_query_key(const_bspan userkey, const read_options& opt);
-    koios::task<> flush_imm_to_sstable();
     koios::task<> merge_tables(::std::vector<sstable>& tables, level_t target_l);
 
     koios::task<::std::unique_ptr<in_mem_rw>>
@@ -72,7 +71,7 @@ private:
     snapshot_center m_snapshot_center;
 
     // mamtable===============================
-    mutable koios::shared_mutex m_mem_mutex;
+    mutable koios::mutex m_mem_mutex;
     ::std::unique_ptr<memtable> m_mem;
     garbage_collector m_gcer;
     memtable_flusher m_flusher;

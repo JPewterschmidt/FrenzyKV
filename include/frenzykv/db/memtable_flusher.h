@@ -39,7 +39,7 @@ public:
 
 private:
     koios::task<::std::pair<bool, version_guard>> need_compaction(level_t l) const;
-    koios::task<> may_compact(bool joined_gc = false);
+    koios::eager_task<> may_compact(bool joined_gc = false);
 
 private:
     const kvdb_deps* m_deps{};
@@ -48,6 +48,7 @@ private:
     file_center* m_file_center{};
     garbage_collector* m_gcer{};
     mutable koios::mutex m_mutex;
+    koios::mutex m_compact_mutex;
 };
 
 } // namespace frenzykv

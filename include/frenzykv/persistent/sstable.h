@@ -95,6 +95,7 @@ public:
 
     bool overlapped(const sstable& other) const noexcept;
     bool disjoint(const sstable& other) const noexcept;
+    bool empty() const noexcept;
 
     bool operator<(const sstable& other) const noexcept
     {

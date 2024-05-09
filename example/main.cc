@@ -24,12 +24,13 @@ koios::task<> db_test()
     auto dbimpl = ::std::make_unique<db_impl>("test1", get_global_options());
     db_interface* db = dbimpl.get();
 
-    //for (size_t i{}; i < 1000; ++i)
-    //{
-    //    co_await db->insert(::std::to_string(i), ::std::to_string(i));
-    //}
+    size_t count{};
+    for (size_t i{}; i < 100000; ++i)
+    {
+        co_await db->insert(::std::to_string(i), "testtest");
+    }
 
-    auto k = ::std::to_string(500);
+    auto k = ::std::to_string(50);
     auto opt = co_await db->get(k);
     if (opt)
     {
@@ -37,7 +38,9 @@ koios::task<> db_test()
     }
     else ::std::cout << "not found" << ::std::endl;
 
+    spdlog::debug("before dbclose");
     co_await db->close();
+    spdlog::debug("after dbclose");
 
     co_return;
 }

@@ -5,9 +5,41 @@
 #include <memory>
 #include "koios/exceptions.h"
 
+using namespace ::std::chrono_literals;
+
 namespace frenzykv
 {
     static ::std::unique_ptr<nlohmann::json> g_data;
+
+    options::options()
+        : disk_block_bytes{ 4096 }, 
+          memory_page_bytes{ 4096 }, 
+          max_block_segments_number{ 1000 }, 
+          block_size{ 4096 }, 
+          max_level{ 5 }, 
+          level_file_number{ 2, 4, 8, 16, 32 }, 
+
+          // SSTable bound
+          level_file_size{ 
+              16 * 1024 * 1024, 
+              64 * 1024 * 1024, 
+              128 * 1024 * 1024,  
+              256 * 1024 * 1024,  
+              512 * 1024 * 1024,  
+          }, 
+          compress_level{ 15 },
+          need_buffered_write{ true },
+          sync_write{ false },
+          buffered_read{ true },
+          need_compress{ true },
+          gc_period_sec{ 10s },
+          root_path{ "/tmp/frenzykv" },
+          create_root_path_if_not_exists{ true },
+          log_path{ "frenzy-prewrite-log" },
+          log_level{ logging_level::INFO },
+          compressor_name{ "zstd" }
+    {
+    }
 
     options get_global_options() noexcept
     {

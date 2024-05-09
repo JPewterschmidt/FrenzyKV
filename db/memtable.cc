@@ -123,11 +123,4 @@ koios::task<bool> memtable::empty() const
     co_return empty_impl();
 }
 
-koios::task<::std::optional<kv_entry>> 
-imm_memtable::
-get(const sequenced_key& key) const noexcept
-{
-    co_return table_get(m_list, key);
-}
-
 } // namespace frenzykv

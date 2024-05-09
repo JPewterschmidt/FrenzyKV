@@ -26,8 +26,14 @@ public:
     {
     }
 
-    // Non of business of sequence_number, cause the snapshot mechinaism 
-    // keep those files of version alive
+    /*! \brief Compact the specified version from version `from`
+     *  \return A pair consisting a `in_mem_rw` object and a `version_delta` object
+     *          if the `in_mem_rw` is nullptr, means that is an empty sstable.
+     *          You have to do the null ptr check.
+     *
+     *  Non of business of sequence_number, cause the snapshot mechinaism 
+     *  keep those files of version alive
+     */
     koios::task<::std::pair<::std::unique_ptr<in_mem_rw>, version_delta>>
     compact(version_guard version, level_t from);
 
@@ -36,6 +42,9 @@ public:
      *  \param  tables a vector conatins several sstables.
      *  \return A `in_mem_rw` contains mergging result. 
      *          You can later dump the file into a real fisk file.
+     *          but this file may be nullptr indicates that
+     *          compaction result is a empty table. 
+     *          So you have to do the null pointer check.
      */
     koios::task<::std::unique_ptr<in_mem_rw>> 
     merge_tables(::std::ranges::range auto& tables)
@@ -52,7 +61,6 @@ public:
             file = co_await merge_two_tables(temp, t);
         }
 
-        assert(file->file_size() > 0);
         co_return file;
     }
 
