@@ -68,7 +68,8 @@ koios::eager_task<> memtable_flusher::may_compact(bool joined_gc)
             }
 
             // Add a new version
-            const auto cur_v = co_await m_version_center->add_new_version() += delta;
+            auto cur_v = co_await m_version_center->add_new_version();
+            cur_v += delta;
 
             // Write new version to version descriptor
             const auto new_desc_name = cur_v.version_desc_name();
@@ -108,8 +109,6 @@ flush_to_disk(::std::unique_ptr<memtable> table, bool joined_compact)
         // Which natually form the flushing call into a queue.
         // So this is an easy Consumer/Producer module.
         auto lk = co_await m_mutex.acquire();
-        auto cur_ver = co_await m_version_center->current_version();
-        assert(cur_ver.valid());
         
         auto sst_guard = co_await m_file_center->get_file(name_a_sst(0));
         auto file = m_deps->env()->get_seq_writable(sstables_path()/sst_guard);
@@ -148,16 +147,13 @@ flush_to_disk(::std::unique_ptr<memtable> table, bool joined_compact)
         }
         co_await finish_current_buiding();
         
-        // Update current version descriptor
-        const auto ver_filename = cur_ver.version_desc_name();
-        auto ver_file = m_deps->env()->get_seq_writable(version_path()/ver_filename);
-        [[maybe_unused]] bool appending_ret = co_await append_version_descriptor(delta.added_files(), ver_file.get());
-        assert(appending_ret);
-        co_await set_current_version_file(*m_deps, ver_filename);
-
-        // Only after changing the version descriptor (on disk), 
-        // the in memory update could be performed.
-        cur_ver += delta;
+        // TODO: refactor the version_center to support disk current setting first, in mem current setting second.
+        auto new_ver = co_await m_version_center->add_new_version();
+        new_ver += delta;
+        const auto vdname = new_ver.version_desc_name();
+        auto ver_file = m_deps->env()->get_seq_writable(version_path()/vdname);
+        co_await write_version_descriptor(*new_ver, ver_file.get());
+        co_await set_current_version_file(*m_deps, vdname);
     }
 
     // TODO: For debug 

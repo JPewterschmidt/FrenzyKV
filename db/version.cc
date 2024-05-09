@@ -42,13 +42,13 @@ version_rep& version_rep::operator+=(const version_delta& delta)
     return *this;
 }
 
-koios::task<version_guard> version_center::add_new_version()
+koios::task<mutable_version_guard> version_center::add_new_version()
 {
     auto lk = co_await m_modify_lock.acquire();
     auto& new_ver = m_versions.emplace_back(m_versions.back());
     new_ver.set_version_desc_name(get_version_descriptor_name());
     m_current = { new_ver };
-    co_return m_current;
+    co_return { ::std::move(lk), m_current };
 }
 
 koios::eager_task<> version_center::load_current_version()
@@ -95,16 +95,23 @@ koios::task<version_guard> version_center::current_version() const noexcept
     co_return m_current;
 }
 
-koios::task<> version_center::set_current_version(version_guard v)
-{
-    auto lk = co_await m_modify_lock.acquire();
-    assert(!v.rep().version_desc_name().empty());
-    m_current = ::std::move(v);
-}
-
 void version_center::in_mem_GC_impl() 
 { 
     ::std::erase_if(m_versions, is_garbage_in_mem); 
+}
+
+koios::task<> version_center::GC()
+{
+    auto lk = co_await m_modify_lock.acquire();
+    spdlog::debug("version_center::GC start");
+    in_mem_GC_impl();
+    spdlog::debug("version_center::GC completed");
+}
+
+koios::task<size_t> version_center::size() const
+{
+    auto lk = co_await m_modify_lock.acquire_shared();
+    co_return m_versions.size();
 }
 
 } // namespace frenzykv
