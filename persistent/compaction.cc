@@ -66,7 +66,7 @@ merge_two_tables(sstable& lhs, sstable& rhs, level_t l)
                     }), 
                  merged.end());
 
-    ::std::erase_if(merged, is_tomb_stone<kv_entry>);
+    //::std::erase_if(merged, is_tomb_stone<kv_entry>);
 
     if (!merged.empty())
     {

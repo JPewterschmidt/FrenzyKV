@@ -27,6 +27,9 @@ public:
 ::std::unique_ptr<compaction_policy> 
 make_default_compaction_policy(const kvdb_deps& deps, filter_policy* filter);
 
+::std::unique_ptr<compaction_policy>
+make_tombstone_compaction_policy(const kvdb_deps& deps, filter_policy* filter);
+
 } // namespace frenzykv
 
 #endif

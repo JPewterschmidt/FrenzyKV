@@ -24,17 +24,17 @@ koios::task<> db_test()
     auto dbimpl = ::std::make_unique<db_impl>("test1", get_global_options());
     db_interface* db = dbimpl.get();
 
-    //for (size_t i{}; i < 10000; ++i)
-    //{
-    //    auto k = ::std::to_string(i);
-    //    co_await db->insert(k, "test");
-    //}
+    for (size_t i{}; i < 10000; ++i)
+    {
+        auto k = ::std::to_string(i);
+        co_await db->insert(k, "test");
+    }
 
-    //for (size_t i{}; i < 10000; ++i)
-    //{
-    //    auto k = ::std::to_string(i);
-    //    co_await db->remove_from_db(k);
-    //}
+    for (size_t i{}; i < 10000; ++i)
+    {
+        auto k = ::std::to_string(i);
+        co_await db->remove_from_db(k);
+    }
 
     auto k = ::std::to_string(50);
     auto opt = co_await db->get(k);

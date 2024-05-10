@@ -224,13 +224,13 @@ db_impl::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noexc
 
     const sequenced_key skey = co_await this->make_query_key(key, snap);
     auto result_opt = co_await m_mem->get(skey);
-    if (result_opt) 
+    if (!result_opt) 
     {
-        if (!result_opt->is_tomb_stone()) co_return result_opt;
-        co_return {};
+        result_opt = co_await find_from_ssts(skey, ::std::move(snap));
     }
 
-    co_return co_await find_from_ssts(skey, ::std::move(snap));
+    if (result_opt && !result_opt->is_tomb_stone()) co_return result_opt;
+    co_return {};
 }
 
 koios::task<::std::optional<kv_entry>> 
@@ -246,7 +246,7 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
     [&potiential_results, &key] mutable -> koios::task<::std::optional<kv_entry>> { 
         ::std::optional<kv_entry> result;
         auto iter = potiential_results.find_last_less_equal(key);
-        if (iter != potiential_results.end() && !iter->second.is_tomb_stone())
+        if (iter != potiential_results.end())
         {
             co_return result.emplace(::std::move(iter->first), ::std::move(iter->second));
         }
