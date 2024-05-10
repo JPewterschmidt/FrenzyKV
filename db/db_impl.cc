@@ -220,8 +220,9 @@ koios::task<::std::optional<kv_entry>>
 db_impl::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noexcept
 {
     co_await init();
+    snapshot snap = opt.snap.valid() ? ::std::move(opt.snap) : co_await get_snapshot();
 
-    const sequenced_key skey = co_await this->make_query_key(key, opt);
+    const sequenced_key skey = co_await this->make_query_key(key, snap);
     auto result_opt = co_await m_mem->get(skey);
     if (result_opt) 
     {
@@ -229,7 +230,7 @@ db_impl::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noexc
         co_return {};
     }
 
-    co_return co_await find_from_ssts(skey, ::std::move(opt.snap));
+    co_return co_await find_from_ssts(skey, ::std::move(snap));
 }
 
 koios::task<::std::optional<kv_entry>> 
@@ -284,9 +285,8 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
 }
 
 koios::task<sequenced_key> 
-db_impl::make_query_key(const_bspan userkey, const read_options& opt)
+db_impl::make_query_key(const_bspan userkey, const snapshot& snap)
 {
-    const auto& snap = opt.snap;
     co_return { 
         (snap.valid() 
             ? snap.sequence_number() 

@@ -19,24 +19,22 @@ using namespace koios;
 using namespace frenzykv;
 using namespace ::std::string_view_literals;
 
-koios::task<> parallel_insert(db_interface* db)
-{
-    for (size_t i{}; i < 50000; ++i)
-    {
-        co_await db->insert(::std::to_string(i), "testtest");
-    }
-}
-
 koios::task<> db_test()
 {
     auto dbimpl = ::std::make_unique<db_impl>("test1", get_global_options());
     db_interface* db = dbimpl.get();
 
-    auto f1 = parallel_insert(db).run_and_get_future();
-    auto f2 = parallel_insert(db).run_and_get_future();
-    
-    f1.get();
-    f2.get();
+    //for (size_t i{}; i < 10000; ++i)
+    //{
+    //    auto k = ::std::to_string(i);
+    //    co_await db->insert(k, "test");
+    //}
+
+    //for (size_t i{}; i < 10000; ++i)
+    //{
+    //    auto k = ::std::to_string(i);
+    //    co_await db->remove_from_db(k);
+    //}
 
     auto k = ::std::to_string(50);
     auto opt = co_await db->get(k);

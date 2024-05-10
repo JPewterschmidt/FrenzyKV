@@ -50,12 +50,12 @@ koios::task<bool> sstable::parse_meta_data()
 {
     if (m_meta_data_parsed) co_return true;
     
-    const uintmax_t filesz = m_file->file_size(); 
-    if (filesz == 0) // Empty file
+    if (m_file == nullptr)
     {
         m_meta_data_parsed = true;
         co_return true;
     }
+    const uintmax_t filesz = m_file->file_size(); 
 
     const size_t footer_sz = sizeof(mbo_t) + sizeof(mgn_t);
     ::std::string buffer(footer_sz, 0);
