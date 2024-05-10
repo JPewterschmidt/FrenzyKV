@@ -71,7 +71,7 @@ koios::task<bool> db_impl::init()
 
     if (co_await m_log.empty())
     {
-        co_await m_gcer.do_GC();
+        do_GC().run();
         spdlog::debug("db_impl::init() done");
         co_return true;
     }
@@ -92,7 +92,7 @@ koios::task<bool> db_impl::init()
     spdlog::debug("db_impl::init() recoverying from pre-write log compact and flush and gc");
     co_await m_flusher.flush_to_disk(::std::move(memp));
     co_await may_compact();
-    co_await m_gcer.do_GC();
+    m_gcer.do_GC().run();
 
     spdlog::debug("db_impl::init() done");
     co_return true;
@@ -128,6 +128,7 @@ koios::eager_task<> db_impl::compact_tombstones()
         if (fake_files.empty()) continue;
         co_await fake_file_to_disk(::std::move(fake_files), cur_delta, l);
         delta += ::std::move(cur_delta);
+        break;
     }
     co_await update_current_version(::std::move(delta));
 }
@@ -183,9 +184,10 @@ koios::task<> db_impl::close()
         co_return;
     
     m_inited = false;
-    auto lk = co_await m_mem_mutex.acquire();
-    if (co_await m_mem->empty()) co_return;
 
+    auto lk = co_await m_mem_mutex.acquire();
+
+    if (co_await m_mem->empty()) co_return;
     co_await m_flusher.flush_to_disk(::std::move(m_mem));
     co_await may_compact();
     [[maybe_unused]] bool write_ret = co_await write_leatest_sequence_number(
@@ -219,8 +221,7 @@ insert(write_batch batch, write_options opt)
     co_await m_log.insert(batch);
     co_await m_log.may_flush(opt.sync_write);
     
-    auto lk = co_await m_mem_mutex.acquire();
-
+    auto unilk = co_await m_mem_mutex.acquire();
     if (auto ec = co_await m_mem->insert(batch); is_frzkv_out_of_range(ec))
     {
         spdlog::debug("db_impl::insert() need flushing");
@@ -228,9 +229,8 @@ insert(write_batch batch, write_options opt)
         m_mem = ::std::make_unique<memtable>(m_deps);
         co_await m_flusher.flush_to_disk(::std::move(flushing_file));
         co_await may_compact();
-        co_await do_GC();
-        spdlog::debug("db_impl::insert() after GC");
-        // TODO: remove this after debug
+        do_GC().run();
+
         ec = co_await m_mem->insert(::std::move(batch));
         spdlog::debug("db_impl::insert() after GC, then after insert to mem");
         co_return ec;
@@ -254,7 +254,7 @@ db_impl::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noexc
     const sequenced_key skey = co_await this->make_query_key(key, snap);
     spdlog::debug("db_impl::get() get from mem");
 
-    auto lk = co_await m_mem_mutex.acquire();
+    auto lk = co_await m_mem_mutex.acquire_shared();
     auto result_opt = co_await m_mem->get(skey);
     lk.unlock();
 

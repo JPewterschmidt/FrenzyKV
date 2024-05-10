@@ -90,7 +90,7 @@ private:
     compactor m_compactor;
 
     // mamtable===============================
-    mutable koios::mutex m_mem_mutex;
+    mutable koios::shared_mutex m_mem_mutex;
     ::std::unique_ptr<memtable> m_mem;
     garbage_collector m_gcer;
     memtable_flusher m_flusher;

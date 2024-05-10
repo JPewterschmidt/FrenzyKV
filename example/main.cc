@@ -26,15 +26,23 @@ koios::eager_task<> db_test()
     auto dbimpl = ::std::make_unique<db_impl>("test1", get_global_options());
     db_interface* db = dbimpl.get();
 
-    const size_t scale = 10000;
+    const size_t scale = 100000;
 
-    spdlog::debug("db_test: start insert");
+    //spdlog::debug("db_test: start insert");
+    //for (size_t i{}; i < scale; ++i)
+    //{
+    //    auto k = ::std::to_string(i);
+    //    co_await db->insert(k, "testtest");
+    //}
+    //spdlog::debug("db_test: insert complete");
+
+    spdlog::debug("db_test: start remove");
     for (size_t i{}; i < scale; ++i)
     {
         auto k = ::std::to_string(i);
-        co_await db->insert(k, "testtest");
+        co_await db->remove_from_db(k);
     }
-    spdlog::debug("db_test: insert complete");
+    spdlog::debug("db_test: remove complete");
 
     auto k = ::std::to_string(50);
     auto opt = co_await db->get(k);
