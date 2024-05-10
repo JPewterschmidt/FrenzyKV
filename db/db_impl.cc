@@ -9,6 +9,7 @@
 #include "toolpex/skip_list.h"
 
 #include "koios/iouring_awaitables.h"
+#include "koios/this_task.h"
 
 #include "frenzykv/statistics.h"
 #include "frenzykv/error_category.h"
@@ -57,8 +58,13 @@ koios::task<bool> db_impl::init()
     if (m_inited.load())
         co_return true;
 
+    spdlog::debug("db_impl::init() start");
     m_inited.store(true);
 
+    spdlog::debug("db_impl::init() turn_into_scheduler");
+    co_await koios::this_task::turn_into_scheduler();
+
+    spdlog::debug("db_impl::init() loading from fs");
     co_await m_file_center.load_files();
     co_await m_version_center.load_current_version();
 
@@ -68,9 +74,11 @@ koios::task<bool> db_impl::init()
     if (co_await m_log.empty())
     {
         co_await m_gcer.do_GC();
+        spdlog::debug("db_impl::init() done");
         co_return true;
     }
     
+    spdlog::debug("db_impl::init() recoverying from pre-write log");
     auto envp = m_deps.env();
     auto [batch, max_seq_from_log] = co_await recover(envp.get());
     co_await m_log.truncate_file();
@@ -80,10 +88,13 @@ koios::task<bool> db_impl::init()
     auto lk = co_await m_mem_mutex.acquire();
     auto memp = ::std::exchange(m_mem, ::std::make_unique<memtable>(m_deps));
     lk.unlock();
+
+    spdlog::debug("db_impl::init() recoverying from pre-write log compact and flush and gc");
     co_await m_flusher.flush_to_disk(::std::move(memp));
     co_await may_compact();
     co_await m_gcer.do_GC();
 
+    spdlog::debug("db_impl::init() done");
     co_return true;
 }
 
