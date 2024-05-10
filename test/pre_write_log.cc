@@ -29,7 +29,7 @@ write_batch make_batch()
     return result;
 }
 
-koios::task<bool> write(logger& l)
+koios::eager_task<bool> write(logger& l)
 {
     auto w = make_batch();
     try

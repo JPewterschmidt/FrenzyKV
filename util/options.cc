@@ -17,7 +17,7 @@ namespace frenzykv
           max_block_segments_number{ 1000 }, 
           block_size{ 4096 }, 
           max_level{ 5 }, 
-          level_file_number{ 2, 4, 8, 16, 32 }, 
+          level_file_number{ 4, 8, 10, 32, 32 }, 
 
           // SSTable bound
           level_file_size{ 

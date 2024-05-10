@@ -39,9 +39,10 @@ db_impl::db_impl(::std::string dbname, const options& opt)
       m_filter_policy{ make_bloom_filter(64) }, 
       m_file_center{ m_deps }, 
       m_version_center{ m_file_center },
+      m_compactor{ m_deps, m_filter_policy.get() }, 
       m_mem{ ::std::make_unique<memtable>(m_deps) }, 
       m_gcer{ &m_version_center, &m_file_center }, 
-      m_flusher{ m_deps, &m_version_center, m_filter_policy.get(), &m_file_center, &m_gcer }
+      m_flusher{ m_deps, &m_version_center, m_filter_policy.get(), &m_file_center }
 {
 }
 
@@ -79,10 +80,69 @@ koios::task<bool> db_impl::init()
     auto lk = co_await m_mem_mutex.acquire();
     auto memp = ::std::exchange(m_mem, ::std::make_unique<memtable>(m_deps));
     lk.unlock();
-    co_await m_flusher.flush_to_disk(::std::move(memp), true);
+    co_await m_flusher.flush_to_disk(::std::move(memp));
+    co_await may_compact();
     co_await m_gcer.do_GC();
 
     co_return true;
+}
+
+koios::task<::std::pair<bool, version_guard>> 
+db_impl::need_compaction(level_t l)
+{
+    auto cur_ver = co_await m_version_center.current_version();
+    auto level_files_view = cur_ver.files()
+        | rv::transform([](auto&& guard){ return retrive_level_and_id_from_sst_name(guard); })
+        | rv::filter([](auto&& opt)     { return opt.has_value();   })
+        | rv::transform([](auto&& lopt) { return lopt->first;       })
+        | rv::filter([l](auto&& level)  { return level == l;        })
+        | rv::transform([]([[maybe_unused]] auto&&){ return 1; })
+        ;
+    const size_t num = r::fold_left(level_files_view, 0, ::std::plus<size_t>{});
+
+    co_return { 
+        !m_deps.opt()->is_appropriate_level_file_number(l, num), 
+        ::std::move(cur_ver)
+    };
+}
+
+koios::eager_task<> db_impl::may_compact()
+{
+    const level_t max_level = m_deps.opt()->max_level;
+    auto env = m_deps.env();
+
+    spdlog::debug("start compacting");
+    for (level_t l{}; l <= max_level; ++l)
+    {
+        auto [need, ver] = co_await need_compaction(l);
+        if (!need) continue;
+        
+        // Do the actual compaction
+        auto [fake_file, delta] = co_await m_compactor.compact(::std::move(ver), l);
+
+        if (fake_file && fake_file->file_size())
+        {
+            auto file = co_await m_file_center.get_file(name_a_sst(l + 1));
+            auto fp = co_await file.open_write(env.get());
+            co_await fake_file->dump_to(*fp);
+            co_await fp->sync();
+            delta.add_new_file(::std::move(file));
+        }
+
+        // Add a new version
+        auto cur_v = co_await m_version_center.add_new_version();
+        cur_v += delta;
+
+        // Write new version to version descriptor
+        const auto new_desc_name = cur_v.version_desc_name();
+        auto new_desc = env->get_seq_writable(version_path()/new_desc_name);
+        [[maybe_unused]] bool write_ret = co_await write_version_descriptor(*cur_v, new_desc.get());
+        assert(write_ret);
+
+        // Set current version
+        co_await set_current_version_file(m_deps, new_desc_name);
+    }
+    spdlog::debug("compacting complete");
 }
 
 koios::task<> db_impl::close()
@@ -94,7 +154,8 @@ koios::task<> db_impl::close()
     auto lk = co_await m_mem_mutex.acquire();
     if (co_await m_mem->empty()) co_return;
 
-    co_await m_flusher.flush_to_disk(::std::move(m_mem), true);
+    co_await m_flusher.flush_to_disk(::std::move(m_mem));
+    co_await may_compact();
     [[maybe_unused]] bool write_ret = co_await write_leatest_sequence_number(
         m_deps, 
         m_snapshot_center.leatest_used_sequence_number()
@@ -132,6 +193,8 @@ insert(write_batch batch, write_options opt)
         auto flushing_file = ::std::move(m_mem);
         m_mem = ::std::make_unique<memtable>(m_deps);
         co_await m_flusher.flush_to_disk(::std::move(flushing_file));
+        co_await may_compact();
+        do_GC().run();
     }
     co_return co_await m_mem->insert(::std::move(batch));
 }

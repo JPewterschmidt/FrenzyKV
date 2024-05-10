@@ -4,6 +4,7 @@
 #include <system_error>
 #include <memory>
 #include <stop_token>
+#include <utility>
 
 #include "koios/coroutine_mutex.h"
 #include "koios/coroutine_shared_mutex.h"
@@ -25,6 +26,7 @@
 #include "frenzykv/db/garbage_collector.h"
 
 #include "frenzykv/persistent/sstable.h"
+#include "frenzykv/persistent/compaction.h"
 
 namespace frenzykv
 {
@@ -58,6 +60,9 @@ private:
     koios::task<::std::optional<kv_entry>> find_from_ssts(const sequenced_key& key, snapshot snap) const;
     koios::task<> delete_all_prewrite_log();
 
+    koios::task<::std::pair<bool, version_guard>> need_compaction(level_t l);
+    koios::eager_task<> may_compact();
+
 private:
     ::std::string m_dbname;
     kvdb_deps m_deps;
@@ -69,6 +74,7 @@ private:
     file_center m_file_center;
     version_center m_version_center;
     snapshot_center m_snapshot_center;
+    compactor m_compactor;
 
     // mamtable===============================
     mutable koios::mutex m_mem_mutex;

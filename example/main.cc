@@ -47,7 +47,7 @@ koios::task<> db_test()
 
 int main()
 {
-    koios::runtime_init(1);
+    koios::runtime_init(10);
 
     db_test().result();
     

@@ -17,11 +17,8 @@ namespace frenzykv
 class compactor
 {
 public:
-    compactor(const kvdb_deps& deps, 
-              uintmax_t newfilesizebound, 
-              filter_policy* filter) noexcept
+    compactor(const kvdb_deps& deps, filter_policy* filter) noexcept
         : m_deps{ &deps }, 
-          m_newfilesizebound{ newfilesizebound }, 
           m_filter_policy{ filter }
     {
     }
@@ -47,18 +44,18 @@ public:
      *          So you have to do the null pointer check.
      */
     koios::task<::std::unique_ptr<in_mem_rw>> 
-    merge_tables(::std::ranges::range auto& tables)
+    merge_tables(::std::ranges::range auto& tables, level_t l)
     {
         namespace rv = ::std::ranges::views;
         assert(tables.size() >= 2);
         const auto first_two = tables | rv::take(2) | rv::adjacent<2>;
         auto [t1, t2] = *begin(first_two);
         
-        auto file = co_await merge_two_tables(t1, t2);
+        auto file = co_await merge_two_tables(t1, t2, l + 1);
         for (auto& t : tables | rv::drop(2))
         {
             sstable temp{ *m_deps, m_filter_policy, file.get() };
-            file = co_await merge_two_tables(temp, t);
+            file = co_await merge_two_tables(temp, t, l + 1);
         }
 
         co_return file;
@@ -66,11 +63,11 @@ public:
 
 private:
     koios::task<::std::unique_ptr<in_mem_rw>>
-    merge_two_tables(sstable& lhs, sstable& rhs);
+    merge_two_tables(sstable& lhs, sstable& rhs, level_t next_of_from);
 
 private:
+    mutable koios::mutex m_mutex;
     const kvdb_deps* m_deps;
-    uintmax_t m_newfilesizebound{};
     filter_policy* m_filter_policy;
 };
 
