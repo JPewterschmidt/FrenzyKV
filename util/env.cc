@@ -19,6 +19,11 @@
 using namespace koios;
 namespace fs = ::std::filesystem;
 
+namespace
+{
+    static fs::path root_path;
+}
+
 namespace frenzykv
 {
 
@@ -107,53 +112,39 @@ public:
     {
         return fs::current_path();
     }
-
-    ::std::error_code 
-    change_current_directroy(const fs::path& p) override
-    {
-        ::std::error_code result{};
-        if (fs::absolute(fs::current_path()) != fs::absolute(p))
-        {
-            fs::current_path(p, result);
-            spdlog::info("Working directory now is '{}'", p.string());
-        }
-        return result;
-    }
 };
 
 ::std::unique_ptr<env> env::make_default_env(const options& opt)
 {
-    static ::std::once_flag flag;
-    auto ret = ::std::make_unique<posix_uring_env>(opt);
-    ::std::call_once(flag, [&]{ ret->change_current_directroy(opt.root_path); });
-    return ret;
+    root_path = opt.root_path;
+    return ::std::make_unique<posix_uring_env>(opt);
 }
 
 namespace fs = fs;
 
 fs::path sstables_path()
 {
-    return fs::current_path()/"sstable";
+    return root_path/"sstable";
 }
 
 fs::path prewrite_log_path()
 {
-    return fs::current_path()/"db_prewrite_log";
+    return root_path/"db_prewrite_log";
 }
 
 fs::path system_log_path()
 {
-    return fs::current_path()/"system_log";
+    return root_path/"system_log";
 }
 
 fs::path config_path()
 {
-    return fs::current_path()/"config";
+    return root_path/"config";
 }
 
 ::std::filesystem::path version_path()
 {
-    return fs::current_path()/"version";
+    return root_path/"version";
 }
 
 fs::directory_entry sstables_dir(::std::error_code& ec)

@@ -39,7 +39,6 @@ public:
     virtual koios::task<> sleep_for(::std::chrono::milliseconds ms) = 0;
     virtual koios::task<> sleep_until(::std::chrono::system_clock::time_point tp) = 0;
     virtual ::std::filesystem::path current_directory() const = 0;
-    virtual ::std::error_code change_current_directroy(const ::std::filesystem::path& p) = 0;
 
     static ::std::unique_ptr<env> make_default_env(const options& opt);
 };

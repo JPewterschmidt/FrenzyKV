@@ -7,12 +7,44 @@
 
 #include "frenzykv/persistent/compaction.h"
 #include "frenzykv/persistent/compaction_policy.h"
+#include "frenzykv/persistent/compaction_policy_tombstone.h"
 #include "frenzykv/persistent/sstable.h"
 
 namespace rv = ::std::ranges::views;
 
 namespace frenzykv
 {
+
+koios::task<::std::pair<::std::vector<::std::unique_ptr<in_mem_rw>>, version_delta>>
+compactor::compact_tombstones(version_guard vg, level_t l)
+{
+    auto lk = co_await m_mutex.acquire();
+    auto files = co_await compaction_policy_tombstone{*m_deps, m_filter_policy}.compacting_files(vg, l);
+    
+    ::std::vector<::std::unique_ptr<in_mem_rw>> result;
+    version_delta delta;
+
+    auto env = m_deps->env();
+    const uintmax_t size_bound = m_deps->opt()->allowed_level_file_size(l);
+    for (const file_guard& fg : files)
+    {
+        sstable sst{ *m_deps, m_filter_policy, co_await fg.open_read(env.get()) };
+        co_await sst.parse_meta_data();
+        if (sst.empty()) [[unlikely]] continue;
+
+        auto entries = co_await get_entries_from_sstable(sst);
+        ::std::erase_if(entries, is_tomb_stone<kv_entry>);
+        auto filep = ::std::make_unique<in_mem_rw>();
+        sstable_builder builder{ *m_deps, size_bound, m_filter_policy, filep.get() };
+        [[maybe_unused]] bool add_ret = co_await builder.add(entries); assert(add_ret);       
+        [[maybe_unused]] bool finish_ret = co_await builder.finish(); assert(finish_ret);
+
+        result.emplace_back(::std::move(filep));
+        delta.add_compacted_file(fg);
+    }
+
+    co_return { ::std::move(result), ::std::move(delta) };
+}
 
 koios::task<::std::pair<::std::unique_ptr<in_mem_rw>, version_delta>>
 compactor::compact(version_guard version, level_t from)

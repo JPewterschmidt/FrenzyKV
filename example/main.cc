@@ -21,20 +21,20 @@ using namespace ::std::string_view_literals;
 
 koios::task<> db_test()
 {
+    spdlog::set_level(spdlog::level::debug);
+
     auto dbimpl = ::std::make_unique<db_impl>("test1", get_global_options());
     db_interface* db = dbimpl.get();
 
-    for (size_t i{}; i < 10000; ++i)
-    {
-        auto k = ::std::to_string(i);
-        co_await db->insert(k, "test");
-    }
+    const size_t scale = 10000;
 
-    for (size_t i{}; i < 10000; ++i)
+    spdlog::debug("start insert");
+    for (size_t i{}; i < scale; ++i)
     {
         auto k = ::std::to_string(i);
-        co_await db->remove_from_db(k);
+        co_await db->insert(k, "testtest");
     }
+    spdlog::debug("insert complete");
 
     auto k = ::std::to_string(50);
     auto opt = co_await db->get(k);
@@ -43,6 +43,8 @@ koios::task<> db_test()
         ::std::cout << opt->to_string_debug() << ::std::endl;
     }
     else ::std::cout << "not found" << ::std::endl;
+
+    co_await dbimpl->compact_tombstones();
 
     spdlog::debug("before dbclose");
     co_await db->close();
@@ -53,7 +55,7 @@ koios::task<> db_test()
 
 int main()
 {
-    koios::runtime_init(20);
+    koios::runtime_init(10);
 
     db_test().result();
     

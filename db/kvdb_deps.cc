@@ -19,7 +19,6 @@ kvdb_deps::kvdb_deps(options opt, ::std::move_only_function<void()> after_init)
     ::std::error_code ec{};
     const auto rp = this->opt()->root_path;
     if (!fs::exists(rp, ec)) fs::create_directory(rp);
-    ec = this->env()->change_current_directroy(rp);
     if (ec) throw koios::exception{ec};
 
     recreate_dirs_if_non_exists();

@@ -48,6 +48,8 @@ public:
     koios::task<> close() override;
     koios::task<snapshot> get_snapshot() override;
 
+    koios::eager_task<> compact_tombstones();
+
 private:
     koios::task<sequenced_key> make_query_key(const_bspan userkey, const snapshot& snap);
     koios::task<> merge_tables(::std::vector<sstable>& tables, level_t target_l);
@@ -59,6 +61,17 @@ private:
 
     koios::task<::std::optional<kv_entry>> find_from_ssts(const sequenced_key& key, snapshot snap) const;
     koios::task<> delete_all_prewrite_log();
+
+    koios::task<> fake_file_to_disk(::std::unique_ptr<in_mem_rw> fake, version_delta& delta, level_t l);
+    koios::task<> fake_file_to_disk(::std::ranges::range auto fakes, version_delta& delta, level_t l)
+    {
+        for (auto& f : fakes)
+        {
+            co_await fake_file_to_disk(::std::move(f), delta, l);
+        }
+    }
+
+    koios::task<> update_current_version(version_delta delta);
 
     koios::task<::std::pair<bool, version_guard>> need_compaction(level_t l);
     koios::eager_task<> may_compact();

@@ -2,6 +2,8 @@
 #define FRENZYKV_PERSISTENT_COMPACTION_H
 
 #include <utility>
+#include <memory>
+#include <vector>
 
 #include "koios/task.h"
 
@@ -60,6 +62,9 @@ public:
 
         co_return file;
     }
+
+    koios::task<::std::pair<::std::vector<::std::unique_ptr<in_mem_rw>>, version_delta>>
+    compact_tombstones(version_guard vg, level_t l);
 
 private:
     koios::task<::std::unique_ptr<in_mem_rw>>

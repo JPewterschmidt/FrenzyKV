@@ -61,10 +61,8 @@ koios::task<bool> db_impl::init()
     spdlog::debug("db_impl::init() start");
     m_inited.store(true);
 
-    spdlog::debug("db_impl::init() turn_into_scheduler");
     co_await koios::this_task::turn_into_scheduler();
 
-    spdlog::debug("db_impl::init() loading from fs");
     co_await m_file_center.load_files();
     co_await m_version_center.load_current_version();
 
@@ -92,6 +90,7 @@ koios::task<bool> db_impl::init()
     spdlog::debug("db_impl::init() recoverying from pre-write log compact and flush and gc");
     co_await m_flusher.flush_to_disk(::std::move(memp));
     co_await may_compact();
+    //co_await compact_tombstones();
     co_await m_gcer.do_GC();
 
     spdlog::debug("db_impl::init() done");
@@ -117,12 +116,53 @@ db_impl::need_compaction(level_t l)
     };
 }
 
+koios::eager_task<> db_impl::compact_tombstones()
+{
+    const level_t max_level = m_deps.opt()->max_level;
+    version_delta delta;
+    for (level_t l = max_level - 1; l >= 0; --l)
+    {
+        auto [fake_files, cur_delta] = co_await m_compactor.compact_tombstones(co_await m_version_center.current_version(), l);
+        if (fake_files.empty()) continue;
+        co_await fake_file_to_disk(::std::move(fake_files), cur_delta, l);
+        delta += ::std::move(cur_delta);
+    }
+    co_await update_current_version(::std::move(delta));
+}
+
+koios::task<> db_impl::update_current_version(version_delta delta)
+{
+    // Add a new version
+    auto cur_v = co_await m_version_center.add_new_version();
+    cur_v += delta;
+
+    // Write new version to version descriptor
+    const auto new_desc_name = cur_v.version_desc_name();
+    auto new_desc = m_deps.env()->get_seq_writable(version_path()/new_desc_name);
+    [[maybe_unused]] bool write_ret = co_await write_version_descriptor(*cur_v, new_desc.get());
+    assert(write_ret);
+
+    // Set current version
+    co_await set_current_version_file(m_deps, new_desc_name);
+}
+
+koios::task<> db_impl::fake_file_to_disk(::std::unique_ptr<in_mem_rw> fake_file, version_delta& delta, level_t l)
+{
+    if (fake_file && fake_file->file_size())
+    {
+        auto file = co_await m_file_center.get_file(name_a_sst(l));
+        auto fp = co_await file.open_write(m_deps.env().get());
+        co_await fake_file->dump_to(*fp);
+        co_await fp->sync();
+        delta.add_new_file(::std::move(file));
+    }
+}
+
 koios::eager_task<> db_impl::may_compact()
 {
     const level_t max_level = m_deps.opt()->max_level;
     auto env = m_deps.env();
 
-    spdlog::debug("start compacting");
     for (level_t l{}; l <= max_level; ++l)
     {
         auto [need, ver] = co_await need_compaction(l);
@@ -130,30 +170,9 @@ koios::eager_task<> db_impl::may_compact()
         
         // Do the actual compaction
         auto [fake_file, delta] = co_await m_compactor.compact(::std::move(ver), l);
-
-        if (fake_file && fake_file->file_size())
-        {
-            auto file = co_await m_file_center.get_file(name_a_sst(l + 1));
-            auto fp = co_await file.open_write(env.get());
-            co_await fake_file->dump_to(*fp);
-            co_await fp->sync();
-            delta.add_new_file(::std::move(file));
-        }
-
-        // Add a new version
-        auto cur_v = co_await m_version_center.add_new_version();
-        cur_v += delta;
-
-        // Write new version to version descriptor
-        const auto new_desc_name = cur_v.version_desc_name();
-        auto new_desc = env->get_seq_writable(version_path()/new_desc_name);
-        [[maybe_unused]] bool write_ret = co_await write_version_descriptor(*cur_v, new_desc.get());
-        assert(write_ret);
-
-        // Set current version
-        co_await set_current_version_file(m_deps, new_desc_name);
+        co_await fake_file_to_disk(::std::move(fake_file), delta, l + 1);
+        co_await update_current_version(::std::move(delta));
     }
-    spdlog::debug("compacting complete");
 }
 
 koios::task<> db_impl::close()

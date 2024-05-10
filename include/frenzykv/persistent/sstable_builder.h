@@ -3,6 +3,9 @@
 
 #include <string>
 #include <memory>
+#include <ranges>
+#include <cassert>
+#include <algorithm>
 
 #include "frenzykv/kvdb_deps.h"
 #include "frenzykv/db/filter.h"
@@ -55,6 +58,19 @@ public:
     
     koios::task<bool> add(const sequenced_key& key, const kv_user_value& value);
     koios::task<bool> add(const kv_entry& kv) { return add(kv.key(), kv.value()); }
+
+    koios::task<bool> add(::std::ranges::range auto const& entries)
+    {
+        bool result{true};
+        assert(::std::is_sorted(entries.begin(), entries.end()));
+        for (const auto& kv : entries)
+        {
+            result = co_await add(kv);
+            if (!result) break;
+        }
+        co_return result;
+    }
+
     bool was_finish() const noexcept { return m_finish; }
     koios::task<bool> finish();
     bool reach_the_size_limit() const noexcept { return m_size_flushed >= m_size_limit; }

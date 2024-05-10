@@ -29,7 +29,7 @@ struct options
     size_t  memory_page_bytes;
     size_t  max_block_segments_number;
     size_t  block_size;
-    size_t  max_level;
+    level_t max_level;
 
     ::std::vector<size_t> level_file_number;
     ::std::vector<size_t> level_file_size; // SSTable bound
@@ -134,10 +134,10 @@ struct adl_serializer<frenzykv::options>
             spdlog::error("could not retrive logging level from your conf file.");
         }
 
-        if (opt.level_file_number.size() < opt.max_level - 1)
+        if (opt.level_file_number.size() < static_cast<size_t>(opt.max_level - 1))
             spdlog::error("wrong file number count");
         
-        if (opt.level_file_size.size() < opt.max_level - 1)
+        if (opt.level_file_size.size() < static_cast<size_t>(opt.max_level - 1))
             spdlog::error("wrong file size number");
     }
 };

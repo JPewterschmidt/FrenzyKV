@@ -43,16 +43,27 @@ public:
         return *this;
     }
 
+    decltype(auto) add_compacted_file(file_guard guard)
+    {
+        m_compacted.emplace_back(::std::move(guard));
+        return *this;
+    }
+
     decltype(auto) add_new_file(file_guard guard)
     {
         m_added.emplace_back(::std::move(guard));
         return *this;
     }
 
-    const auto& compacted_files() const noexcept { return m_compacted; }
-    const auto& added_files() const noexcept { return m_added; }
+    const auto& compacted_files() const & noexcept { return m_compacted; }
+    const auto& added_files() const & noexcept { return m_added; }
+
+    auto compacted_files() && noexcept { return ::std::move(m_compacted); }
+    auto added_files() && noexcept { return ::std::move(m_added); }
 
     bool empty() const noexcept { return m_compacted.empty() && m_added.empty(); }
+
+    version_delta& operator+=(version_delta other_delta);
 
 private:
     ::std::vector<file_guard> m_compacted;
@@ -221,7 +232,6 @@ public:
         namespace rv = ::std::ranges::views;
         auto lk = co_await m_modify_lock.acquire();
 
-        spdlog::debug("version_center::GC_with start");
         for (const version_rep& out_dated_version : m_versions 
             | rv::take(m_versions.size())
             | rv::filter(is_garbage_in_mem))
@@ -229,7 +239,6 @@ public:
             co_await async_func_file_range(out_dated_version);
         }
         in_mem_GC_impl();
-        spdlog::debug("version_center::GC_with completed");
     }
 
     koios::task<> GC();

@@ -11,6 +11,20 @@ namespace r = ::std::ranges;
 namespace rv = r::views;
 namespace fs = ::std::filesystem;
 
+version_delta& version_delta::operator+=(version_delta other_delta)
+{
+#ifdef __cpp_lib_containers_ranges
+    m_compacted.append_range(::std::move(other_delta.m_compacted));
+    m_added.append_range(::std::move(other_delta.m_added));
+#else
+    auto comp = ::std::move(other_delta.m_compacted);
+    auto addd = ::std::move(other_delta.m_added);
+    ::std::move(comp.begin(), comp.end(), ::std::back_inserter(m_compacted));
+    ::std::move(addd.begin(), addd.end(), ::std::back_inserter(m_added));
+#endif
+    return *this;
+}
+
 version_rep::version_rep(::std::string_view desc_name)
     : m_version_desc_name{ desc_name }
 {
@@ -103,9 +117,7 @@ void version_center::in_mem_GC_impl()
 koios::task<> version_center::GC()
 {
     auto lk = co_await m_modify_lock.acquire();
-    spdlog::debug("version_center::GC start");
     in_mem_GC_impl();
-    spdlog::debug("version_center::GC completed");
 }
 
 koios::task<size_t> version_center::size() const

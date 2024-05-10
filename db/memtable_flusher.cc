@@ -20,8 +20,6 @@ namespace frenzykv
 koios::task<> memtable_flusher::
 flush_to_disk(::std::unique_ptr<memtable> table)
 {
-    spdlog::debug("flush_to_disk start");
-
     // Really important lock, the underlying implmentation guarantee that the FIFO execution order.
     // Which natually form the flushing call into a queue.
     // So this is an easy Consumer/Producer module.
@@ -71,8 +69,6 @@ flush_to_disk(::std::unique_ptr<memtable> table)
     auto ver_file = m_deps->env()->get_seq_writable(version_path()/vdname);
     co_await write_version_descriptor(*new_ver, ver_file.get());
     co_await set_current_version_file(*m_deps, vdname);
-
-    spdlog::debug("flush_to_disk end");
 }
 
 } // namespace frenzykv

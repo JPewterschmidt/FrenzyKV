@@ -135,7 +135,7 @@ koios::task<bool> sstable_builder::finish()
 
     if (empty())
     {
-        spdlog::debug("sstable builder empty finish occured!");
+        spdlog::info("sstable builder empty finish occured!");
         co_return true;
     }
 
