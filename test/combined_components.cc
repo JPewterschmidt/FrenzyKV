@@ -57,7 +57,7 @@ public:
         auto file = ::std::make_unique<in_mem_rw>();
         sstable_builder builder(m_deps, 8192 * 10, m_filter.get(), file.get());
 
-        auto& sto = mem.storage();
+        auto sto = co_await mem.get_storage();
         for (const auto& [k, v] : sto)
         {
             [[maybe_unused]] bool addret = co_await builder.add(k, v);

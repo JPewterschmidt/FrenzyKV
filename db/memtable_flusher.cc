@@ -25,6 +25,7 @@ flush_to_disk(::std::unique_ptr<memtable> table)
     // So this is an easy Consumer/Producer module.
     auto lk = co_await m_mutex.acquire();
     
+    spdlog::debug("flush_to_disk() start");
     auto sst_guard = co_await m_file_center->get_file(name_a_sst(0));
     auto file = m_deps->env()->get_seq_writable(sstables_path()/sst_guard);
     sstable_builder builder{ 
@@ -42,7 +43,8 @@ flush_to_disk(::std::unique_ptr<memtable> table)
     };
 
     // Flush those KV into sstable
-    for (const auto& [k, v] : *table)
+    auto list = co_await table->get_storage();
+    for (const auto& [k, v] : list)
     {
         bool add_result = co_await builder.add(k, v);
         if (!add_result)
@@ -62,13 +64,15 @@ flush_to_disk(::std::unique_ptr<memtable> table)
     }
     co_await finish_current_buiding();
     
-    // TODO: refactor the version_center to support disk current setting first, in mem current setting second.
+    spdlog::debug("flush_to_disk() updates version info");
     auto new_ver = co_await m_version_center->add_new_version();
     new_ver += delta;
     const auto vdname = new_ver.version_desc_name();
     auto ver_file = m_deps->env()->get_seq_writable(version_path()/vdname);
     co_await write_version_descriptor(*new_ver, ver_file.get());
     co_await set_current_version_file(*m_deps, vdname);
+
+    spdlog::debug("flush_to_disk() complete");
 }
 
 } // namespace frenzykv

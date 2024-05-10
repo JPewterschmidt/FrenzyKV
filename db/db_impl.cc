@@ -61,7 +61,7 @@ koios::task<bool> db_impl::init()
     spdlog::debug("db_impl::init() start");
     m_inited.store(true);
 
-    co_await koios::this_task::turn_into_scheduler();
+    co_await koios::this_task::yield();
 
     co_await m_file_center.load_files();
     co_await m_version_center.load_current_version();
@@ -80,17 +80,18 @@ koios::task<bool> db_impl::init()
     auto envp = m_deps.env();
     auto [batch, max_seq_from_log] = co_await recover(envp.get());
     co_await m_log.truncate_file();
-    co_await m_mem->insert(::std::move(batch));
-    m_snapshot_center.set_init_leatest_used_sequence_number(max_seq_from_log);
 
     auto lk = co_await m_mem_mutex.acquire();
+    [[maybe_unused]] auto ec = co_await m_mem->insert(::std::move(batch));
+    assert(ec.value() == 0);
+    m_snapshot_center.set_init_leatest_used_sequence_number(max_seq_from_log);
+
     auto memp = ::std::exchange(m_mem, ::std::make_unique<memtable>(m_deps));
     lk.unlock();
 
     spdlog::debug("db_impl::init() recoverying from pre-write log compact and flush and gc");
     co_await m_flusher.flush_to_disk(::std::move(memp));
     co_await may_compact();
-    //co_await compact_tombstones();
     co_await m_gcer.do_GC();
 
     spdlog::debug("db_impl::init() done");
@@ -118,6 +119,7 @@ db_impl::need_compaction(level_t l)
 
 koios::eager_task<> db_impl::compact_tombstones()
 {
+    spdlog::debug("db_impl::compact_tombstones()");
     const level_t max_level = m_deps.opt()->max_level;
     version_delta delta;
     for (level_t l = max_level - 1; l >= 0; --l)
@@ -218,15 +220,23 @@ insert(write_batch batch, write_options opt)
     co_await m_log.may_flush(opt.sync_write);
     
     auto lk = co_await m_mem_mutex.acquire();
-    if (! co_await m_mem->could_fit_in(batch))
+
+    if (auto ec = co_await m_mem->insert(batch); is_frzkv_out_of_range(ec))
     {
+        spdlog::debug("db_impl::insert() need flushing");
         auto flushing_file = ::std::move(m_mem);
         m_mem = ::std::make_unique<memtable>(m_deps);
         co_await m_flusher.flush_to_disk(::std::move(flushing_file));
         co_await may_compact();
-        do_GC().run();
+        co_await do_GC();
+        spdlog::debug("db_impl::insert() after GC");
+        // TODO: remove this after debug
+        ec = co_await m_mem->insert(::std::move(batch));
+        spdlog::debug("db_impl::insert() after GC, then after insert to mem");
+        co_return ec;
     }
-    co_return co_await m_mem->insert(::std::move(batch));
+    
+    co_return {};
 }
 
 koios::task<> 
@@ -242,9 +252,15 @@ db_impl::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noexc
     snapshot snap = opt.snap.valid() ? ::std::move(opt.snap) : co_await get_snapshot();
 
     const sequenced_key skey = co_await this->make_query_key(key, snap);
+    spdlog::debug("db_impl::get() get from mem");
+
+    auto lk = co_await m_mem_mutex.acquire();
     auto result_opt = co_await m_mem->get(skey);
+    lk.unlock();
+
     if (!result_opt) 
     {
+        spdlog::debug("db_impl::get() get from sst");
         result_opt = co_await find_from_ssts(skey, ::std::move(snap));
     }
 
@@ -255,6 +271,7 @@ db_impl::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noexc
 koios::task<::std::optional<kv_entry>> 
 db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
 {
+    spdlog::debug("db_impl::find_from_ssts() start, not complete log");
     version_guard ver = snap.valid() ? snap.version() : co_await m_version_center.current_version();
     auto files = ver.files();
     r::sort(files);
@@ -278,6 +295,7 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
     {
         if (level_t l = fg.level(); l != cur_level) 
         {
+            spdlog::debug("db_impl::find_from_ssts() one level through, getting to next level");
             cur_level = l;
             if (auto ret = co_await find_from_potiential_results(); ret.has_value())
                 co_return ret;

@@ -19,7 +19,7 @@ using namespace koios;
 using namespace frenzykv;
 using namespace ::std::string_view_literals;
 
-koios::task<> db_test()
+koios::eager_task<> db_test()
 {
     spdlog::set_level(spdlog::level::debug);
 
@@ -28,13 +28,13 @@ koios::task<> db_test()
 
     const size_t scale = 10000;
 
-    spdlog::debug("start insert");
+    spdlog::debug("db_test: start insert");
     for (size_t i{}; i < scale; ++i)
     {
         auto k = ::std::to_string(i);
         co_await db->insert(k, "testtest");
     }
-    spdlog::debug("insert complete");
+    spdlog::debug("db_test: insert complete");
 
     auto k = ::std::to_string(50);
     auto opt = co_await db->get(k);
@@ -55,7 +55,7 @@ koios::task<> db_test()
 
 int main()
 {
-    koios::runtime_init(10);
+    koios::runtime_init(20);
 
     db_test().result();
     

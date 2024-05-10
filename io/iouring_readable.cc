@@ -28,14 +28,12 @@ iouring_readable::iouring_readable(const ::std::filesystem::path& p, const optio
 koios::task<size_t>
 iouring_readable::read(::std::span<::std::byte> dest)
 {
-    co_await koios::this_task::turn_into_scheduler();
     co_return m_fdctx.has_read((co_await uring::read(m_fd, dest, m_fdctx.cursor())).nbytes_delivered());
 }
 
 koios::task<size_t> 
 iouring_readable::read(::std::span<::std::byte> dest, size_t offset) const
 {
-    co_await koios::this_task::turn_into_scheduler();
     co_return (co_await uring::read(m_fd, dest, offset)).nbytes_delivered();
 }
 
