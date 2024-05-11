@@ -5,10 +5,11 @@
 namespace frenzykv
 {
 
-koios::task<> garbage_collector::do_GC() const
+koios::eager_task<> garbage_collector::do_GC() const
 {
     auto lk = co_await m_mutex.acquire();
 
+    spdlog::debug("garbage_collector::do_GC() start");
     auto delete_garbage_version_desc = [](const auto& vrep) -> koios::task<> { 
         assert(vrep.approx_ref_count() == 0);
         co_await koios::uring::unlink(version_path()/vrep.version_desc_name());
@@ -17,7 +18,8 @@ koios::task<> garbage_collector::do_GC() const
     // delete those garbage version descriptor files
     co_await m_version_center->GC_with(delete_garbage_version_desc);
     co_await m_file_center->GC();
-}
 
+    spdlog::debug("garbage_collector::do_GC() complete");
+}
 
 } // namespace frenzykv

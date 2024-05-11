@@ -4,6 +4,7 @@
 #include <system_error>
 #include <memory>
 #include <stop_token>
+#include <utility>
 
 #include "koios/coroutine_mutex.h"
 #include "koios/coroutine_shared_mutex.h"
@@ -25,6 +26,7 @@
 #include "frenzykv/db/garbage_collector.h"
 
 #include "frenzykv/persistent/sstable.h"
+#include "frenzykv/persistent/compaction.h"
 
 namespace frenzykv
 {
@@ -46,9 +48,10 @@ public:
     koios::task<> close() override;
     koios::task<snapshot> get_snapshot() override;
 
+    koios::eager_task<> compact_tombstones();
+
 private:
-    koios::task<sequenced_key> make_query_key(const_bspan userkey, const read_options& opt);
-    koios::task<> flush_imm_to_sstable();
+    koios::task<sequenced_key> make_query_key(const_bspan userkey, const snapshot& snap);
     koios::task<> merge_tables(::std::vector<sstable>& tables, level_t target_l);
 
     koios::task<::std::unique_ptr<in_mem_rw>>
@@ -58,6 +61,20 @@ private:
 
     koios::task<::std::optional<kv_entry>> find_from_ssts(const sequenced_key& key, snapshot snap) const;
     koios::task<> delete_all_prewrite_log();
+
+    koios::task<> fake_file_to_disk(::std::unique_ptr<in_mem_rw> fake, version_delta& delta, level_t l);
+    koios::task<> fake_file_to_disk(::std::ranges::range auto fakes, version_delta& delta, level_t l)
+    {
+        for (auto& f : fakes)
+        {
+            co_await fake_file_to_disk(::std::move(f), delta, l);
+        }
+    }
+
+    koios::task<> update_current_version(version_delta delta);
+
+    koios::task<::std::pair<bool, version_guard>> need_compaction(level_t l);
+    koios::eager_task<> may_compact();
 
 private:
     ::std::string m_dbname;
@@ -70,6 +87,7 @@ private:
     file_center m_file_center;
     version_center m_version_center;
     snapshot_center m_snapshot_center;
+    compactor m_compactor;
 
     // mamtable===============================
     mutable koios::shared_mutex m_mem_mutex;

@@ -65,12 +65,17 @@ retrive_level_and_id_from_sst_name(::std::string_view name)
     return result;
 }
 
-koios::task<> file_center::load_files()
+koios::eager_task<> file_center::load_files()
 {
     auto lk = co_await m_mutex.acquire();
     // Go through all the files.
     for (const auto& dir_entry : fs::directory_iterator{ sstables_path() })
     {
+        if (dir_entry.file_size() == 0) 
+        {
+            co_await koios::uring::unlink(dir_entry.path());
+            continue;
+        }
         auto name = dir_entry.path().filename().string();
         assert(is_sst_name(name));
 

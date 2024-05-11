@@ -43,16 +43,27 @@ public:
         return *this;
     }
 
+    decltype(auto) add_compacted_file(file_guard guard)
+    {
+        m_compacted.emplace_back(::std::move(guard));
+        return *this;
+    }
+
     decltype(auto) add_new_file(file_guard guard)
     {
         m_added.emplace_back(::std::move(guard));
         return *this;
     }
 
-    const auto& compacted_files() const noexcept { return m_compacted; }
-    const auto& added_files() const noexcept { return m_added; }
+    const auto& compacted_files() const & noexcept { return m_compacted; }
+    const auto& added_files() const & noexcept { return m_added; }
+
+    auto compacted_files() && noexcept { return ::std::move(m_compacted); }
+    auto added_files() && noexcept { return ::std::move(m_added); }
 
     bool empty() const noexcept { return m_compacted.empty() && m_added.empty(); }
+
+    version_delta& operator+=(version_delta other_delta);
 
 private:
     ::std::vector<file_guard> m_compacted;
@@ -133,21 +144,11 @@ public:
 
     bool valid() const noexcept { return !!m_rep; }
 
-    auto& rep() noexcept { assert(m_rep); return *m_rep; }
     const auto& rep() const noexcept { assert(m_rep); return *m_rep; }
     decltype(auto) version_desc_name() const noexcept { return rep().version_desc_name(); }
 
-    auto& operator*() noexcept { return rep(); }
     const auto& operator*() const noexcept { return rep(); }
-
-    auto* operator ->() noexcept { return &rep(); }
     const auto* operator ->() const noexcept { return &rep(); }
-
-    version_guard& operator+=(const version_delta& delta)
-    {
-        rep() += delta;
-        return *this;
-    }
 
     const auto& files() const noexcept
     {
@@ -165,8 +166,51 @@ private:
         }
     }
     
-private:
+protected:
     version_rep* m_rep{};
+};
+
+/*! \brief  Class that only for `add_new_version`
+ *
+ *  Thanks for the immutablity, this system implement could be very elegant, 
+ *  but at the very beginning of initializing process of a new version, 
+ *  there always some write operation need to be performed, 
+ *  we had to provide a `version_guard` similar 
+ *  facility to support the new version initing process.
+ *  So this guard not only holds a reference count, 
+ *  but also holds the locked modify mutex of the `verison_center` 
+ *  by a RAII `koios::unique_lock` object, 
+ *  to make sure there won't be any operation 
+ *  on the version newly added but not yet fully initialized.
+ *
+ *  So as soon as you complete the initialization of a new versioin, 
+ *  release this object immediately, because this type of object 
+ *  will block(async) the whole version_center for a while. 
+ *  This usually won't be a issue.
+ *  Thanks for RAII.
+ *  
+ *  \see `version_guard`
+ */
+class mutable_version_guard : public version_guard
+{
+private:
+    koios::unique_lock<koios::shared_mutex> m_version_center_lock;
+
+public:
+    constexpr mutable_version_guard() noexcept = default;
+
+    mutable_version_guard(koios::unique_lock<koios::shared_mutex> version_center_lock, auto&& ver_rep) noexcept
+        : version_guard(ver_rep), m_version_center_lock{ ::std::move(version_center_lock) }
+    {
+        assert(m_version_center_lock.is_hold());
+    }
+
+    mutable_version_guard& operator+=(const version_delta& delta)
+    {
+        assert(valid());
+        (*m_rep) += delta;
+        return *this;
+    }
 };
 
 class version_center
@@ -179,10 +223,10 @@ public:
 
     version_center(version_center&& other) noexcept;
     version_center& operator=(version_center&& other) noexcept;
-    koios::task<version_guard> add_new_version();
-    koios::task<version_guard> current_version() const noexcept;
-    koios::eager_task<> load_current_version();
-    koios::task<> set_current_version(version_guard v);
+
+    koios::task<mutable_version_guard>  add_new_version();
+    koios::task<version_guard>          current_version() const noexcept;
+    koios::eager_task<>                 load_current_version();
 
     //koios::task<void> GC_with(koios::awaitable_callable_concept auto async_func_file_range)
     koios::task<> GC_with(auto async_func_file_range)
@@ -199,17 +243,8 @@ public:
         in_mem_GC_impl();
     }
 
-    koios::task<> GC()
-    {
-        auto lk = co_await m_modify_lock.acquire();
-        in_mem_GC_impl();
-    }
-
-    koios::task<size_t> size() const
-    {
-        auto lk = co_await m_modify_lock.acquire_shared();
-        co_return m_versions.size();
-    }
+    koios::task<> GC();
+    koios::task<size_t> size() const;
 
 private:
     static bool is_garbage_in_mem(const version_rep& vg)

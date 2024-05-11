@@ -333,6 +333,16 @@ public:
     }
 };
 
+bool is_tomb_stone(const auto& something) noexcept
+{
+    return something.is_tomb_stone();
+}
+
+bool not_tomb_stone(const auto& something) noexcept
+{
+    return !is_tomb_stone(something);
+}
+
 } // namespace frenzykv
 
 extern template class koios::_task<frenzykv::kv_entry, koios::discardable, koios::lazy_aw>::_type;

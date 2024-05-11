@@ -110,6 +110,7 @@ append(::std::span<const ::std::byte> buffer)
             + ", buffer left = " + m_buffer.left()
         )};
     }
+    m_wrote += buffer.size_bytes();
     co_return buffer.size_bytes();
 }
 
@@ -168,6 +169,7 @@ koios::task<>
 iouring_writable::
 commit(size_t len) noexcept
 {
+    m_wrote += len;
     m_buffer.commit(len);
     if (m_buffer.full())
     {

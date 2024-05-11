@@ -18,7 +18,7 @@ public:
     {
     }
 
-    koios::task<> do_GC() const;
+    koios::eager_task<> do_GC() const;
 
 private:
     version_center* m_version_center{};

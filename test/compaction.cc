@@ -57,12 +57,12 @@ public:
         fvec.push_back(co_await make_sstable(0, 1000));
         fvec.push_back(co_await make_sstable(500, 1500));
 
-        compactor c(m_deps, 81920, m_filter.get());
+        compactor c(m_deps, m_filter.get());
         auto tables_view = fvec | rv::transform([this](auto&& f){ 
             return sstable(m_deps, m_filter.get(), f.get()); 
         });
         ::std::vector<sstable> tables(tables_view.begin(), tables_view.end());
-        ::std::unique_ptr<in_mem_rw> newfile = co_await c.merge_tables(tables);
+        ::std::unique_ptr<in_mem_rw> newfile = co_await c.merge_tables(tables, 3);
         sstable final_table(m_deps, m_filter.get(), newfile.get());
         [[maybe_unused]] bool parse_ret = co_await final_table.parse_meta_data();
         assert(parse_ret);

@@ -49,7 +49,17 @@ compacting_files(version_guard vc, level_t from) const
     [[maybe_unused]] bool parse_ret = co_await from_l_sst.parse_meta_data(); assert(parse_ret);
 
     // Find overlapped tables from next level
-    for (const auto& fguard : files | rv::filter(file_guard::with_level_predicator(from + 1)))
+    auto files_level_next = files | rv::filter(file_guard::with_level_predicator(from + 1));
+    ::std::vector file_vec_level_next(begin(files_level_next), end(files_level_next));
+    
+    r::sort(file_vec_level_next, [](const auto& lhs, const auto& rhs) { 
+        return lhs.last_write_time() < rhs.last_write_time(); 
+    });
+    r::sort(file_vec_level_next, [](const auto& lhs, const auto& rhs) { 
+        return lhs.file_size() < rhs.file_size(); 
+    });
+    
+    for (const auto& fguard : file_vec_level_next)
     {
         sstable next_l_sst(*m_deps, m_filter, co_await fguard.open_read(env.get()));
         [[maybe_unused]] bool parse_ret = co_await next_l_sst.parse_meta_data();

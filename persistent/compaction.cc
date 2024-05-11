@@ -3,9 +3,11 @@
 #include <cassert>
 #include <vector>
 #include <ranges>
+#include <algorithm>
 
 #include "frenzykv/persistent/compaction.h"
 #include "frenzykv/persistent/compaction_policy.h"
+#include "frenzykv/persistent/compaction_policy_tombstone.h"
 #include "frenzykv/persistent/sstable.h"
 
 namespace rv = ::std::ranges::views;
@@ -13,11 +15,47 @@ namespace rv = ::std::ranges::views;
 namespace frenzykv
 {
 
-koios::task<::std::pair<::std::unique_ptr<in_mem_rw>, version_delta>>
-compactor::compact(version_guard version, level_t from)
+koios::task<::std::pair<::std::vector<::std::unique_ptr<in_mem_rw>>, version_delta>>
+compactor::compact_tombstones(version_guard vg, level_t l) const
 {
+    spdlog::debug("compact_tombstones() start");
+    auto files = co_await compaction_policy_tombstone{*m_deps, m_filter_policy}.compacting_files(vg, l);
+    
+    ::std::vector<::std::unique_ptr<in_mem_rw>> result;
+    version_delta delta;
+
+    auto env = m_deps->env();
+    const uintmax_t size_bound = m_deps->opt()->allowed_level_file_size(l);
+    for (const file_guard& fg : files)
+    {
+        sstable sst{ *m_deps, m_filter_policy, co_await fg.open_read(env.get()) };
+        co_await sst.parse_meta_data();
+        if (sst.empty()) [[unlikely]] continue;
+
+        auto entries = co_await get_entries_from_sstable(sst);
+        ::std::erase_if(entries, is_tomb_stone<kv_entry>);
+        auto filep = ::std::make_unique<in_mem_rw>();
+        sstable_builder builder{ *m_deps, size_bound, m_filter_policy, filep.get() };
+        [[maybe_unused]] bool add_ret = co_await builder.add(entries); assert(add_ret);       
+        [[maybe_unused]] bool finish_ret = co_await builder.finish(); assert(finish_ret);
+
+        result.emplace_back(::std::move(filep));
+        delta.add_compacted_file(fg);
+    }
+
+    spdlog::debug("compact_tombstones() complete");
+    co_return { ::std::move(result), ::std::move(delta) };
+}
+
+koios::task<::std::pair<::std::unique_ptr<in_mem_rw>, version_delta>>
+compactor::compact(version_guard version, level_t from) const
+{
+    spdlog::debug("compact() start");
+
     auto policy = make_default_compaction_policy(*m_deps, m_filter_policy);
     auto file_guards = co_await policy->compacting_files(version, from);
+    spdlog::debug("compact() after chosing compacting_files()");
+
     version_delta compacted;
     compacted.add_compacted_files(file_guards);
 
@@ -32,13 +70,15 @@ compactor::compact(version_guard version, level_t from)
         tables.emplace_back(*m_deps, m_filter_policy, co_await filep_aw);
 
     // To prevent ICE, See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=114850
-    auto newfile = co_await merge_tables(tables);
+    auto newfile = co_await merge_tables(tables, from);
+
+    spdlog::debug("compact() complete");
     co_return { ::std::move(newfile), ::std::move(compacted) };
 }
 
 koios::task<::std::unique_ptr<in_mem_rw>>
 compactor::
-merge_two_tables(sstable& lhs, sstable& rhs)
+merge_two_tables(sstable& lhs, sstable& rhs, level_t l) const 
 {
     [[maybe_unused]] bool ok1 = co_await lhs.parse_meta_data();
     [[maybe_unused]] bool ok2 = co_await rhs.parse_meta_data();
@@ -46,13 +86,18 @@ merge_two_tables(sstable& lhs, sstable& rhs)
 
     ::std::vector<::std::unique_ptr<in_mem_rw>> result;
 
-    ::std::list<kv_entry> lhs_entries = co_await get_entries_from_sstable(lhs);
-    ::std::list<kv_entry> rhs_entries = co_await get_entries_from_sstable(rhs);
+    ::std::list<kv_entry> lhs_entries; 
+    ::std::list<kv_entry> rhs_entries; 
+
+    if (!lhs.empty()) lhs_entries = co_await get_entries_from_sstable(lhs);
+    if (!rhs.empty()) rhs_entries = co_await get_entries_from_sstable(rhs);
 
     ::std::list<kv_entry> merged;
     ::std::merge(::std::move_iterator{ lhs_entries.begin() }, ::std::move_iterator{ lhs_entries.end() }, 
                  ::std::move_iterator{ rhs_entries.begin() }, ::std::move_iterator{ rhs_entries.end() }, 
                  ::std::front_inserter(merged));
+
+    assert(::std::is_sorted(merged.rbegin(), merged.rend()));
 
     merged.erase(::std::unique(merged.begin(), merged.end(), 
                     [](const auto& lhs, const auto& rhs) { 
@@ -60,19 +105,23 @@ merge_two_tables(sstable& lhs, sstable& rhs)
                     }), 
                  merged.end());
 
-    auto file = ::std::make_unique<in_mem_rw>(m_newfilesizebound);
-    sstable_builder builder{ 
-        *m_deps, m_newfilesizebound, 
-        m_filter_policy, file.get() 
-    };
-    for (const auto& entry : merged | rv::reverse)
+    if (!merged.empty())
     {
-        [[maybe_unused]] bool add_ret = co_await builder.add(entry);
-        assert(add_ret);
+        const uintmax_t newfilesizebound = m_deps->opt()->allowed_level_file_size(l);
+        auto file = ::std::make_unique<in_mem_rw>(newfilesizebound);
+        sstable_builder builder{ 
+            *m_deps, newfilesizebound, 
+            m_filter_policy, file.get() 
+        };
+        for (const auto& entry : merged | rv::reverse)
+        {
+            [[maybe_unused]] bool add_ret = co_await builder.add(entry);
+            assert(add_ret);
+        }
+        co_await builder.finish();
+        co_return file;
     }
-    co_await builder.finish();
-    
-    co_return file;
+    co_return {};
 }
 
 } // namespace frenzykv

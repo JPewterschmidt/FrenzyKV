@@ -22,25 +22,30 @@ class env;
 
 struct options
 {
+    options();
+
     // XXX remember to update those serializer code below after you add something above.
-    size_t disk_block_bytes = 4096;
-    size_t memory_page_bytes = 4096;
-    size_t max_block_segments_number = 1000;
-    size_t block_size = 4096;
-    size_t max_level = 3;
-    ::std::vector<size_t> level_file_number{ 2, 3 };
-    ::std::vector<size_t> level_file_size{ 4 * 1024 * 1024, 20 * 1024 * 1024, 60 * 1024 * 1024 }; // SSTable bound
-    int compress_level = 15;
-    bool need_buffered_write = true;
-    bool sync_write = false;
-    bool buffered_read = true;
-    bool need_compress = true;
-    ::std::chrono::seconds gc_period_sec = ::std::chrono::seconds{10};
-    ::std::filesystem::path root_path = "/tmp/frenzykv";
-    bool create_root_path_if_not_exists = true;
-    ::std::filesystem::path log_path = "frenzy-prewrite-log";
-    logging_level log_level = logging_level::DEBUG;
-    ::std::string compressor_name = "zstd";
+    size_t  disk_block_bytes;
+    size_t  memory_page_bytes;
+    size_t  max_block_segments_number;
+    size_t  block_size;
+    level_t max_level;
+
+    ::std::vector<size_t> level_file_number;
+    ::std::vector<size_t> level_file_size; // SSTable bound
+
+    int     compress_level;
+    bool    need_buffered_write;
+    bool    sync_write;
+    bool    buffered_read;
+    bool    need_compress;
+
+    ::std::chrono::seconds      gc_period_sec;
+    ::std::filesystem::path     root_path;
+    bool                        create_root_path_if_not_exists;
+    ::std::filesystem::path     log_path;
+    logging_level               log_level;
+    ::std::string               compressor_name;
 
     size_t allowed_level_file_number(level_t l) const noexcept;
     size_t allowed_level_file_size(level_t l) const noexcept;
@@ -129,10 +134,10 @@ struct adl_serializer<frenzykv::options>
             spdlog::error("could not retrive logging level from your conf file.");
         }
 
-        if (opt.level_file_number.size() < opt.max_level - 1)
+        if (opt.level_file_number.size() < static_cast<size_t>(opt.max_level - 1))
             spdlog::error("wrong file number count");
         
-        if (opt.level_file_size.size() < opt.max_level - 1)
+        if (opt.level_file_size.size() < static_cast<size_t>(opt.max_level - 1))
             spdlog::error("wrong file size number");
     }
 };

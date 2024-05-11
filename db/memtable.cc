@@ -8,7 +8,6 @@ namespace frenzykv
 
 koios::task<::std::error_code> memtable::insert(write_batch b)
 {
-    auto lk = co_await m_list_mutex.acquire();
     if (!could_fit_in_impl(b))
     {
         co_return make_frzkv_out_of_range();
@@ -55,26 +54,22 @@ table_get(auto&& list, const sequenced_key& key) noexcept
 koios::task<::std::optional<kv_entry>> memtable::
 get(const sequenced_key& key) const noexcept
 {
-    auto lk = co_await m_list_mutex.acquire_shared();
     co_return table_get(m_list, key);
 }
 
 koios::task<size_t> memtable::count() const
 {
-    auto lk = co_await m_list_mutex.acquire_shared();
     co_return m_list.size();
 }
 
 koios::task<size_t> memtable::bound_size_bytes() const
 {
-    auto lk = co_await m_list_mutex.acquire_shared();
     assert(m_bound_size_bytes);
     co_return bound_size_bytes_impl();
 }
 
 koios::task<bool> memtable::full() const
 {
-    auto lk = co_await m_list_mutex.acquire_shared();
     assert(m_bound_size_bytes);
     co_return full_impl();
 }
@@ -96,7 +91,6 @@ size_t memtable::size_bytes_impl() const
 
 koios::task<size_t> memtable::size_bytes() const
 {
-    auto lk = co_await m_list_mutex.acquire_shared();
     co_return size_bytes_impl();
 }
 
@@ -113,21 +107,17 @@ bool memtable::empty_impl() const noexcept
 
 koios::task<bool> memtable::could_fit_in(const write_batch& batch) const noexcept
 {
-    auto lk = co_await m_list_mutex.acquire_shared();
     co_return could_fit_in_impl(batch);
 }
 
 koios::task<bool> memtable::empty() const
 {
-    auto lk = co_await m_list_mutex.acquire_shared();
     co_return empty_impl();
 }
 
-koios::task<::std::optional<kv_entry>> 
-imm_memtable::
-get(const sequenced_key& key) const noexcept
-{
-    co_return table_get(m_list, key);
+koios::task<typename memtable::container_type> memtable::get_storage() 
+{ 
+    co_return ::std::move(m_list); 
 }
 
 } // namespace frenzykv

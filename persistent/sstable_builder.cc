@@ -45,7 +45,7 @@ void sstable_builder::swap(sstable_builder&& other)
     ::std::swap(m_deps, other.m_deps);
     ::std::swap(m_finish, other.m_finish);
     ::std::swap(m_size_limit, other.m_size_limit);
-    ::std::swap(m_size_wrote, other.m_size_wrote);
+    ::std::swap(m_size_flushed, other.m_size_flushed);
     ::std::swap(m_filter, other.m_filter);
     ::std::swap(m_first_uk, other.m_first_uk);
     ::std::swap(m_last_uk, other.m_last_uk);
@@ -88,7 +88,7 @@ koios::task<bool> sstable_builder::add(
     {
         bool ret = co_await flush_current_block();
         if (!ret) co_return false;
-        m_size_wrote += m_block_builder.bytes_size();
+        m_size_flushed += m_block_builder.bytes_size();
     }
 
     co_return true;
@@ -118,6 +118,11 @@ koios::task<bool> sstable_builder::flush_current_block(bool need_flush)
     co_return result;
 }
 
+bool sstable_builder::empty() const noexcept
+{
+    return m_filter_rep.empty();
+}
+
 koios::task<bool> sstable_builder::finish()
 {
     assert(!was_finish());
@@ -127,6 +132,16 @@ koios::task<bool> sstable_builder::finish()
     {
         co_await flush_current_block(false); // wont flush.
     }
+
+    if (empty())
+    {
+        spdlog::info("sstable builder empty finish occured!");
+        co_return true;
+    }
+
+    assert(!m_last_uk.empty());
+    assert(!m_first_uk.empty());
+    assert(!m_filter_rep.empty());
     
     // Build meta block
     block_builder meta_builder{ *m_deps };

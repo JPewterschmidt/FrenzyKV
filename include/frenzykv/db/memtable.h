@@ -15,6 +15,9 @@ namespace frenzykv
 class memtable
 {
 public:
+    using container_type = toolpex::skip_list<sequenced_key, kv_user_value>;
+
+public:
     memtable(const kvdb_deps& deps)
         : m_deps{ &deps },
           m_list(toolpex::skip_list_suggested_max_level(m_deps->stat()->hot_data_scale_baseline())), 
@@ -50,21 +53,13 @@ public:
     koios::task<bool> could_fit_in(const write_batch& batch) const noexcept;
     koios::task<bool> empty() const;
 
-    const auto& storage() const noexcept { return m_list; }
-    const kvdb_deps& deps() const noexcept { return *m_deps; }
+    koios::task<container_type> get_storage();
 
-    auto begin() const noexcept { return storage().begin(); }
-    auto end() const noexcept { return storage().end(); }
+    const kvdb_deps& deps() const noexcept { return *m_deps; }
 
 private:
     ::std::error_code insert_impl(kv_entry&& entry);
     ::std::error_code insert_impl(const kv_entry& entry);
-    void delete_impl(const kv_entry& entry) noexcept
-    {;
-        return delete_impl(entry.key());
-    }
-
-    void delete_impl(const sequenced_key& key);
 
     bool full_impl() const;
     size_t bound_size_bytes_impl() const;
@@ -75,39 +70,11 @@ private:
 private:
     const kvdb_deps* m_deps{};
 
-    friend class imm_memtable;
-    toolpex::skip_list<sequenced_key, kv_user_value> m_list;
+    container_type m_list;
 
     size_t m_bound_size_bytes{};
     size_t m_size_bytes{};
-    mutable koios::shared_mutex m_list_mutex;
-};
-
-class imm_memtable
-{
-public:
-    imm_memtable(memtable&& m) noexcept
-        : m_list{ ::std::move(m.m_list) }, 
-          m_size_bytes{ m.m_size_bytes }
-    {
-    }
-
-    imm_memtable(imm_memtable&&) noexcept = default;
-
-    koios::task<::std::optional<kv_entry>> get(const sequenced_key& key) const noexcept;
-    koios::task<size_t> size_bytes() const noexcept
-    {
-        co_return m_size_bytes;
-    }
-
-    const auto& storage() const noexcept { return m_list; }
-    void set_flushed_flags() noexcept { m_flushed = true; }
-    bool was_flushed() const noexcept { return m_flushed; }
-
-private:
-    toolpex::skip_list<sequenced_key, kv_user_value> m_list;
-    const size_t m_size_bytes{};
-    bool m_flushed{};
+    //mutable koios::shared_mutex m_list_mutex;
 };
 
 } // namespace frenzykv

@@ -6,12 +6,14 @@
 #include <filesystem>
 #include <utility>
 
+#include "koios/task.h"
+#include "koios/this_task.h"
+#include "koios/coroutine_mutex.h"
+
 #include "frenzykv/kvdb_deps.h"
 #include "frenzykv/write_batch.h"
 #include "frenzykv/env.h"
 #include "frenzykv/log/logging_level.h"
-#include "koios/task.h"
-#include "koios/this_task.h"
 
 namespace frenzykv
 {
@@ -28,14 +30,18 @@ public:
     }
 
     koios::task<> insert(const write_batch& b);
-    koios::task<> may_flush(bool force = false) noexcept;
     koios::task<bool> empty() const noexcept;
     koios::task<> truncate_file() noexcept;
     koios::eager_task<> delete_file();
+    koios::task<> may_flush(bool force = false);
     
+private:
+    koios::task<> may_flush_impl(bool force = false);
+
 private:
     const kvdb_deps* m_deps{};
     ::std::unique_ptr<seq_writable> m_log_file;
+    mutable koios::mutex m_mutex;
 };
 
 koios::task<::std::pair<write_batch, sequence_number_t>> 

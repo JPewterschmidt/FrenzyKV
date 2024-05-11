@@ -11,6 +11,20 @@ namespace r = ::std::ranges;
 namespace rv = r::views;
 namespace fs = ::std::filesystem;
 
+version_delta& version_delta::operator+=(version_delta other_delta)
+{
+#ifdef __cpp_lib_containers_ranges
+    m_compacted.append_range(::std::move(other_delta.m_compacted));
+    m_added.append_range(::std::move(other_delta.m_added));
+#else
+    auto comp = ::std::move(other_delta.m_compacted);
+    auto addd = ::std::move(other_delta.m_added);
+    ::std::move(comp.begin(), comp.end(), ::std::back_inserter(m_compacted));
+    ::std::move(addd.begin(), addd.end(), ::std::back_inserter(m_added));
+#endif
+    return *this;
+}
+
 version_rep::version_rep(::std::string_view desc_name)
     : m_version_desc_name{ desc_name }
 {
@@ -42,17 +56,18 @@ version_rep& version_rep::operator+=(const version_delta& delta)
     return *this;
 }
 
-koios::task<version_guard> version_center::add_new_version()
+koios::task<mutable_version_guard> version_center::add_new_version()
 {
     auto lk = co_await m_modify_lock.acquire();
     auto& new_ver = m_versions.emplace_back(m_versions.back());
     new_ver.set_version_desc_name(get_version_descriptor_name());
     m_current = { new_ver };
-    co_return m_current;
+    co_return { ::std::move(lk), m_current };
 }
 
 koios::eager_task<> version_center::load_current_version()
 {
+    // Load from file, actually add a new version, acquire unique
     auto lk = co_await m_modify_lock.acquire();
     assert(m_versions.empty());
 
@@ -95,16 +110,21 @@ koios::task<version_guard> version_center::current_version() const noexcept
     co_return m_current;
 }
 
-koios::task<> version_center::set_current_version(version_guard v)
-{
-    auto lk = co_await m_modify_lock.acquire();
-    assert(!v.rep().version_desc_name().empty());
-    m_current = ::std::move(v);
-}
-
 void version_center::in_mem_GC_impl() 
 { 
     ::std::erase_if(m_versions, is_garbage_in_mem); 
+}
+
+koios::task<> version_center::GC()
+{
+    auto lk = co_await m_modify_lock.acquire();
+    in_mem_GC_impl();
+}
+
+koios::task<size_t> version_center::size() const
+{
+    auto lk = co_await m_modify_lock.acquire_shared();
+    co_return m_versions.size();
 }
 
 } // namespace frenzykv
