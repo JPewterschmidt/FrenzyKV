@@ -76,6 +76,8 @@ private:
     koios::task<::std::pair<bool, version_guard>> need_compaction(level_t l);
     koios::eager_task<> may_compact();
 
+    koios::eager_task<> back_ground_compacting_GC(::std::stop_token tk);
+
 private:
     ::std::string m_dbname;
     kvdb_deps m_deps;
@@ -96,6 +98,8 @@ private:
     memtable_flusher m_flusher;
 
     ::std::atomic_bool m_inited{};
+
+    mutable koios::mutex m_flying_GC_mutex;
 };  
 
 } // namespace frenzykv

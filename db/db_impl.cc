@@ -1,4 +1,5 @@
 #include <cassert>
+#include <chrono>
 #include <ranges>
 #include <list>
 #include <vector>
@@ -29,6 +30,8 @@
 namespace rv = ::std::ranges::views;
 namespace r = ::std::ranges;
 namespace fs = ::std::filesystem;
+
+using namespace ::std::chrono_literals;
 
 namespace frenzykv
 {
@@ -193,6 +196,11 @@ koios::task<> db_impl::close()
     
     m_inited = false;
 
+    // Make sure the background be GC stoped.
+    m_bg_gc_stop_src.request_stop();
+    auto fly_gc_lk = co_await m_flying_GC_mutex.acquire();
+    fly_gc_lk.unlock();
+
     auto lk = co_await m_mem_mutex.acquire();
 
     if (co_await m_mem->empty()) co_return;
@@ -343,6 +351,18 @@ koios::task<snapshot> db_impl::get_snapshot()
 {
     co_await init();
     co_return m_snapshot_center.get_snapshot(co_await m_version_center.current_version());
+}
+
+koios::eager_task<> db_impl::back_ground_compacting_GC(::std::stop_token stp)
+{
+    auto lk = co_await m_flying_GC_mutex.acquire();
+    for (;;)
+    {
+        if (stp.stop_requested()) co_return;
+        co_await may_compact();
+        co_await do_GC();
+        co_await koios::this_task::sleep_for(250ms);
+    }
 }
 
 } // namespace frenzykv
