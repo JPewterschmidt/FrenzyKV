@@ -66,6 +66,7 @@ flush_to_disk(::std::unique_ptr<memtable> table)
     
     spdlog::debug("flush_to_disk() updates version info");
     auto new_ver = co_await m_version_center->add_new_version();
+    spdlog::debug("flush_to_disk() updates version info, get newly added version guard!");
     new_ver += delta;
     const auto vdname = new_ver.version_desc_name();
     auto ver_file = m_deps->env()->get_seq_writable(version_path()/vdname);

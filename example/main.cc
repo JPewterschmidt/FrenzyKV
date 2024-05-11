@@ -28,6 +28,8 @@ koios::eager_task<> db_test()
 
     const size_t scale = 50000;
 
+    co_await db->init();
+
     // #1
     spdlog::debug("db_test: start insert");
     for (size_t i{}; i < scale; ++i)
@@ -77,13 +79,13 @@ koios::eager_task<> db_test()
         else ::std::cout << "not found" << ::std::endl;
     }
 
-    for (size_t i{}; i < scale; i += 1000)
-    {
-        auto k = ::std::to_string(i);
-        auto opt = co_await db->get(k);
-        if (opt) ::std::cout << opt->to_string_debug() << ::std::endl;
-        else ::std::cout << "not found" << ::std::endl;
-    }
+    //for (size_t i{}; i < scale; i += 1000)
+    //{
+    //    auto k = ::std::to_string(i);
+    //    auto opt = co_await db->get(k);
+    //    if (opt) ::std::cout << opt->to_string_debug() << ::std::endl;
+    //    else ::std::cout << "not found" << ::std::endl;
+    //}
 
     spdlog::debug("before dbclose");
     co_await db->close();
@@ -94,7 +96,7 @@ koios::eager_task<> db_test()
 
 int main()
 {
-    koios::runtime_init(1);
+    koios::runtime_init(4);
 
     db_test().result();
     
