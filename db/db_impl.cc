@@ -98,6 +98,8 @@ koios::task<bool> db_impl::init()
     m_gcer.do_GC().run();
 
     spdlog::debug("db_impl::init() done");
+
+    back_ground_compacting_GC(m_bg_gc_stop_src.get_token()).run();
     co_return true;
 }
 
