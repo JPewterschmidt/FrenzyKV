@@ -10,6 +10,11 @@ namespace fs = ::std::filesystem;
 namespace frenzykv
 {
 
+uintmax_t file_rep::file_size() const
+{
+    return fs::file_size(sstables_path()/name());
+}
+
 koios::task<::std::unique_ptr<random_readable>>
 file_rep::open_read(env* e) const
 {

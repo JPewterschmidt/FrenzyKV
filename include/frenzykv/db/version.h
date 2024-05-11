@@ -197,6 +197,8 @@ private:
     koios::unique_lock<koios::shared_mutex> m_version_center_lock;
 
 public:
+    constexpr mutable_version_guard() noexcept = default;
+
     mutable_version_guard(koios::unique_lock<koios::shared_mutex> version_center_lock, auto&& ver_rep) noexcept
         : version_guard(ver_rep), m_version_center_lock{ ::std::move(version_center_lock) }
     {

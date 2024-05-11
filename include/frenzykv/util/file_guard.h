@@ -54,6 +54,7 @@ public:
     level_t level() const noexcept { return m_level; }
     ::std::string_view name() const noexcept { return m_name; }
     ::std::filesystem::file_time_type last_write_time() const;
+    uintmax_t file_size() const;
     
     bool valid() const noexcept { return !m_name.empty(); }
     operator file_id_t() const noexcept { return file_id(); }
@@ -147,6 +148,7 @@ public:
     operator ::std::string_view() const { return name(); }
     operator ::std::filesystem::path() const { return name(); }
     auto last_write_time() const { assert(valid()); return m_rep->last_write_time(); }
+    auto file_size() const { assert(valid()); return m_rep->file_size(); }
 
     bool operator==(const file_guard& other) const noexcept
     {

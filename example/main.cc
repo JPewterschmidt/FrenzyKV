@@ -26,33 +26,64 @@ koios::eager_task<> db_test()
     auto dbimpl = ::std::make_unique<db_impl>("test1", get_global_options());
     db_interface* db = dbimpl.get();
 
-    const size_t scale = 100000;
+    const size_t scale = 50000;
 
+    // #1
+    spdlog::debug("db_test: start insert");
+    for (size_t i{}; i < scale; ++i)
+    {
+        auto k = ::std::to_string(i);
+        co_await db->insert(k, "test value abcdefg abcdefg");
+    }
+    spdlog::debug("db_test: insert complete");
+
+    // #2
     //spdlog::debug("db_test: start insert");
     //for (size_t i{}; i < scale; ++i)
     //{
     //    auto k = ::std::to_string(i);
-    //    co_await db->insert(k, "testtest");
+    //    co_await db->insert(k, "test value abcdefg abcdefg");
     //}
     //spdlog::debug("db_test: insert complete");
 
-    spdlog::debug("db_test: start remove");
-    for (size_t i{}; i < scale; ++i)
+    //spdlog::debug("db_test: start remove");
+    //for (size_t i{}; i < scale; ++i)
+    //{
+    //    auto k = ::std::to_string(i);
+    //    co_await db->remove_from_db(k);
+    //}
+    //spdlog::debug("db_test: remove complete");
+
+    {
+        auto k = ::std::to_string(50);
+        auto opt = co_await db->get(k);
+        if (opt) ::std::cout << opt->to_string_debug() << ::std::endl;
+        else ::std::cout << "not found" << ::std::endl;
+    }
+
+    {
+        auto k = ::std::to_string(1000);
+        auto opt = co_await db->get(k);
+        if (opt) ::std::cout << opt->to_string_debug() << ::std::endl;
+        else ::std::cout << "not found" << ::std::endl;
+    }
+
+    {
+        auto k = ::std::to_string(50);
+        co_await db->insert(k, "new value with key equals to 50");
+
+        auto opt = co_await db->get(k);
+        if (opt) ::std::cout << opt->to_string_debug() << ::std::endl;
+        else ::std::cout << "not found" << ::std::endl;
+    }
+
+    for (size_t i{}; i < scale; i += 1000)
     {
         auto k = ::std::to_string(i);
-        co_await db->remove_from_db(k);
+        auto opt = co_await db->get(k);
+        if (opt) ::std::cout << opt->to_string_debug() << ::std::endl;
+        else ::std::cout << "not found" << ::std::endl;
     }
-    spdlog::debug("db_test: remove complete");
-
-    auto k = ::std::to_string(50);
-    auto opt = co_await db->get(k);
-    if (opt)
-    {
-        ::std::cout << opt->to_string_debug() << ::std::endl;
-    }
-    else ::std::cout << "not found" << ::std::endl;
-
-    co_await dbimpl->compact_tombstones();
 
     spdlog::debug("before dbclose");
     co_await db->close();
@@ -63,7 +94,7 @@ koios::eager_task<> db_test()
 
 int main()
 {
-    koios::runtime_init(20);
+    koios::runtime_init(1);
 
     db_test().result();
     

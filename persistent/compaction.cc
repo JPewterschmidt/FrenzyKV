@@ -16,9 +16,9 @@ namespace frenzykv
 {
 
 koios::task<::std::pair<::std::vector<::std::unique_ptr<in_mem_rw>>, version_delta>>
-compactor::compact_tombstones(version_guard vg, level_t l)
+compactor::compact_tombstones(version_guard vg, level_t l) const
 {
-    auto lk = co_await m_mutex.acquire();
+    spdlog::debug("compact_tombstones() start");
     auto files = co_await compaction_policy_tombstone{*m_deps, m_filter_policy}.compacting_files(vg, l);
     
     ::std::vector<::std::unique_ptr<in_mem_rw>> result;
@@ -43,16 +43,19 @@ compactor::compact_tombstones(version_guard vg, level_t l)
         delta.add_compacted_file(fg);
     }
 
+    spdlog::debug("compact_tombstones() complete");
     co_return { ::std::move(result), ::std::move(delta) };
 }
 
 koios::task<::std::pair<::std::unique_ptr<in_mem_rw>, version_delta>>
-compactor::compact(version_guard version, level_t from)
+compactor::compact(version_guard version, level_t from) const
 {
-    auto lk = co_await m_mutex.acquire();
+    spdlog::debug("compact() start");
 
     auto policy = make_default_compaction_policy(*m_deps, m_filter_policy);
     auto file_guards = co_await policy->compacting_files(version, from);
+    spdlog::debug("compact() after chosing compacting_files()");
+
     version_delta compacted;
     compacted.add_compacted_files(file_guards);
 
@@ -68,12 +71,14 @@ compactor::compact(version_guard version, level_t from)
 
     // To prevent ICE, See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=114850
     auto newfile = co_await merge_tables(tables, from);
+
+    spdlog::debug("compact() complete");
     co_return { ::std::move(newfile), ::std::move(compacted) };
 }
 
 koios::task<::std::unique_ptr<in_mem_rw>>
 compactor::
-merge_two_tables(sstable& lhs, sstable& rhs, level_t l)
+merge_two_tables(sstable& lhs, sstable& rhs, level_t l) const 
 {
     [[maybe_unused]] bool ok1 = co_await lhs.parse_meta_data();
     [[maybe_unused]] bool ok2 = co_await rhs.parse_meta_data();
@@ -92,13 +97,13 @@ merge_two_tables(sstable& lhs, sstable& rhs, level_t l)
                  ::std::move_iterator{ rhs_entries.begin() }, ::std::move_iterator{ rhs_entries.end() }, 
                  ::std::front_inserter(merged));
 
+    assert(::std::is_sorted(merged.rbegin(), merged.rend()));
+
     merged.erase(::std::unique(merged.begin(), merged.end(), 
                     [](const auto& lhs, const auto& rhs) { 
                         return lhs.key().user_key() == rhs.key().user_key(); 
                     }), 
                  merged.end());
-
-    //::std::erase_if(merged, is_tomb_stone<kv_entry>);
 
     if (!merged.empty())
     {

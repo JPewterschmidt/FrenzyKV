@@ -35,6 +35,7 @@ koios::eager_task<bool> write(logger& l)
     try
     {
         co_await l.insert(w);
+        co_await l.may_flush(true);
     }
     catch (...)
     {

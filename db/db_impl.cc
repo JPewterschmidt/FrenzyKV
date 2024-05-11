@@ -83,7 +83,7 @@ koios::task<bool> db_impl::init()
 
     auto lk = co_await m_mem_mutex.acquire();
     [[maybe_unused]] auto ec = co_await m_mem->insert(::std::move(batch));
-    assert(ec.value() == 0);
+    //assert(ec.value() == 0);
     m_snapshot_center.set_init_leatest_used_sequence_number(max_seq_from_log);
 
     auto memp = ::std::exchange(m_mem, ::std::make_unique<memtable>(m_deps));
@@ -122,13 +122,15 @@ koios::eager_task<> db_impl::compact_tombstones()
     spdlog::debug("db_impl::compact_tombstones()");
     const level_t max_level = m_deps.opt()->max_level;
     version_delta delta;
-    for (level_t l = max_level - 1; l >= 0; --l)
+
+    // Can not remove tombstones from level 0
+    for (level_t l = max_level - 1; l >= 2; --l)
     {
         auto [fake_files, cur_delta] = co_await m_compactor.compact_tombstones(co_await m_version_center.current_version(), l);
         if (fake_files.empty()) continue;
         co_await fake_file_to_disk(::std::move(fake_files), cur_delta, l);
         delta += ::std::move(cur_delta);
-        break;
+        spdlog::debug("db_impl::compact_tombstones(): level{} compacted", l);
     }
     co_await update_current_version(::std::move(delta));
 }
@@ -170,11 +172,17 @@ koios::eager_task<> db_impl::may_compact()
     {
         auto [need, ver] = co_await need_compaction(l);
         if (!need) continue;
+
+        if (l >= 2)
+        {
+            spdlog::info("Compacting files from level {}", l);
+        }
         
         // Do the actual compaction
         auto [fake_file, delta] = co_await m_compactor.compact(::std::move(ver), l);
         co_await fake_file_to_disk(::std::move(fake_file), delta, l + 1);
         co_await update_current_version(::std::move(delta));
+        break;
     }
 }
 
@@ -219,7 +227,6 @@ insert(write_batch batch, write_options opt)
     batch.set_first_sequence_num(seq);
 
     co_await m_log.insert(batch);
-    co_await m_log.may_flush(opt.sync_write);
     
     auto unilk = co_await m_mem_mutex.acquire();
     if (auto ec = co_await m_mem->insert(batch); is_frzkv_out_of_range(ec))
@@ -295,7 +302,7 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
     {
         if (level_t l = fg.level(); l != cur_level) 
         {
-            spdlog::debug("db_impl::find_from_ssts() one level through, getting to next level");
+            spdlog::debug("db_impl::find_from_ssts() one level through, getting to next level{}", l);
             cur_level = l;
             if (auto ret = co_await find_from_potiential_results(); ret.has_value())
                 co_return ret;

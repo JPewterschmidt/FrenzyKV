@@ -67,6 +67,7 @@ koios::task<mutable_version_guard> version_center::add_new_version()
 
 koios::eager_task<> version_center::load_current_version()
 {
+    // Load from file, actually add a new version, acquire unique
     auto lk = co_await m_modify_lock.acquire();
     assert(m_versions.empty());
 

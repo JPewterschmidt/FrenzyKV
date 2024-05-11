@@ -34,7 +34,7 @@ public:
      *  keep those files of version alive
      */
     koios::task<::std::pair<::std::unique_ptr<in_mem_rw>, version_delta>>
-    compact(version_guard version, level_t from);
+    compact(version_guard version, level_t from) const;
 
 //private: // TODO: rewrite the tests
     /*  \brief  Merge sstables
@@ -46,32 +46,36 @@ public:
      *          So you have to do the null pointer check.
      */
     koios::task<::std::unique_ptr<in_mem_rw>> 
-    merge_tables(::std::ranges::range auto& tables, level_t l)
+    merge_tables(::std::ranges::range auto& tables, level_t l) const
     {
         namespace rv = ::std::ranges::views;
         assert(tables.size() >= 2);
+
+        spdlog::debug("compactor::merge_tables() start");
+
         const auto first_two = tables | rv::take(2) | rv::adjacent<2>;
         auto [t1, t2] = *begin(first_two);
-        
         auto file = co_await merge_two_tables(t1, t2, l + 1);
+        spdlog::debug("compactor::merge_tables() one two tables merging complete");
+
         for (auto& t : tables | rv::drop(2))
         {
             sstable temp{ *m_deps, m_filter_policy, file.get() };
             file = co_await merge_two_tables(temp, t, l + 1);
+            spdlog::debug("compactor::merge_tables() one two tables merging complete");
         }
 
         co_return file;
     }
 
     koios::task<::std::pair<::std::vector<::std::unique_ptr<in_mem_rw>>, version_delta>>
-    compact_tombstones(version_guard vg, level_t l);
+    compact_tombstones(version_guard vg, level_t l) const;
 
 private:
     koios::task<::std::unique_ptr<in_mem_rw>>
-    merge_two_tables(sstable& lhs, sstable& rhs, level_t next_of_from);
+    merge_two_tables(sstable& lhs, sstable& rhs, level_t next_of_from) const;
 
 private:
-    mutable koios::mutex m_mutex;
     const kvdb_deps* m_deps;
     filter_policy* m_filter_policy;
 };
