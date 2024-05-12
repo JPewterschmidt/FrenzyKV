@@ -76,7 +76,7 @@ koios::task<bool> db_impl::init()
 
     if (co_await m_log.empty())
     {
-        back_ground_compacting_GC(m_bg_gc_stop_src.get_token()).run();
+        background_compacting_GC(m_bg_gc_stop_src.get_token()).run();
         spdlog::debug("db_impl::init() done");
         co_return true;
     }
@@ -99,7 +99,7 @@ koios::task<bool> db_impl::init()
     co_await may_compact();
     m_gcer.do_GC().run();
 
-    back_ground_compacting_GC(m_bg_gc_stop_src.get_token()).run();
+    background_compacting_GC(m_bg_gc_stop_src.get_token()).run();
     spdlog::debug("db_impl::init() done");
 
     co_return true;
@@ -361,7 +361,7 @@ koios::task<snapshot> db_impl::get_snapshot()
     co_return m_snapshot_center.get_snapshot(co_await m_version_center.current_version());
 }
 
-koios::eager_task<> db_impl::back_ground_compacting_GC(::std::stop_token stp)
+koios::eager_task<> db_impl::background_compacting_GC(::std::stop_token stp)
 {
     spdlog::info("back ground GC emitted");
     auto lk = co_await m_flying_GC_mutex.acquire();
@@ -374,8 +374,8 @@ koios::eager_task<> db_impl::back_ground_compacting_GC(::std::stop_token stp)
             co_await may_compact(1);
         }
         co_await do_GC();
-        co_await koios::this_task::sleep_for(250ms);
-        spdlog::info("back ground GC wakeup");
+        co_await koios::this_task::sleep_for(100ms);
+        spdlog::debug("back ground GC wakeup");
     }
 }
 

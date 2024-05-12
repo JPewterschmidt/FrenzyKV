@@ -76,7 +76,7 @@ private:
     koios::task<::std::pair<bool, version_guard>> need_compaction(level_t l);
     koios::eager_task<> may_compact(level_t from = 0);
 
-    koios::eager_task<> back_ground_compacting_GC(::std::stop_token tk);
+    koios::eager_task<> background_compacting_GC(::std::stop_token tk);
 
 private:
     ::std::string m_dbname;
