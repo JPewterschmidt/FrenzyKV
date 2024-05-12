@@ -374,7 +374,7 @@ koios::eager_task<> db_impl::back_ground_compacting_GC(::std::stop_token stp)
             co_await may_compact(1);
         }
         co_await do_GC();
-        co_await koios::this_task::sleep_for(100ms);
+        co_await koios::this_task::sleep_for(250ms);
         spdlog::info("back ground GC wakeup");
     }
 }

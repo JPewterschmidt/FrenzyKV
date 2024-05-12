@@ -96,7 +96,7 @@ koios::eager_task<> db_test()
 
 int main()
 {
-    koios::runtime_init(4);
+    koios::runtime_init(20);
 
     db_test().result();
     
