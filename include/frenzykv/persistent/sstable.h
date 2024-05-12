@@ -61,18 +61,37 @@ struct block_with_storage
  *      Magic Number    See the sstable.cc source file.
  */
 
+/*! \brief  SSTable parser and accesser
+ *  
+ *  This class could parse a SSTable from a `random_readable` object, 
+ *  provides several useful async API.
+ *  
+ *  \attention  Before call to any of those non-async member function,
+ *              except those has clear information that informs you no need to parse meta data, 
+ *              you have to `co_await sst.parse_meta_data()` first.
+ *              Or there suppose to be a assertion terminates the program 
+ *              if you compile it with debug mode.
+ */ 
 class sstable
 {
 public:
+    /*  \param  file A raw pointer pointed to a `random_readable` object, 
+     *          without life time management, it could equals to nullptr, means the sstable is empty.
+     *          But before use a `sstable` object with a nullptr file still need to `parse_meta_data()` first.
+     */
     sstable(const kvdb_deps& deps, 
             filter_policy* filter, 
             random_readable* file);
 
+    /*  \param  file A unique pointer pointed to a `random_readable` object. 
+     *          it could equals to nullptr, means the sstable is empty.
+     *          But before use a `sstable` object with a nullptr file still need to `parse_meta_data()` first.
+     */
     sstable(const kvdb_deps& deps, 
             filter_policy* filter, 
             ::std::unique_ptr<random_readable> file);
 
-    /*! \brief Searching specific user key from this memtable
+    /*! \brief Searching specific user key from this sstable
      *  
      *  \return A ::std::optional<block_segment> 
      *          represents a block segment that all elements 
@@ -82,14 +101,23 @@ public:
      *              from some RAII object that actually hold the memory.
      *              So after a call of this function, 
      *              any access to the previously returned 
-     *              `block_segment` object are XXX undefined behaviour.
+     *              `block_segment` object is undefined behaviour.
      *  \param  user_key_ignore_seq Only take the serialized user key part, ignore the seq part
      */
     koios::task<::std::optional<::std::pair<block_segment, block_with_storage>>> 
     get_segment(const sequenced_key& user_key_ignore_seq);
 
+    /*! \brief Searching specific sequenced key from this sstable
+     *  
+     *  \return A ::std::optional<kv_entry> 
+     *          represents the kv_entry object that metch the sequenced key 
+     *          which sequence number also involved in the searching process.
+     *
+     *  \param  seq_key A typical sequenced key which sequence number also 
+     *          get involved in the searching process unlike the member function `get_segment()`
+     */
     koios::task<::std::optional<kv_entry>>
-    get_kv_entry(const sequenced_key& user_key);
+    get_kv_entry(const sequenced_key& seq_key);
 
     sequenced_key last_user_key_without_seq() const noexcept;
     sequenced_key first_user_key_without_seq() const noexcept;
@@ -115,6 +143,17 @@ public:
 
     koios::generator<::std::pair<uintmax_t, btl_t>> block_offsets() const noexcept;
     koios::task<bool>   parse_meta_data();
+
+    /*! \brief  A function to get the hash value of the current sstable.
+     *
+     *  Since a SSTable getting ready to be read, menas it's a immutable object.
+     *  so the hash value could be evaluate at the very beginning of the usage.
+     *  The current implementation uses the hash value of 
+     *  the corresponding file name as the argument of hash function.
+     *  So you can use this function without `parse_meta_data()`
+     *
+     *  \return The hash value.
+     */
     size_t hash() const noexcept { return m_hash_value; }
 
 private:
