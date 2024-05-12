@@ -5,6 +5,7 @@
 #include <vector>
 #include <utility>
 #include <list>
+#include <functional>
 
 #include "koios/task.h"
 
@@ -114,6 +115,7 @@ public:
 
     koios::generator<::std::pair<uintmax_t, btl_t>> block_offsets() const noexcept;
     koios::task<bool>   parse_meta_data();
+    size_t hash() const noexcept { return m_hash_value; }
 
 private:
     koios::task<btl_t>  btl_value(uintmax_t offset);        // Required by `generate_block_offsets()`
@@ -132,11 +134,22 @@ private:
     ::std::vector<::std::pair<uintmax_t, btl_t>> m_block_offsets;
     buffer<> m_buffer{};
     size_t m_get_call_count{};
+    size_t m_hash_value{};
 };
 
 koios::task<::std::list<kv_entry>>
 get_entries_from_sstable(sstable& table);
 
 } // namespace frenzykv
+
+template<>
+class std::hash<frenzykv::sstable>
+{
+public:
+    ::std::size_t operator()(const frenzykv::sstable& tab) const noexcept
+    {
+        return tab.hash();
+    }
+};
 
 #endif

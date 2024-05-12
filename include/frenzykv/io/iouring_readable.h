@@ -19,13 +19,6 @@ public:
     iouring_readable(const ::std::filesystem::path& p, 
                      const options& opt);
 
-    iouring_readable(toolpex::unique_posix_fd fd, 
-                     const options& opt)
-        : posix_base{ ::std::move(fd) }, 
-          m_opt{ &opt }
-    {
-    }
-
     ~iouring_readable() noexcept = default;
 
     koios::task<size_t>
