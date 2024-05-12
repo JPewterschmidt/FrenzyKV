@@ -45,7 +45,7 @@ sstable::sstable(const kvdb_deps& deps,
 bool sstable::empty() const noexcept
 {
     assert(m_meta_data_parsed);
-    return m_file == nullptr || m_file->file_size() == 0;
+    return m_file == nullptr;
 }
 
 koios::task<bool> sstable::parse_meta_data()
@@ -327,6 +327,12 @@ get_entries_from_sstable(sstable& table)
     assert(::std::is_sorted(result.begin(), result.end()));
 
     co_return result;
+}
+
+bool sstable::operator==(const sstable& other) const noexcept
+{
+    if (empty()) return other.empty();
+    return m_file->filename() == other.m_file->filename();
 }
 
 } // namespace frenzykv

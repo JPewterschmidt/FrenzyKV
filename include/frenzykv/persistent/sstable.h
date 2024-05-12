@@ -131,6 +131,8 @@ public:
         return first_user_key_without_seq() < other.first_user_key_without_seq();
     }
 
+    bool operator==(const sstable& other) const noexcept;
+
     // Required by `get_segment()`
     koios::task<::std::optional<block_with_storage>> 
     get_block(uintmax_t offset, btl_t btl);
