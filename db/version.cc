@@ -58,7 +58,9 @@ version_rep& version_rep::operator+=(const version_delta& delta)
 
 koios::task<mutable_version_guard> version_center::add_new_version()
 {
+    spdlog::debug("before get verison center modify lock");
     auto lk = co_await m_modify_lock.acquire();
+    spdlog::debug("after get verison center modify lock");
     auto& new_ver = m_versions.emplace_back(m_versions.back());
     new_ver.set_version_desc_name(get_version_descriptor_name());
     m_current = { new_ver };
@@ -106,7 +108,8 @@ version_center& version_center::operator=(version_center&& other) noexcept
 
 koios::task<version_guard> version_center::current_version() const noexcept
 {
-    auto lk = co_await m_modify_lock.acquire_shared();
+    //auto lk = co_await m_modify_lock.acquire_shared();
+    auto lk = co_await m_modify_lock.acquire();
     co_return m_current;
 }
 
@@ -123,7 +126,8 @@ koios::task<> version_center::GC()
 
 koios::task<size_t> version_center::size() const
 {
-    auto lk = co_await m_modify_lock.acquire_shared();
+    //auto lk = co_await m_modify_lock.acquire_shared();
+    auto lk = co_await m_modify_lock.acquire();
     co_return m_versions.size();
 }
 

@@ -28,6 +28,8 @@ koios::eager_task<> db_test()
 
     const size_t scale = 50000;
 
+    co_await db->init();
+
     // #1
     spdlog::debug("db_test: start insert");
     for (size_t i{}; i < scale; ++i)
@@ -37,7 +39,7 @@ koios::eager_task<> db_test()
     }
     spdlog::debug("db_test: insert complete");
 
-    // #2
+    //#2
     //spdlog::debug("db_test: start insert");
     //for (size_t i{}; i < scale; ++i)
     //{
@@ -94,7 +96,7 @@ koios::eager_task<> db_test()
 
 int main()
 {
-    koios::runtime_init(1);
+    koios::runtime_init(20);
 
     db_test().result();
     

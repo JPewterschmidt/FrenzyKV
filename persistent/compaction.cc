@@ -18,6 +18,7 @@ namespace frenzykv
 koios::task<::std::pair<::std::vector<::std::unique_ptr<in_mem_rw>>, version_delta>>
 compactor::compact_tombstones(version_guard vg, level_t l) const
 {
+    auto lk = co_await m_mutex.acquire();
     spdlog::debug("compact_tombstones() start");
     auto files = co_await compaction_policy_tombstone{*m_deps, m_filter_policy}.compacting_files(vg, l);
     
@@ -50,6 +51,7 @@ compactor::compact_tombstones(version_guard vg, level_t l) const
 koios::task<::std::pair<::std::unique_ptr<in_mem_rw>, version_delta>>
 compactor::compact(version_guard version, level_t from) const
 {
+    auto lk = co_await m_mutex.acquire();
     spdlog::debug("compact() start");
 
     auto policy = make_default_compaction_policy(*m_deps, m_filter_policy);

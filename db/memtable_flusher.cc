@@ -38,9 +38,12 @@ flush_to_disk(::std::unique_ptr<memtable> table)
 
     auto finish_current_buiding = [&] -> koios::task<> { 
         co_await builder.finish();
-        co_await file->flush();
+        //co_await file->flush();
+        co_await file->sync();
         delta.add_new_file(sst_guard);
     };
+
+    auto env = m_deps->env();
 
     // Flush those KV into sstable
     auto list = co_await table->get_storage();
@@ -51,7 +54,7 @@ flush_to_disk(::std::unique_ptr<memtable> table)
         {
             co_await finish_current_buiding();
             sst_guard = co_await m_file_center->get_file(name_a_sst(0));
-            file = m_deps->env()->get_seq_writable(sstables_path()/sst_guard);
+            file = co_await sst_guard.open_write(env.get());
 
             builder = { 
                 *m_deps, 
@@ -66,6 +69,7 @@ flush_to_disk(::std::unique_ptr<memtable> table)
     
     spdlog::debug("flush_to_disk() updates version info");
     auto new_ver = co_await m_version_center->add_new_version();
+    spdlog::debug("flush_to_disk() updates version info, get newly added version guard!");
     new_ver += delta;
     const auto vdname = new_ver.version_desc_name();
     auto ver_file = m_deps->env()->get_seq_writable(version_path()/vdname);

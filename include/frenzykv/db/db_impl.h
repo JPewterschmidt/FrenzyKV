@@ -74,7 +74,9 @@ private:
     koios::task<> update_current_version(version_delta delta);
 
     koios::task<::std::pair<bool, version_guard>> need_compaction(level_t l);
-    koios::eager_task<> may_compact();
+    koios::eager_task<> may_compact(level_t from = 0);
+
+    koios::eager_task<> background_compacting_GC(::std::stop_token tk);
 
 private:
     ::std::string m_dbname;
@@ -96,6 +98,10 @@ private:
     memtable_flusher m_flusher;
 
     ::std::atomic_bool m_inited{};
+
+    mutable koios::mutex m_flying_GC_mutex;
+    ::std::atomic_size_t m_force_GC_hint;
+    size_t m_num_bound_level0{};
 };  
 
 } // namespace frenzykv

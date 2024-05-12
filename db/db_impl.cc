@@ -1,4 +1,5 @@
 #include <cassert>
+#include <chrono>
 #include <ranges>
 #include <list>
 #include <vector>
@@ -29,6 +30,8 @@
 namespace rv = ::std::ranges::views;
 namespace r = ::std::ranges;
 namespace fs = ::std::filesystem;
+
+using namespace ::std::chrono_literals;
 
 namespace frenzykv
 {
@@ -61,6 +64,8 @@ koios::task<bool> db_impl::init()
     spdlog::debug("db_impl::init() start");
     m_inited.store(true);
 
+    m_num_bound_level0 = m_deps.opt()->allowed_level_file_number(0);
+
     co_await koios::this_task::yield();
 
     co_await m_file_center.load_files();
@@ -71,7 +76,7 @@ koios::task<bool> db_impl::init()
 
     if (co_await m_log.empty())
     {
-        do_GC().run();
+        background_compacting_GC(m_bg_gc_stop_src.get_token()).run();
         spdlog::debug("db_impl::init() done");
         co_return true;
     }
@@ -94,7 +99,9 @@ koios::task<bool> db_impl::init()
     co_await may_compact();
     m_gcer.do_GC().run();
 
+    background_compacting_GC(m_bg_gc_stop_src.get_token()).run();
     spdlog::debug("db_impl::init() done");
+
     co_return true;
 }
 
@@ -163,12 +170,12 @@ koios::task<> db_impl::fake_file_to_disk(::std::unique_ptr<in_mem_rw> fake_file,
     }
 }
 
-koios::eager_task<> db_impl::may_compact()
+koios::eager_task<> db_impl::may_compact(level_t from)
 {
     const level_t max_level = m_deps.opt()->max_level;
     auto env = m_deps.env();
 
-    for (level_t l{}; l <= max_level; ++l)
+    for (level_t l = from; l <= max_level; ++l)
     {
         auto [need, ver] = co_await need_compaction(l);
         if (!need) continue;
@@ -192,6 +199,11 @@ koios::task<> db_impl::close()
         co_return;
     
     m_inited = false;
+
+    // Make sure the background be GC stoped.
+    m_bg_gc_stop_src.request_stop();
+    auto fly_gc_lk = co_await m_flying_GC_mutex.acquire();
+    fly_gc_lk.unlock();
 
     auto lk = co_await m_mem_mutex.acquire();
 
@@ -235,8 +247,12 @@ insert(write_batch batch, write_options opt)
         auto flushing_file = ::std::move(m_mem);
         m_mem = ::std::make_unique<memtable>(m_deps);
         co_await m_flusher.flush_to_disk(::std::move(flushing_file));
-        co_await may_compact();
-        do_GC().run();
+        if (m_force_GC_hint.fetch_add(1, ::std::memory_order_acq_rel) % (m_num_bound_level0 * 2) == 0)
+        {
+            spdlog::debug("force compacting");
+            co_await may_compact();
+            do_GC().run();
+        }
 
         ec = co_await m_mem->insert(::std::move(batch));
         spdlog::debug("db_impl::insert() after GC, then after insert to mem");
@@ -343,6 +359,24 @@ koios::task<snapshot> db_impl::get_snapshot()
 {
     co_await init();
     co_return m_snapshot_center.get_snapshot(co_await m_version_center.current_version());
+}
+
+koios::eager_task<> db_impl::background_compacting_GC(::std::stop_token stp)
+{
+    spdlog::info("back ground GC emitted");
+    auto lk = co_await m_flying_GC_mutex.acquire();
+    const level_t max_level = m_deps.opt()->max_level;
+    for (;;)
+    {
+        if (stp.stop_requested()) co_return;
+        for (level_t l = 1; l < max_level; ++l)
+        {
+            co_await may_compact(1);
+        }
+        co_await do_GC();
+        co_await koios::this_task::sleep_for(100ms);
+        spdlog::debug("back ground GC wakeup");
+    }
 }
 
 } // namespace frenzykv

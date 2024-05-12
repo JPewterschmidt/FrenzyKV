@@ -76,6 +76,7 @@ private:
     merge_two_tables(sstable& lhs, sstable& rhs, level_t next_of_from) const;
 
 private:
+    mutable koios::mutex m_mutex;
     const kvdb_deps* m_deps;
     filter_policy* m_filter_policy;
 };
