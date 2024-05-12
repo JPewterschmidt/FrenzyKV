@@ -7,6 +7,7 @@
 #include <span>
 #include <memory>
 #include <cstddef>
+#include <filesystem>
 
 #include "frenzykv/io/file.h"
 
@@ -23,6 +24,8 @@ public:
     read(::std::span<::std::byte> dest) = 0;
 
     virtual ~seq_readable() noexcept {}
+    
+    virtual ::std::string_view filename() const = 0;
 };
 
 class random_readable : public seq_readable
