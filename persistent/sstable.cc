@@ -21,7 +21,8 @@ sstable::sstable(const kvdb_deps& deps,
     : m_deps{ &deps },
       m_file{ file }, 
       m_filter{ filter },
-      m_compressor{ get_compressor(*m_deps->opt(), m_deps->opt()->compressor_name) }
+      m_compressor{ get_compressor(*m_deps->opt(), m_deps->opt()->compressor_name) }, 
+      m_hash_value{ ::std::hash<::std::string_view>{}(m_file->filename()) }
 {
     assert(m_compressor);
     assert(m_filter);
@@ -34,7 +35,8 @@ sstable::sstable(const kvdb_deps& deps,
       m_deps{ &deps }, 
       m_file{ m_self_managed_file.get() }, 
       m_filter{ filter },
-      m_compressor{ get_compressor(*m_deps->opt(), m_deps->opt()->compressor_name) }
+      m_compressor{ get_compressor(*m_deps->opt(), m_deps->opt()->compressor_name) },
+      m_hash_value{ ::std::hash<::std::string_view>{}(m_file->filename()) }
 {
     assert(m_compressor);
     assert(m_filter);

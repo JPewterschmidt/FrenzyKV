@@ -2,6 +2,8 @@
 #define FRENZYKV_IOURING_READABLE_H
 
 #include <filesystem>
+#include <string>
+#include <string_view>
 
 #include "frenzykv/io/readable.h"
 #include "frenzykv/io/inner_buffer.h"
@@ -19,13 +21,6 @@ public:
     iouring_readable(const ::std::filesystem::path& p, 
                      const options& opt);
 
-    iouring_readable(toolpex::unique_posix_fd fd, 
-                     const options& opt)
-        : posix_base{ ::std::move(fd) }, 
-          m_opt{ &opt }
-    {
-    }
-
     ~iouring_readable() noexcept = default;
 
     koios::task<size_t>
@@ -40,10 +35,13 @@ public:
 
     uintmax_t file_size() const override { return m_filesize; }
 
+    ::std::string_view filename() const noexcept override { return m_filename; }
+
 private:
     const options* m_opt;
     seq_readable_context m_fdctx;
     uintmax_t m_filesize{};
+    ::std::string m_filename;
 };
 
 }

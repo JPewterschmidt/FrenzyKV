@@ -28,7 +28,8 @@ public:
 
     in_mem_rw(in_mem_rw&& other) noexcept
         : m_blocks{ ::std::move(other.m_blocks) }, 
-          m_block_size{ other.m_block_size }
+          m_block_size{ other.m_block_size }, 
+          m_id{ ::std::move(other.m_id) }
     {
     }
 
@@ -38,6 +39,7 @@ public:
     {
         m_blocks = ::std::move(other.m_blocks);
         m_block_size = other.m_block_size;
+        m_id = ::std::move(other.m_id);
         return *this;
     }
 
@@ -70,6 +72,7 @@ public:
     }
 
     koios::task<size_t> dump_to(seq_writable& file);
+    ::std::string_view filename() const noexcept override { return m_id.to_string(); }
 
 private:
     koios::generator<::std::span<const ::std::byte>> 
@@ -79,6 +82,7 @@ private:
 private:
     ::std::vector<buffer<>> m_blocks;
     size_t m_block_size;
+    uuid m_id{};
 };
 
 } // namespace frenzykv
