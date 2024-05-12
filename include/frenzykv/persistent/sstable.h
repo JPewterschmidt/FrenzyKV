@@ -6,6 +6,7 @@
 #include <utility>
 #include <list>
 #include <functional>
+#include <generator>
 
 #include "koios/task.h"
 
@@ -143,7 +144,7 @@ public:
         return get_block(p.first, p.second);
     }
 
-    koios::generator<::std::pair<uintmax_t, btl_t>> block_offsets() const noexcept;
+    ::std::generator<::std::pair<uintmax_t, btl_t>> block_offsets() const noexcept;
     koios::task<bool>   parse_meta_data();
 
     /*! \brief  A function to get the hash value of the current sstable.

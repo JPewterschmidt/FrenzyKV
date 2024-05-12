@@ -6,9 +6,9 @@
 #include <memory>
 #include <string_view>
 #include <functional>
+#include <generator>
 
 #include "toolpex/functional.h"
-#include "koios/generator.h"
 #include "koios/task.h"
 
 #include "frenzykv/types.h"
@@ -291,9 +291,9 @@ private:
  *  \param  buffer A string buffer that contains all the serialized entries that you want parse.
  *                 Make sure that this buffer a just fit all those entries or with a 4 bytes long range filled with zero.
  */
-koios::generator<kv_entry> kv_entries_from_buffer(const_bspan buffer);
+::std::generator<kv_entry> kv_entries_from_buffer(const_bspan buffer);
 
-inline koios::generator<kv_entry> kv_entries_from_buffer(const ::std::string& str)
+inline ::std::generator<kv_entry> kv_entries_from_buffer(const ::std::string& str)
 {
     return kv_entries_from_buffer(::std::as_bytes(::std::span{str}));
 }

@@ -54,7 +54,7 @@ append(::std::span<const ::std::byte> buffer)
     co_return result;
 }
 
-koios::generator<::std::span<const ::std::byte>> 
+::std::generator<::std::span<const ::std::byte>> 
 in_mem_rw::
 target_spans(size_t offset, size_t dest_size) const noexcept
 {
