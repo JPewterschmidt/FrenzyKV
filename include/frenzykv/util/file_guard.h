@@ -52,7 +52,7 @@ public:
     auto deref() { return m_ref--; }
     file_id_t file_id() const noexcept { return m_fileid; }
     level_t level() const noexcept { return m_level; }
-    ::std::string_view name() const noexcept { return m_name; }
+    const ::std::string& name() const noexcept { return m_name; }
     ::std::filesystem::file_time_type last_write_time() const;
     uintmax_t file_size() const;
     
@@ -140,7 +140,7 @@ public:
 
     auto& rep() noexcept { assert(m_rep); return *m_rep; }
     const auto& rep() const noexcept { assert(m_rep); return *m_rep; }
-    const ::std::string_view name() const noexcept { assert(m_rep); return m_rep->name(); }
+    const ::std::string& name() const noexcept { assert(m_rep); return m_rep->name(); }
 
     bool valid() const noexcept { return !!m_rep; }
     operator file_id_t() const noexcept { return file_id(); }

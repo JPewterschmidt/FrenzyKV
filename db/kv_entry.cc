@@ -16,7 +16,7 @@ namespace frenzykv
 
 using namespace toolpex;
 
-koios::generator<kv_entry> kv_entries_from_buffer(const_bspan buffer)
+::std::generator<kv_entry> kv_entries_from_buffer(const_bspan buffer)
 {
     const ::std::byte* sentinal = buffer.data() + buffer.size();
     for (const ::std::byte* cur = buffer.data(); 

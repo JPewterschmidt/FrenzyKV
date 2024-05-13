@@ -4,6 +4,8 @@
 #include <string_view>
 #include <vector>
 #include <cstdint>
+#include <generator>
+
 #include "toolpex/move_only.h"
 #include "koios/generator.h"
 #include "koios/exceptions.h"
@@ -117,8 +119,8 @@ private:
     parse_result_t m_parse_result;
 };
 
-koios::generator<kv_entry> entries_from_block_segment(const block_segment& seg);
-koios::generator<kv_entry> entries_from_block_segment_reverse(const block_segment& seg);
+::std::generator<kv_entry> entries_from_block_segment(const block_segment& seg);
+::std::generator<kv_entry> entries_from_block_segment_reverse(const block_segment& seg);
 
 /*! \brief  Block obejct
  *  Lazy evaluation. But it will parse the meta data during construction.
@@ -144,9 +146,9 @@ public:
     /*! \brief Get segments from speficied position
      *  \param from A pointer point to a block segment, usually an element of `m_special_segs`.
      */
-    koios::generator<block_segment> segments_in_single_interval(const ::std::byte* beg, const ::std::byte* end) const;
-    koios::generator<block_segment> segments_in_single_interval() const;
-    koios::generator<block_segment> segments() const;
+    ::std::generator<block_segment> segments_in_single_interval(const ::std::byte* beg, const ::std::byte* end) const;
+    ::std::generator<block_segment> segments_in_single_interval() const;
+    ::std::generator<block_segment> segments() const;
 
     const auto& special_segment_ptrs() { return m_special_segs; }
     const_bspan first_segment_public_prefix() const noexcept { return m_first_seg_public_prefix; }
@@ -154,7 +156,7 @@ public:
     bool less_than_this_first_segment_public_prefix(const_bspan user_prefix) const noexcept;
 
     ::std::optional<block_segment> get(const_bspan public_prefix) const;
-    koios::generator<kv_entry> entries() const;
+    ::std::generator<kv_entry> entries() const;
 
 private:
     parse_result_t parse_meta_data();

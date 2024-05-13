@@ -45,7 +45,7 @@ sstable::sstable(const kvdb_deps& deps,
 bool sstable::empty() const noexcept
 {
     assert(m_meta_data_parsed);
-    return m_file == nullptr || m_file->file_size() == 0;
+    return m_file == nullptr;
 }
 
 koios::task<bool> sstable::parse_meta_data()
@@ -300,7 +300,7 @@ bool sstable::disjoint(const sstable& other) const noexcept
     return (al < bl && ar < bl) || (bl < al && br < al);
 }
 
-koios::generator<::std::pair<uintmax_t, btl_t>> 
+::std::generator<::std::pair<uintmax_t, btl_t>> 
 sstable::
 block_offsets() const noexcept
 {
@@ -327,6 +327,22 @@ get_entries_from_sstable(sstable& table)
     assert(::std::is_sorted(result.begin(), result.end()));
 
     co_return result;
+}
+
+::std::string_view sstable::filename() const noexcept
+{
+    if (empty())
+    {
+        return {};
+    }
+
+    return m_file->filename();
+}
+
+bool sstable::operator==(const sstable& other) const noexcept
+{
+    if (empty()) return other.empty();
+    return filename() == other.filename();
 }
 
 } // namespace frenzykv

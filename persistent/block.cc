@@ -105,7 +105,7 @@ bool block_segment::less_than_this_public_prefix(const_bspan user_prefix) const 
     return cmp_ret == ::std::strong_ordering::less;
 }
 
-static koios::generator<kv_entry> 
+static ::std::generator<kv_entry> 
 entries_from_block_segment_impl(const_bspan uk_from_seg, r::range auto&& items)
 {
     // including 2 bytes of user key len
@@ -120,7 +120,7 @@ entries_from_block_segment_impl(const_bspan uk_from_seg, r::range auto&& items)
     }
 }
 
-koios::generator<kv_entry> 
+::std::generator<kv_entry> 
 entries_from_block_segment(const block_segment& seg)
 {
     auto pp = seg.public_prefix();
@@ -131,7 +131,7 @@ entries_from_block_segment(const block_segment& seg)
     }
 }
 
-koios::generator<kv_entry> 
+::std::generator<kv_entry> 
 entries_from_block_segment_reverse(const block_segment& seg)
 {
     auto pp = seg.public_prefix();
@@ -284,7 +284,7 @@ block::block(const_bspan block_storage)
     if ((m_parse_result = parse_meta_data()) == parse_result_t::error)
         throw koios::exception{"block_segment: parse fail"};
     auto segs = segments_in_single_interval();
-    m_first_seg_public_prefix = ::std::begin(segs)->public_prefix();
+    m_first_seg_public_prefix = (*begin(segs)).public_prefix();
 }
 
 // UnCompressed data only
@@ -304,7 +304,7 @@ parse_result_t block::parse_meta_data()
     return parse_result_t::success;
 }
 
-koios::generator<block_segment> block::
+::std::generator<block_segment> block::
 segments_in_single_interval(const ::std::byte* from, const ::std::byte* sentinal) const
 {
     const ::std::byte* current = from;
@@ -328,13 +328,13 @@ segments_in_single_interval(const ::std::byte* from, const ::std::byte* sentinal
     }
 }
 
-koios::generator<block_segment> block::segments_in_single_interval() const
+::std::generator<block_segment> block::segments_in_single_interval() const
 {
     const auto* potential_end = meta_data_beg_ptr(m_storage);
     return segments_in_single_interval(m_special_segs[0], m_special_segs.size() > 1 ? m_special_segs[1]: potential_end);
 }
 
-koios::generator<block_segment> block::segments() const
+::std::generator<block_segment> block::segments() const
 {
     const ::std::byte* current = m_special_segs[0];
     const ::std::byte* sentinal = meta_data_beg_ptr(m_storage);
@@ -588,7 +588,7 @@ static ::std::span<char> block_content(::std::string& storage)
     return ::std::move(m_storage);
 }
 
-koios::generator<kv_entry> block::entries() const
+::std::generator<kv_entry> block::entries() const
 {
     for (block_segment seg : segments())
     {

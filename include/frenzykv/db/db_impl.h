@@ -14,6 +14,7 @@
 #include "frenzykv/io/in_mem_rw.h"
 #include "frenzykv/util/record_writer_wrapper.h"
 #include "frenzykv/util/file_center.h"
+#include "frenzykv/util/table_cache.h"
 
 #include "frenzykv/db.h"
 #include "frenzykv/db/kv_entry.h"
@@ -90,6 +91,7 @@ private:
     version_center m_version_center;
     snapshot_center m_snapshot_center;
     compactor m_compactor;
+    mutable table_cache m_cache;
 
     // mamtable===============================
     mutable koios::shared_mutex m_mem_mutex;

@@ -6,6 +6,7 @@
 #include <utility>
 #include <list>
 #include <functional>
+#include <generator>
 
 #include "koios/task.h"
 
@@ -131,6 +132,8 @@ public:
         return first_user_key_without_seq() < other.first_user_key_without_seq();
     }
 
+    bool operator==(const sstable& other) const noexcept;
+
     // Required by `get_segment()`
     koios::task<::std::optional<block_with_storage>> 
     get_block(uintmax_t offset, btl_t btl);
@@ -141,7 +144,7 @@ public:
         return get_block(p.first, p.second);
     }
 
-    koios::generator<::std::pair<uintmax_t, btl_t>> block_offsets() const noexcept;
+    ::std::generator<::std::pair<uintmax_t, btl_t>> block_offsets() const noexcept;
     koios::task<bool>   parse_meta_data();
 
     /*! \brief  A function to get the hash value of the current sstable.
@@ -155,6 +158,7 @@ public:
      *  \return The hash value.
      */
     size_t hash() const noexcept { return m_hash_value; }
+    ::std::string_view filename() const noexcept;
 
 private:
     koios::task<btl_t>  btl_value(uintmax_t offset);        // Required by `generate_block_offsets()`

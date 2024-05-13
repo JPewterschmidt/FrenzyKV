@@ -6,10 +6,10 @@
 #include "frenzykv/io/inner_buffer.h"
 #include "frenzykv/error_category.h"
 #include "koios/coroutine_mutex.h"
-#include "koios/generator.h"
 
 #include <vector>
 #include <memory>
+#include <generator>
 
 namespace frenzykv
 {
@@ -75,7 +75,7 @@ public:
     ::std::string_view filename() const noexcept override { return m_id.to_string(); }
 
 private:
-    koios::generator<::std::span<const ::std::byte>> 
+    ::std::generator<::std::span<const ::std::byte>> 
     target_spans(size_t offset, size_t dest_size) const noexcept;
     buffer<>& next_writable_buffer();
 
