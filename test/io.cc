@@ -14,6 +14,7 @@
 #include "frenzykv/io/writable.h"
 #include "frenzykv/io/in_mem_rw.h"
 #include "frenzykv/io/iouring_writable.h"
+#include "frenzykv/io/iouring_readable.h"
 #include "frenzykv/io/io_objects_util.h"
 
 using namespace koios;
@@ -176,6 +177,25 @@ namespace
 
         co_return true;
     }
+
+    eager_task<bool> iouring_readable_dump_to()
+    {
+        auto opt = deps.opt();
+        const ::std::string test_filename = "testfile-iouring_readable_dump_to";
+        iouring_writable w(test_filename, *opt, file::default_create_mode(), O_TRUNC);
+        ::std::array<::std::byte, 8193> buffer{};
+        ::std::memset(buffer.data(), 1, buffer.size());
+        co_await w.append(buffer);
+        const uintmax_t file_size = w.file_size();
+        co_await w.close();
+        
+        in_mem_rw mem;
+        iouring_readable r(test_filename, *opt);
+        co_await r.dump_to(mem);
+        const bool result = mem.file_size() == file_size;
+        co_await koios::uring::unlink(test_filename);
+        co_return result;
+    }
 }
 
 TEST(readable_test_env, basic)
@@ -183,4 +203,9 @@ TEST(readable_test_env, basic)
     ASSERT_TRUE(env_setup().result());
     ASSERT_TRUE(testbody_in_mem_rw().result());
     ASSERT_TRUE(testbody_posix().result());
+}
+
+TEST(real_file, iouring_readable_dump_to)
+{
+    ASSERT_TRUE(iouring_readable_dump_to().result());
 }
