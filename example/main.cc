@@ -31,13 +31,13 @@ koios::eager_task<> db_test()
     co_await db->init();
 
     // #1
-    spdlog::debug("db_test: start insert");
-    for (size_t i{}; i < scale; ++i)
-    {
-        auto k = ::std::to_string(i);
-        co_await db->insert(k, "test value abcdefg abcdefg");
-    }
-    spdlog::debug("db_test: insert complete");
+    //spdlog::debug("db_test: start insert");
+    //for (size_t i{}; i < scale; ++i)
+    //{
+    //    auto k = ::std::to_string(i);
+    //    co_await db->insert(k, "test value abcdefg abcdefg");
+    //}
+    //spdlog::debug("db_test: insert complete");
 
     // #2
     //spdlog::debug("db_test: start insert");

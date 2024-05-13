@@ -158,6 +158,7 @@ public:
      *  \return The hash value.
      */
     size_t hash() const noexcept { return m_hash_value; }
+    ::std::string_view filename() const noexcept;
 
 private:
     koios::task<btl_t>  btl_value(uintmax_t offset);        // Required by `generate_block_offsets()`

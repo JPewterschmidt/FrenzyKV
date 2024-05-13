@@ -329,10 +329,20 @@ get_entries_from_sstable(sstable& table)
     co_return result;
 }
 
+::std::string_view sstable::filename() const noexcept
+{
+    if (empty())
+    {
+        return {};
+    }
+
+    return m_file->filename();
+}
+
 bool sstable::operator==(const sstable& other) const noexcept
 {
     if (empty()) return other.empty();
-    return m_file->filename() == other.m_file->filename();
+    return filename() == other.filename();
 }
 
 } // namespace frenzykv
