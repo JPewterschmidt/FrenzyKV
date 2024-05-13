@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <iterator>
 #include <filesystem>
+#include <memory>
 
 #include "toolpex/skip_list.h"
 
@@ -44,6 +45,7 @@ db_impl::db_impl(::std::string dbname, const options& opt)
       m_file_center{ m_deps }, 
       m_version_center{ m_file_center },
       m_compactor{ m_deps, m_filter_policy.get() }, 
+      m_cache{ 16 },
       m_mem{ ::std::make_unique<memtable>(m_deps) }, 
       m_gcer{ &m_version_center, &m_file_center }, 
       m_flusher{ m_deps, &m_version_center, m_filter_policy.get(), &m_file_center }
@@ -324,12 +326,17 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
                 co_return ret;
             potiential_results.clear();
         }
-        auto filep = co_await fg.open_read(env.get());
-        if (filep->file_size() == 0) continue;
-        sstable sst(m_deps, m_filter_policy.get(), ::std::move(filep));
 
-        co_await sst.parse_meta_data();
-        auto entry_opt = co_await sst.get_kv_entry(key);
+        ::std::shared_ptr<sstable> sst = co_await m_cache.find_table(fg.name());
+        if (!sst)
+        {
+            auto filep = co_await fg.open_read(env.get());
+            if (filep->file_size() == 0) continue;
+            sst = ::std::make_shared<sstable>(m_deps, m_filter_policy.get(), ::std::move(filep));
+        }
+
+        co_await sst->parse_meta_data();
+        auto entry_opt = co_await sst->get_kv_entry(key);
         if (!entry_opt.has_value() 
             || (snap.valid() && entry_opt->key().sequence_number() > snap.sequence_number()))
         {
