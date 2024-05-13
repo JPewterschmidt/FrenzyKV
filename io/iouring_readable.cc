@@ -37,4 +37,21 @@ iouring_readable::read(::std::span<::std::byte> dest, size_t offset) const
     co_return (co_await uring::read(m_fd, dest, offset)).nbytes_delivered();
 }
 
+koios::task<size_t> 
+iouring_readable::dump_to(seq_writable& file)
+{
+    const size_t file_sz = file_size();
+    size_t wrote{};
+    do
+    {
+        auto buffer = file.writable_span();
+        const size_t each_read = co_await read(buffer, wrote);
+        co_await file.commit(each_read);
+        wrote += each_read;
+    }
+    while (file_sz - wrote);
+
+    co_return wrote;
+}
+
 } // namespace frenzykv

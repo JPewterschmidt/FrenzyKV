@@ -10,6 +10,7 @@
 #include <filesystem>
 
 #include "frenzykv/io/file.h"
+#include "frenzykv/io/writable.h"
 
 namespace frenzykv
 {
@@ -51,6 +52,8 @@ public:
 
     virtual ~random_readable() noexcept override {}
     virtual bool is_buffering() const override = 0;
+
+    virtual koios::task<size_t> dump_to(seq_writable& file) = 0;
 };
 
 class seq_readable_context

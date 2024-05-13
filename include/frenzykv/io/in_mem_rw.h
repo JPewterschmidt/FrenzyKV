@@ -71,7 +71,7 @@ public:
         m_block_size = block_size;
     }
 
-    koios::task<size_t> dump_to(seq_writable& file);
+    koios::task<size_t> dump_to(seq_writable& file) override;
     ::std::string_view filename() const noexcept override { return m_id.to_string(); }
 
 private:
