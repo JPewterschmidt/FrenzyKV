@@ -45,7 +45,7 @@ db_impl::db_impl(::std::string dbname, const options& opt)
       m_file_center{ m_deps }, 
       m_version_center{ m_file_center },
       m_compactor{ m_deps, m_filter_policy.get() }, 
-      m_cache{ 16 },
+      m_cache{ m_deps, m_filter_policy.get(), 16 },
       m_mem{ ::std::make_unique<memtable>(m_deps) }, 
       m_gcer{ &m_version_center, &m_file_center }, 
       m_flusher{ m_deps, &m_version_center, m_filter_policy.get(), &m_file_center }
@@ -332,7 +332,7 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
         {
             auto filep = co_await fg.open_read(env.get());
             if (filep->file_size() == 0) continue;
-            sst = ::std::make_shared<sstable>(m_deps, m_filter_policy.get(), ::std::move(filep));
+            sst = co_await m_cache.insert(fg);
         }
 
         co_await sst->parse_meta_data();

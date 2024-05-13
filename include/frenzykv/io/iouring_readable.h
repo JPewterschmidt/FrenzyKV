@@ -37,6 +37,8 @@ public:
 
     ::std::string_view filename() const noexcept override { return m_filename; }
 
+    koios::task<size_t> dump_to(seq_writable& file) override;
+
 private:
     const options* m_opt;
     seq_readable_context m_fdctx;
