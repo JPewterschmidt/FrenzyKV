@@ -18,7 +18,7 @@ koios::task<::std::shared_ptr<sstable>>
 table_cache::
 find_table(const ::std::string& name)
 {
-    auto shr = co_await m_update_mutex.acquire_shared();
+    auto lk = co_await m_mutex.acquire();
     auto opt = m_tables.get(name);
     co_return opt ? ::std::move(*opt) : nullptr;
 }
@@ -26,7 +26,7 @@ find_table(const ::std::string& name)
 koios::task<::std::shared_ptr<sstable>> table_cache::
 insert(const file_guard& fg)
 {
-    auto uni = co_await m_update_mutex.acquire();
+    auto lk = co_await m_mutex.acquire();
     const auto name = fg.name();
 
     auto mem_file = ::std::make_unique<in_mem_rw>();
@@ -37,6 +37,12 @@ insert(const file_guard& fg)
     auto result = ::std::make_shared<sstable>(*m_deps, m_filter, ::std::move(mem_file));
     m_tables.put(name, result);
     co_return result;   
+}
+
+koios::task<size_t> table_cache::size() const
+{
+    auto lk = co_await m_mutex.acquire();
+    co_return m_tables.size();
 }
     
 } // namespace frenzykv

@@ -45,7 +45,7 @@ db_impl::db_impl(::std::string dbname, const options& opt)
       m_file_center{ m_deps }, 
       m_version_center{ m_file_center },
       m_compactor{ m_deps, m_filter_policy.get() }, 
-      m_cache{ m_deps, m_filter_policy.get(), 16 },
+      m_cache{ m_deps, m_filter_policy.get(), 8 },
       m_mem{ ::std::make_unique<memtable>(m_deps) }, 
       m_gcer{ &m_version_center, &m_file_center }, 
       m_flusher{ m_deps, &m_version_center, m_filter_policy.get(), &m_file_center }
@@ -201,6 +201,7 @@ koios::task<> db_impl::close()
         co_return;
     
     m_inited = false;
+    spdlog::debug("final table cache size = {}", co_await m_cache.size());
 
     // Make sure the background be GC stoped.
     m_bg_gc_stop_src.request_stop();
