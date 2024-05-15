@@ -7,7 +7,7 @@
 
 #include "toolpex/lru_cache.h"
 
-#include "koios/coroutine_shared_mutex.h"
+#include "koios/coroutine_mutex.h"
 
 #include "frenzykv/kvdb_deps.h"
 
@@ -29,12 +29,13 @@ public:
     find_table(const ::std::string& name);
 
     koios::task<::std::shared_ptr<sstable>> insert(const file_guard& fg);
+    koios::task<size_t> size() const;
     
 private:
     const kvdb_deps* m_deps{};
     filter_policy* m_filter{};
     toolpex::lru_cache<::std::string, ::std::shared_ptr<sstable>> m_tables;
-    mutable koios::shared_mutex m_update_mutex;
+    mutable koios::mutex m_mutex;
 };
 
 } // namespace frenzykv

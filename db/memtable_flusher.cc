@@ -20,6 +20,8 @@ namespace frenzykv
 koios::task<> memtable_flusher::
 flush_to_disk(::std::unique_ptr<memtable> table)
 {
+    if (co_await table->empty()) co_return;
+
     // Really important lock, the underlying implmentation guarantee that the FIFO execution order.
     // Which natually form the flushing call into a queue.
     // So this is an easy Consumer/Producer module.
