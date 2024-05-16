@@ -6,9 +6,9 @@
 #include <utility>
 
 #include "toolpex/encode.h"
+#include "toolpex/uuid.h"
 
 #include "frenzykv/db/version_descriptor.h"
-#include "frenzykv/util/uuid.h"
 #include "frenzykv/util/file_center.h"
 
 namespace r = ::std::ranges;
@@ -144,7 +144,7 @@ koios::task<version_delta> get_current_version(const kvdb_deps& deps, file_cente
 
 ::std::string get_version_descriptor_name()
 {
-    return ::std::format(vd_name_pattern, uuid{}.to_string());
+    return ::std::format(vd_name_pattern, toolpex::uuid{}.to_string());
 }
 
 bool is_version_descriptor_name(::std::string_view name)

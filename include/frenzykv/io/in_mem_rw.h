@@ -82,7 +82,7 @@ private:
 private:
     ::std::vector<buffer<>> m_blocks;
     size_t m_block_size;
-    uuid m_id{};
+    toolpex::uuid m_id{};
 };
 
 } // namespace frenzykv
