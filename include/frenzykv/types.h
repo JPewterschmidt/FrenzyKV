@@ -5,7 +5,7 @@
 #include <span>
 #include <string_view>
 
-#include "frenzykv/util/uuid.h"
+#include "toolpex/uuid.h"
 
 namespace frenzykv
 {
@@ -15,7 +15,7 @@ namespace frenzykv
 using sequence_number_t = uint32_t; 
 using bspan = ::std::span<::std::byte>;
 using const_bspan = ::std::span<const ::std::byte>;
-using file_id_t = uuid;
+using file_id_t = toolpex::uuid;
 using level_t = int32_t;
 
 ::std::string_view as_string_view(const_bspan s);
