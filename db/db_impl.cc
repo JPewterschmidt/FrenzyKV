@@ -398,7 +398,7 @@ koios::eager_task<> db_impl::background_compacting_GC(::std::stop_token stp)
         if (stp.stop_requested()) co_return;
         for (level_t l = 1; l < max_level; ++l)
         {
-            co_await may_compact(1);
+            co_await may_compact(l);
         }
         co_await do_GC();
         co_await koios::this_task::sleep_for(100ms);
