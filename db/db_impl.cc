@@ -46,7 +46,7 @@ db_impl::db_impl(::std::string dbname, const options& opt)
       m_file_center{ m_deps }, 
       m_version_center{ m_file_center },
       m_compactor{ m_deps, m_filter_policy.get() }, 
-      m_cache{ m_deps, m_filter_policy.get(), 8 },
+      m_cache{ m_deps, m_filter_policy.get(), 16 },
       m_mem{ ::std::make_unique<memtable>(m_deps) }, 
       m_gcer{ &m_version_center, &m_file_center }, 
       m_flusher{ m_deps, &m_version_center, m_filter_policy.get(), &m_file_center }
@@ -192,7 +192,7 @@ koios::eager_task<> db_impl::may_compact(level_t from)
         auto [fake_file, delta] = co_await m_compactor.compact(::std::move(ver), l);
         co_await fake_file_to_disk(::std::move(fake_file), delta, l + 1);
         co_await update_current_version(::std::move(delta));
-        //break;
+        break;
     }
 }
 
