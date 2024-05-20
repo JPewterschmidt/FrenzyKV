@@ -4,11 +4,11 @@
 #include <memory>
 #include <ranges>
 #include <vector>
-#include <cassert>
 #include <list>
 
 #include "toolpex/ref_count.h"
 #include "toolpex/move_only.h"
+#include "toolpex/assert.h"
 
 #include "koios/task.h"
 #include "koios/task_concepts.h"
@@ -92,7 +92,7 @@ public:
         m_version_desc_name = ::std::move(name);
     }
     
-    ::std::string_view version_desc_name() const noexcept { assert(!m_version_desc_name.empty()); return m_version_desc_name; }
+    ::std::string_view version_desc_name() const noexcept { toolpex_assert(!m_version_desc_name.empty()); return m_version_desc_name; }
     auto approx_ref_count() const noexcept { return m_ref.load(::std::memory_order_relaxed); }
 
 private:
@@ -144,7 +144,7 @@ public:
 
     bool valid() const noexcept { return !!m_rep; }
 
-    const auto& rep() const noexcept { assert(m_rep); return *m_rep; }
+    const auto& rep() const noexcept { toolpex_assert(m_rep); return *m_rep; }
     decltype(auto) version_desc_name() const noexcept { return rep().version_desc_name(); }
 
     const auto& operator*() const noexcept { return rep(); }
@@ -152,7 +152,7 @@ public:
 
     const auto& files() const noexcept
     {
-        assert(m_rep);
+        toolpex_assert(m_rep);
         return m_rep->files();
     }
 
@@ -202,12 +202,12 @@ public:
     mutable_version_guard(koios::unique_lock<koios::shared_mutex> version_center_lock, auto&& ver_rep) noexcept
         : version_guard(ver_rep), m_version_center_lock{ ::std::move(version_center_lock) }
     {
-        assert(m_version_center_lock.is_hold());
+        toolpex_assert(m_version_center_lock.is_hold());
     }
 
     mutable_version_guard& operator+=(const version_delta& delta)
     {
-        assert(valid());
+        toolpex_assert(valid());
         (*m_rep) += delta;
         return *this;
     }

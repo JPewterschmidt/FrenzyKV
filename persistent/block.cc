@@ -1,14 +1,17 @@
+#include <cstring>
+#include <limits>
+#include <iterator>
+#include <array>
+#include <ranges>
+
 #include "crc32c/crc32c.h"
+
+#include "toolpex/assert.h"
+
 #include "frenzykv/persistent/block.h"
 #include "frenzykv/util/comp.h"
 #include "frenzykv/util/serialize_helper.h"
 #include "frenzykv/util/compressor.h"
-#include <cstring>
-#include <limits>
-#include <cassert>
-#include <iterator>
-#include <array>
-#include <ranges>
 
 namespace frenzykv
 {
@@ -165,8 +168,8 @@ wc_t wc_value(const_bspan storage)
     const_bspan storage, 
     ::std::shared_ptr<compressor_policy> compressor)
 {
-    assert(compressor != nullptr);
-    assert(wc_value(storage) == 1);
+    toolpex_assert(compressor != nullptr);
+    toolpex_assert(wc_value(storage) == 1);
     auto compressed_part = undecompressed_block_content(storage);
     ::std::string result(sizeof(btl_t), 0);
     ::std::error_code ec = compressor->decompress_append_to(compressed_part, result);
@@ -186,12 +189,12 @@ bool block_decompress_to(
     bspan& dst, 
     ::std::shared_ptr<compressor_policy> compressor)
 {
-    assert(compressor);
+    toolpex_assert(compressor);
     bspan for_block_content = dst.subspan(sizeof(btl_t));
     const bool result = !compressor->decompress(undecompressed_block_content(storage), for_block_content);
     const size_t decompressed_bc_sz = for_block_content.size();
     const size_t new_btl = sizeof(btl_t) + decompressed_bc_sz + sizeof(wc_t) + sizeof(crc32_t);
-    assert(new_btl <= ::std::numeric_limits<btl_t>::max());
+    toolpex_assert(new_btl <= ::std::numeric_limits<btl_t>::max());
     btl_t new_btl_value = static_cast<btl_t>(new_btl);
     toolpex::encode_big_endian_to(new_btl_value, dst.subspan(0, sizeof(btl_t)));
     dst = dst.subspan(0, new_btl);
@@ -203,7 +206,7 @@ size_t approx_block_decompress_size(
     const_bspan storage, 
     ::std::shared_ptr<compressor_policy> compressor)
 {
-    assert(compressor);
+    toolpex_assert(compressor);
     return compressor->decompressed_minimum_size(
                undecompressed_block_content(storage)) 
         + sizeof(btl_t) + sizeof(crc32_t) + sizeof(wc_t);
@@ -212,7 +215,7 @@ size_t approx_block_decompress_size(
 static btl_t btl_value(const_bspan storage)
 {
     btl_t result = toolpex::decode_big_endian_from<btl_t>(storage);
-    assert(result != 0);
+    toolpex_assert(result != 0);
     return result;
 }
 
@@ -248,7 +251,7 @@ bool block_integrity_check(const_bspan storage)
 bool block_content_was_comprssed(const_bspan storage)
 {
     wc_t wc = toolpex::decode_big_endian_from<wc_t>({ wc_beg_ptr(storage), sizeof(wc_t) });
-    assert(wc == 1 || wc == 0);
+    toolpex_assert(wc == 1 || wc == 0);
     return wc == 1;
 }
 
@@ -299,7 +302,7 @@ parse_result_t block::parse_meta_data()
         m_special_segs.push_back(m_storage.data() + sbso_value(sbso_cur));
         sbso_cur += sizeof(sbso_t);
     }
-    assert(m_special_segs.size() == nsbs);
+    toolpex_assert(m_special_segs.size() == nsbs);
 
     return parse_result_t::success;
 }
@@ -341,7 +344,7 @@ segments_in_single_interval(const ::std::byte* from, const ::std::byte* sentinal
     while (current < sentinal)
     {
         block_segment seg{ { current, static_cast<size_t>(sentinal - current) } };
-        assert(seg.parse_result() == parse_result_t::success);
+        toolpex_assert(seg.parse_result() == parse_result_t::success);
         current += seg.storage().size();
         co_yield ::std::move(seg);
     }
@@ -455,7 +458,7 @@ bool block_builder::add(const kv_entry& kv)
 
 bool block_builder::add(const sequenced_key& key, const kv_user_value& value)
 {
-    assert(m_finish == false);
+    toolpex_assert(m_finish == false);
 
     const size_t interval_sz = m_deps->opt()->max_block_segments_number;
 
@@ -478,7 +481,7 @@ bool block_builder::add(const sequenced_key& key, const kv_user_value& value)
         // Only in the manner, the public prefix compression could give a best performance.
         [[maybe_unused]] auto last_prefix = m_current_seg_builder->public_prefix();
         [[maybe_unused]] auto user_key_rep = key.serialize_user_key_as_string();
-        assert(memcmp_comparator{}(user_key_rep, last_prefix) == ::std::strong_ordering::greater);
+        toolpex_assert(memcmp_comparator{}(user_key_rep, last_prefix) == ::std::strong_ordering::greater);
         
         ++m_seg_count;
         if ((m_seg_count + 1) % interval_sz == 0)
@@ -488,10 +491,10 @@ bool block_builder::add(const sequenced_key& key, const kv_user_value& value)
             // Every block segment should has a terminator
             // which compitable to RIL(See specification at the top of this file)
             // filled with zero. Means there're no more one.
-            assert(m_storage[m_storage.size() - 1] == 0);
-            assert(m_storage[m_storage.size() - 2] == 0);
-            assert(m_storage[m_storage.size() - 3] == 0);
-            assert(m_storage[m_storage.size() - 4] == 0);
+            toolpex_assert(m_storage[m_storage.size() - 1] == 0);
+            toolpex_assert(m_storage[m_storage.size() - 2] == 0);
+            toolpex_assert(m_storage[m_storage.size() - 3] == 0);
+            toolpex_assert(m_storage[m_storage.size() - 4] == 0);
         }
 
         // The block_segment_builder won't allocate any space, just simply append new stuff to `m_storage`
@@ -499,7 +502,7 @@ bool block_builder::add(const sequenced_key& key, const kv_user_value& value)
         m_current_seg_builder = ::std::make_unique<block_segment_builder>(m_storage, key.serialize_user_key_as_string());
 
         [[maybe_unused]] bool add_result = m_current_seg_builder->add(key, value);
-        assert(add_result);
+        toolpex_assert(add_result);
     }
     // Do not add something like 
     // `m_current_seg_builder->finish()` here
@@ -517,13 +520,13 @@ static ::std::span<char> block_content(::std::string& storage)
 
 ::std::string block_builder::finish()
 {
-    assert(m_finish == false);
+    toolpex_assert(m_finish == false);
     m_finish = true;
-    assert(!empty());
-    assert(m_seg_count);
+    toolpex_assert(!empty());
+    toolpex_assert(m_seg_count);
 
     // Finish the last block segment builder.
-    assert(m_current_seg_builder);
+    toolpex_assert(m_current_seg_builder);
     m_current_seg_builder->finish();
 
     // If the last sbso point to exactly the end of data area, then delete it.
@@ -580,7 +583,7 @@ static ::std::span<char> block_content(::std::string& storage)
     toolpex::append_encode_big_endian_to(crc, m_storage);
 
     // Serialize BTL
-    assert(m_storage.size() <= ::std::numeric_limits<btl_t>::max());
+    toolpex_assert(m_storage.size() <= ::std::numeric_limits<btl_t>::max());
 
     btl_t btl = static_cast<btl_t>(m_storage.size());
     toolpex::encode_big_endian_to(btl, { m_storage.data(), sizeof(btl) });

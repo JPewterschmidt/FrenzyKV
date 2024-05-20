@@ -1,13 +1,16 @@
-#include "frenzykv/db/kv_entry.h"
-#include "frenzykv/util/serialize_helper.h"
-#include "toolpex/exceptions.h"
-#include "koios/task.h"
 #include <limits>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <cassert>
 #include <span>
+
+#include "toolpex/exceptions.h"
+#include "toolpex/assert.h"
+
+#include "koios/task.h"
+
+#include "frenzykv/db/kv_entry.h"
+#include "frenzykv/util/serialize_helper.h"
 
 template class koios::_task<frenzykv::kv_entry, koios::discardable, koios::lazy_aw>::_type;
 
@@ -32,7 +35,7 @@ using namespace toolpex;
 sequenced_key::sequenced_key(const_bspan serialized_seq_key)
 {
     if (serialized_seq_key.empty()) return;
-    assert(serialized_seq_key.size() > user_key_length_bytes_size + seq_bytes_size);
+    toolpex_assert(serialized_seq_key.size() > user_key_length_bytes_size + seq_bytes_size);
 
     uint16_t userkey_len = decode_big_endian_from<uint16_t>(serialized_seq_key.subspan(0, sizeof(uint16_t)));
 

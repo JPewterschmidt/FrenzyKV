@@ -1,12 +1,12 @@
 #include <ranges>
 #include <format>
-#include <cassert>
 #include <string>
 #include <iterator>
 #include <utility>
 
 #include "toolpex/encode.h"
 #include "toolpex/uuid.h"
+#include "toolpex/assert.h"
 
 #include "frenzykv/db/version_descriptor.h"
 #include "frenzykv/util/file_center.h"
@@ -37,14 +37,14 @@ append_version_descriptor(const ::std::vector<file_guard>& filenames, seq_writab
 koios::task<bool> 
 write_version_descriptor(const version_rep& version, seq_writable* file)
 {
-    assert(file->file_size() == 0);
+    toolpex_assert(file->file_size() == 0);
     return append_version_descriptor(version, file);
 }
 
 koios::task<bool> 
 write_version_descriptor(const ::std::vector<::std::string>& filenames, seq_writable* file)
 {
-    assert(file->file_size() == 0);
+    toolpex_assert(file->file_size() == 0);
     return append_version_descriptor(filenames, file);
 }
 
@@ -111,7 +111,7 @@ koios::task<::std::optional<::std::string>> current_descriptor_name(const kvdb_d
     ::std::string name(vd_name_length, 0);
     auto sp = ::std::as_writable_bytes(::std::span{name.data(), name.size()}.subspan(0, 52));
     const size_t readed = co_await file->read(sp);
-    assert(readed == vd_name_length || readed == 0);
+    toolpex_assert(readed == vd_name_length || readed == 0);
     if (readed == 0)
     {
         co_return {};
@@ -129,7 +129,7 @@ koios::task<version_delta> get_version(const kvdb_deps& deps, ::std::string_view
     version_delta result;
     for (const auto& desc_name : name_vec)
     {
-        assert(is_sst_name(desc_name));
+        toolpex_assert(is_sst_name(desc_name));
         result.add_new_file(co_await fc->get_file(desc_name));
     }
     co_return result;

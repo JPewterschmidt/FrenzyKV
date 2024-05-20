@@ -1,7 +1,9 @@
+#include <utility>
+
+#include "toolpex/assert.h"
+
 #include "frenzykv/db/memtable.h"
 #include "frenzykv/error_category.h"
-#include <utility>
-#include <cassert>
 
 namespace frenzykv
 {
@@ -64,13 +66,13 @@ koios::task<size_t> memtable::count() const
 
 koios::task<size_t> memtable::bound_size_bytes() const
 {
-    assert(m_bound_size_bytes);
+    toolpex_assert(m_bound_size_bytes);
     co_return bound_size_bytes_impl();
 }
 
 koios::task<bool> memtable::full() const
 {
-    assert(m_bound_size_bytes);
+    toolpex_assert(m_bound_size_bytes);
     co_return full_impl();
 }
 

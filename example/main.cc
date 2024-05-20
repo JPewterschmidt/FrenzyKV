@@ -28,18 +28,20 @@ koios::eager_task<> db_test()
     auto dbimpl = ::std::make_unique<db_impl>("test1", get_global_options());
     db_interface* db = dbimpl.get();
 
-    const size_t scale = 500000;
+    const size_t scale = 100000;
 
     co_await db->init();
 
     auto t = toolpex::tic();
+
+    snapshot s = co_await db->get_snapshot();
 
     // #1
     //spdlog::debug("db_test: start insert");
     //for (size_t i{}; i < scale; ++i)
     //{
     //    auto k = ::std::to_string(i);
-    //    co_await db->insert(k, "test value abcdefg abcdefg");
+    //    co_await db->insert(k, "test value abcdefg abcdefg 3");
     //}
     //spdlog::debug("db_test: insert complete");
 
@@ -74,10 +76,10 @@ koios::eager_task<> db_test()
         else ::std::cout << "not found" << ::std::endl;
     }
 
-    for (size_t i{}; i < scale; i += 10000)
+    for (size_t i{}; i < scale; i += 1000)
     {
         auto k = ::std::to_string(i);
-        auto opt = co_await db->get(k);
+        auto opt = co_await db->get(k, { .snap = s });
         if (opt) ::std::cout << opt->to_string_debug() << ::std::endl;
         else ::std::cout << "not found" << ::std::endl;
     }

@@ -1,7 +1,8 @@
 #include <vector>
 #include <ranges>
-#include <cassert>
 #include <stdexcept>
+
+#include "toolpex/assert.h"
 
 #include "koios/task.h"
 
@@ -83,7 +84,7 @@ static size_t append_to_dest(auto& dest, const auto& src) noexcept
     const size_t write_size = ::std::min(dest.size_bytes(), src.size_bytes());
 
     ::std::memcpy(dest.data(), src.data(), write_size);
-    assert(write_size <= dest.size_bytes());
+    toolpex_assert(write_size <= dest.size_bytes());
     dest = dest.subspan(write_size);
 
     return write_size;
@@ -138,7 +139,7 @@ dump_to(seq_writable& file)
         if (cur_wrote == 0) co_return 0;
         wrote += cur_wrote;
     }
-    assert(wrote == file_size());
+    toolpex_assert(wrote == file_size());
     co_return wrote;
 }
 

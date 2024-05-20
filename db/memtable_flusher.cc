@@ -1,5 +1,6 @@
-#include <cassert>
 #include <ranges>
+
+#include "toolpex/assert.h"
 
 #include "frenzykv/env.h"
 
@@ -64,7 +65,7 @@ flush_to_disk(::std::unique_ptr<memtable> table)
                 m_filter, file.get() 
             };
             [[maybe_unused]] bool add_result = co_await builder.add(k, v);
-            assert(add_result);
+            toolpex_assert(add_result);
         }
     }
     co_await finish_current_buiding();

@@ -1,9 +1,10 @@
 #include <list>
 #include <ranges>
-#include <cassert>
 #include <vector>
 #include <ranges>
 #include <algorithm>
+
+#include "toolpex/assert.h"
 
 #include "frenzykv/persistent/compaction.h"
 #include "frenzykv/persistent/compaction_policy.h"
@@ -37,8 +38,8 @@ compactor::compact_tombstones(version_guard vg, level_t l) const
         ::std::erase_if(entries, is_tomb_stone<kv_entry>);
         auto filep = ::std::make_unique<in_mem_rw>();
         sstable_builder builder{ *m_deps, size_bound, m_filter_policy, filep.get() };
-        [[maybe_unused]] bool add_ret = co_await builder.add(entries); assert(add_ret);       
-        [[maybe_unused]] bool finish_ret = co_await builder.finish(); assert(finish_ret);
+        [[maybe_unused]] bool add_ret = co_await builder.add(entries); toolpex_assert(add_ret);       
+        [[maybe_unused]] bool finish_ret = co_await builder.finish(); toolpex_assert(finish_ret);
 
         result.emplace_back(::std::move(filep));
         delta.add_compacted_file(fg);
@@ -84,7 +85,7 @@ merge_two_tables(sstable& lhs, sstable& rhs, level_t l) const
 {
     [[maybe_unused]] bool ok1 = co_await lhs.parse_meta_data();
     [[maybe_unused]] bool ok2 = co_await rhs.parse_meta_data();
-    assert(ok1 && ok2);
+    toolpex_assert(ok1 && ok2);
 
     ::std::vector<::std::unique_ptr<in_mem_rw>> result;
 
@@ -99,7 +100,7 @@ merge_two_tables(sstable& lhs, sstable& rhs, level_t l) const
                  ::std::move_iterator{ rhs_entries.begin() }, ::std::move_iterator{ rhs_entries.end() }, 
                  ::std::front_inserter(merged));
 
-    assert(::std::is_sorted(merged.rbegin(), merged.rend()));
+    toolpex_assert(::std::is_sorted(merged.rbegin(), merged.rend()));
 
     merged.erase(::std::unique(merged.begin(), merged.end(), 
                     [](const auto& lhs, const auto& rhs) { 
@@ -118,7 +119,7 @@ merge_two_tables(sstable& lhs, sstable& rhs, level_t l) const
         for (const auto& entry : merged | rv::reverse)
         {
             [[maybe_unused]] bool add_ret = co_await builder.add(entry);
-            assert(add_ret);
+            toolpex_assert(add_ret);
         }
         co_await builder.finish();
         co_return file;
