@@ -1,4 +1,3 @@
-#include <cassert>
 #include <chrono>
 #include <ranges>
 #include <list>
@@ -10,6 +9,7 @@
 #include <utility>
 
 #include "toolpex/skip_list.h"
+#include "toolpex/assert.h"
 
 #include "koios/iouring_awaitables.h"
 #include "koios/this_task.h"
@@ -91,7 +91,7 @@ koios::task<bool> db_impl::init()
 
     auto lk = co_await m_mem_mutex.acquire();
     [[maybe_unused]] auto ec = co_await m_mem->insert(::std::move(batch));
-    //assert(ec.value() == 0);
+    //toolpex_assert(ec.value() == 0);
     m_snapshot_center.set_init_leatest_used_sequence_number(max_seq_from_log);
 
     auto memp = ::std::exchange(m_mem, ::std::make_unique<memtable>(m_deps));
@@ -155,7 +155,7 @@ koios::task<> db_impl::update_current_version(version_delta delta)
     const auto new_desc_name = cur_v.version_desc_name();
     auto new_desc = m_deps.env()->get_seq_writable(version_path()/new_desc_name);
     [[maybe_unused]] bool write_ret = co_await write_version_descriptor(*cur_v, new_desc.get());
-    assert(write_ret);
+    toolpex_assert(write_ret);
 
     // Set current version
     co_await set_current_version_file(m_deps, new_desc_name);
@@ -192,7 +192,7 @@ koios::eager_task<> db_impl::may_compact(level_t from)
         auto [fake_file, delta] = co_await m_compactor.compact(::std::move(ver), l);
         co_await fake_file_to_disk(::std::move(fake_file), delta, l + 1);
         co_await update_current_version(::std::move(delta));
-        break;
+        //break;
     }
 }
 
@@ -218,7 +218,7 @@ koios::task<> db_impl::close()
         m_deps, 
         m_snapshot_center.leatest_used_sequence_number()
     );
-    assert(write_ret);
+    toolpex_assert(write_ret);
     co_await delete_all_prewrite_log();
     co_await m_gcer.do_GC();
     

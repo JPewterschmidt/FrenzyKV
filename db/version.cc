@@ -1,5 +1,4 @@
 #include <iterator>
-#include <cassert>
 
 #include "frenzykv/db/version.h"
 #include "frenzykv/db/version_descriptor.h"
@@ -71,7 +70,7 @@ koios::eager_task<> version_center::load_current_version()
 {
     // Load from file, actually add a new version, acquire unique
     auto lk = co_await m_modify_lock.acquire();
-    assert(m_versions.empty());
+    toolpex_assert(m_versions.empty());
 
     const auto& deps = m_file_center->deps();
 

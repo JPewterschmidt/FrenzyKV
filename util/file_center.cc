@@ -1,8 +1,9 @@
 #include <filesystem>
-#include <cassert>
 #include <ranges>
 #include <functional>
 #include <memory>
+
+#include "toolpex/assert.h"
 
 #include "koios/iouring_awaitables.h"
 
@@ -19,7 +20,7 @@ using namespace ::std::string_view_literals;
 [[maybe_unused]]
 static bool operator<(const ::std::unique_ptr<frenzykv::file_rep>& lhs, const ::std::unique_ptr<frenzykv::file_rep>& rhs) noexcept
 {
-    assert(!!lhs && !!rhs);
+    toolpex_assert(!!lhs && !!rhs);
     return *lhs < *rhs;
 }
 
@@ -77,7 +78,7 @@ koios::eager_task<> file_center::load_files()
             continue;
         }
         auto name = dir_entry.path().filename().string();
-        assert(is_sst_name(name));
+        toolpex_assert(is_sst_name(name));
 
         auto level_and_id_opt = retrive_level_and_id_from_sst_name(name);
         auto& sp = m_reps.emplace_back(::std::make_unique<file_rep>(level_and_id_opt->first, level_and_id_opt->second, name));
@@ -95,7 +96,7 @@ file_center::get_file_guards(const ::std::vector<::std::string>& names)
 
     for (const auto& name : names)
     {
-        assert(is_sst_name(name));
+        toolpex_assert(is_sst_name(name));
         result.emplace_back(m_name_rep.at(name));
     }
 
@@ -104,7 +105,7 @@ file_center::get_file_guards(const ::std::vector<::std::string>& names)
 
 koios::task<file_guard> file_center::get_file(const ::std::string& name)
 {
-    assert(is_sst_name(name));
+    toolpex_assert(is_sst_name(name));
     auto lk = co_await m_mutex.acquire();
     if (m_name_rep.contains(name))
     {
@@ -117,7 +118,7 @@ koios::task<file_guard> file_center::get_file(const ::std::string& name)
         )
     );
     auto insert_ret = m_name_rep.insert({ name, sp.get() });
-    assert(insert_ret.second); // TODO May triggered
+    toolpex_assert(insert_ret.second); // TODO May triggered
     co_return *((*(insert_ret.first)).second);
 }
 
@@ -125,7 +126,7 @@ koios::task<> file_center::GC()
 {
     auto lk = co_await m_mutex.acquire();
     auto removing = r::partition(m_reps, [](auto&& rep){ return rep->approx_ref_count() != 0; });
-    auto names_removing = removing | rv::transform([](auto&& r) { assert(r->approx_ref_count() == 0); return r->name(); });
+    auto names_removing = removing | rv::transform([](auto&& r) { toolpex_assert(r->approx_ref_count() == 0); return r->name(); });
     for (auto name : names_removing)
     {
         m_name_rep.erase(::std::string(name));

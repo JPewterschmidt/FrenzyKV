@@ -1,10 +1,11 @@
 #include <string>
 #include <iterator>
 #include <ranges>
-#include <cassert>
 #include <list>
 
 #include "toolpex/exceptions.h"
+#include "toolpex/assert.h"
+
 #include "frenzykv/persistent/sstable.h"
 #include "frenzykv/persistent/sstable_builder.h"
 #include "frenzykv/util/comp.h"
@@ -24,8 +25,8 @@ sstable::sstable(const kvdb_deps& deps,
       m_compressor{ get_compressor(*m_deps->opt(), m_deps->opt()->compressor_name) }, 
       m_hash_value{ ::std::hash<::std::string_view>{}(m_file->filename()) }
 {
-    assert(m_compressor);
-    assert(m_filter);
+    toolpex_assert(m_compressor);
+    toolpex_assert(m_filter);
 }
 
 sstable::sstable(const kvdb_deps& deps, 
@@ -38,13 +39,13 @@ sstable::sstable(const kvdb_deps& deps,
       m_compressor{ get_compressor(*m_deps->opt(), m_deps->opt()->compressor_name) },
       m_hash_value{ ::std::hash<::std::string_view>{}(m_file->filename()) }
 {
-    assert(m_compressor);
-    assert(m_filter);
+    toolpex_assert(m_compressor);
+    toolpex_assert(m_filter);
 }
 
 bool sstable::empty() const noexcept
 {
-    assert(m_meta_data_parsed);
+    toolpex_assert(m_meta_data_parsed);
     return m_file == nullptr;
 }
 
@@ -77,9 +78,9 @@ koios::task<bool> sstable::parse_meta_data()
     auto sp = ::std::as_bytes(::std::span{buffer});
     co_await m_file->read({ buffer.data(), buffer.size() }, mbo);
 
-    assert(block_integrity_check(sp));
+    toolpex_assert(block_integrity_check(sp));
     block meta_block{ sp };
-    assert(meta_block.special_segments_count() == 1);
+    toolpex_assert(meta_block.special_segments_count() == 1);
     for (block_segment seg : meta_block.segments_in_single_interval())
     {
         sequenced_key filter_key{ 0, "bloom_filter" };
@@ -108,9 +109,9 @@ koios::task<bool> sstable::parse_meta_data()
         }
     }
 
-    assert(m_filter_rep.size() != 0);
-    assert(m_last_uk.size() != 0);
-    assert(m_first_uk.size() != 0);
+    toolpex_assert(m_filter_rep.size() != 0);
+    toolpex_assert(m_last_uk.size() != 0);
+    toolpex_assert(m_first_uk.size() != 0);
     if (!co_await generate_block_offsets(mbo)) 
         co_return false;
 
@@ -149,13 +150,13 @@ koios::task<::std::optional<block_with_storage>>
 sstable::get_block(uintmax_t offset, btl_t btl)
 {
     [[maybe_unused]] bool parse_ret = co_await parse_meta_data();
-    assert(parse_ret);
+    toolpex_assert(parse_ret);
     ::std::optional<block_with_storage> result{};
 
     buffer<> buff{btl + 10}; // extra bytes to avoid unknow reason buffer overflow.
     
     size_t readed = co_await m_file->read(buff.writable_span().subspan(0, btl), offset);
-    assert(readed == btl);
+    toolpex_assert(readed == btl);
     buff.commit(readed);
 
     const_bspan bs = buff.valid_span();
@@ -186,7 +187,7 @@ sstable::
 get_segment(const sequenced_key& user_key_ignore_seq)
 {
     [[maybe_unused]] bool parse_ret = co_await parse_meta_data();
-    assert(parse_ret);
+    toolpex_assert(parse_ret);
 
     auto user_key_rep = user_key_ignore_seq.serialize_user_key_as_string();
     auto user_key_rep_b = ::std::as_bytes(::std::span{ user_key_rep });
@@ -204,8 +205,8 @@ get_segment(const sequenced_key& user_key_ignore_seq)
         auto blk0_opt = co_await blk0aw;
         auto blk1_opt = co_await blk1aw;
 
-        assert(blk0_opt.has_value());
-        assert(blk1_opt.has_value());
+        toolpex_assert(blk0_opt.has_value());
+        toolpex_assert(blk1_opt.has_value());
 
         // Shot!
         if (blk0_opt->b.larger_equal_than_this_first_segment_public_prefix(user_key_rep_b)
@@ -238,7 +239,7 @@ sstable::
 get_kv_entry(const sequenced_key& user_key)
 {
     [[maybe_unused]] bool parse_ret = co_await parse_meta_data();
-    assert(parse_ret);
+    toolpex_assert(parse_ret);
 
     auto seg_opt = co_await get_segment(user_key);
     if (!seg_opt) co_return {};
@@ -255,7 +256,7 @@ get_kv_entry(const sequenced_key& user_key)
 
 sequenced_key sstable::last_user_key_without_seq() const noexcept
 {
-    assert(m_meta_data_parsed);
+    toolpex_assert(m_meta_data_parsed);
 
     ::std::string temp = m_last_uk;
     temp.resize(temp.size() + 8);
@@ -266,7 +267,7 @@ sequenced_key sstable::last_user_key_without_seq() const noexcept
 
 sequenced_key sstable::first_user_key_without_seq() const noexcept
 {
-    assert(m_meta_data_parsed);
+    toolpex_assert(m_meta_data_parsed);
 
     ::std::string temp = m_first_uk;
     temp.resize(temp.size() + 8);
@@ -282,7 +283,7 @@ bool sstable::overlapped(const sstable& other) const noexcept
 
 bool sstable::disjoint(const sstable& other) const noexcept
 {
-    assert(m_meta_data_parsed);
+    toolpex_assert(m_meta_data_parsed);
 
     /*
      *        A               B
@@ -304,7 +305,7 @@ bool sstable::disjoint(const sstable& other) const noexcept
 sstable::
 block_offsets() const noexcept
 {
-    assert(m_meta_data_parsed);
+    toolpex_assert(m_meta_data_parsed);
 
     for (auto p : m_block_offsets)
         co_yield p;
@@ -318,13 +319,13 @@ get_entries_from_sstable(sstable& table)
     for (auto blk_off : table.block_offsets())
     {
         auto blk_opt = co_await table.get_block(blk_off);
-        assert(blk_opt.has_value());
+        toolpex_assert(blk_opt.has_value());
         for (auto kv : blk_opt->b.entries())
         {
             result.push_back(::std::move(kv));
         }
     }
-    assert(::std::is_sorted(result.begin(), result.end()));
+    toolpex_assert(::std::is_sorted(result.begin(), result.end()));
 
     co_return result;
 }

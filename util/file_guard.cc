@@ -1,5 +1,4 @@
-#include <cassert>
-
+#include "toolpex/assert.h"
 #include "koios/this_task.h"
 
 #include "frenzykv/env.h"
@@ -23,7 +22,7 @@ file_rep::open_read(env* e) const
     {
         co_await koios::this_task::yield();
     }
-    assert(ret->file_size() != 0);
+    toolpex_assert(ret->file_size() != 0);
     co_return ret;
 }
 

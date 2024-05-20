@@ -4,8 +4,9 @@
 #include <string>
 #include <memory>
 #include <ranges>
-#include <cassert>
 #include <algorithm>
+
+#include "toolpex/assert.h"
 
 #include "frenzykv/kvdb_deps.h"
 #include "frenzykv/db/filter.h"
@@ -51,7 +52,7 @@ public:
                     filter_policy* filter, 
                     seq_writable* file);
 
-    ~sstable_builder() noexcept { assert(m_finish); }
+    ~sstable_builder() noexcept { toolpex_assert(m_finish); }
 
     sstable_builder(sstable_builder&& other) noexcept;
     sstable_builder& operator=(sstable_builder&& other) noexcept;
@@ -62,7 +63,7 @@ public:
     koios::task<bool> add(::std::ranges::range auto const& entries)
     {
         bool result{true};
-        assert(::std::is_sorted(entries.begin(), entries.end()));
+        toolpex_assert(::std::is_sorted(entries.begin(), entries.end()));
         for (const auto& kv : entries)
         {
             result = co_await add(kv);

@@ -1,10 +1,10 @@
 #ifndef FRENZYKV_UTIL_FILE_GUARD_H
 #define FRENZYKV_UTIL_FILE_GUARD_H
 
-#include <cassert>
 #include <filesystem>
 
 #include "toolpex/ref_count.h"
+#include "toolpex/assert.h"
 
 #include "koios/task.h"
 
@@ -33,13 +33,13 @@ public:
           m_fileid{ ::std::move(other.m_fileid) }, 
           m_name{ ::std::move(other.m_name) }
     {
-        assert(other.approx_ref_count() == 0);
+        toolpex_assert(other.approx_ref_count() == 0);
     }
 
     file_rep& operator=(file_rep&& other) noexcept
     {
-        assert(approx_ref_count() == 0);
-        assert(other.approx_ref_count() == 0);
+        toolpex_assert(approx_ref_count() == 0);
+        toolpex_assert(other.approx_ref_count() == 0);
 
         m_level = other.m_level;
         m_fileid = ::std::move(other.m_fileid);
@@ -67,7 +67,7 @@ public:
     bool operator==(const file_rep& other) const noexcept
     {
         if (this == &other) return true;
-        assert(file_id() != other.file_id());
+        toolpex_assert(file_id() != other.file_id());
         return false;
     }
 
@@ -128,27 +128,27 @@ public:
 
     file_id_t file_id() const noexcept 
     {
-        assert(m_rep);
+        toolpex_assert(m_rep);
         return m_rep->file_id();
     }
 
     level_t level() const noexcept 
     {
-        assert(m_rep);
+        toolpex_assert(m_rep);
         return m_rep->level();
     }
 
-    auto& rep() noexcept { assert(m_rep); return *m_rep; }
-    const auto& rep() const noexcept { assert(m_rep); return *m_rep; }
-    const ::std::string& name() const noexcept { assert(m_rep); return m_rep->name(); }
+    auto& rep() noexcept { toolpex_assert(m_rep); return *m_rep; }
+    const auto& rep() const noexcept { toolpex_assert(m_rep); return *m_rep; }
+    const ::std::string& name() const noexcept { toolpex_assert(m_rep); return m_rep->name(); }
 
     bool valid() const noexcept { return !!m_rep; }
     operator file_id_t() const noexcept { return file_id(); }
     operator level_t() const noexcept { return level(); }
     operator ::std::string_view() const { return name(); }
     operator ::std::filesystem::path() const { return name(); }
-    auto last_write_time() const { assert(valid()); return m_rep->last_write_time(); }
-    auto file_size() const { assert(valid()); return m_rep->file_size(); }
+    auto last_write_time() const { toolpex_assert(valid()); return m_rep->last_write_time(); }
+    auto file_size() const { toolpex_assert(valid()); return m_rep->file_size(); }
 
     bool operator==(const file_guard& other) const noexcept
     {
@@ -167,13 +167,13 @@ public:
 
     koios::task<::std::unique_ptr<random_readable>> open_read(env* e) const
     {
-        assert(m_rep);
+        toolpex_assert(m_rep);
         return m_rep->open_read(e);
     }
 
     koios::task<::std::unique_ptr<seq_writable>> open_write(env* e) const
     {
-        assert(m_rep);
+        toolpex_assert(m_rep);
         return m_rep->open_write(e);
     }
 

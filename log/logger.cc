@@ -1,8 +1,8 @@
 #include <format>
-#include <cassert>
 #include <filesystem>
 
 #include "toolpex/functional.h"
+#include "toolpex/assert.h"
 
 #include "koios/iouring_awaitables.h"
 
@@ -52,7 +52,7 @@ koios::task<> logger::truncate_file() noexcept
 {
     auto lk = co_await m_mutex.acquire();
     m_log_file = m_deps->env()->get_truncate_seq_writable(prewrite_log_path()/prewrite_log_name());
-    assert(!!m_log_file);
+    toolpex_assert(!!m_log_file);
     co_return;
 }
 
@@ -89,11 +89,11 @@ recover(env* e) noexcept
     }
 
     auto filep = e->get_seq_readable(prewrite_log_path()/prewrite_log_name());
-    assert(!!filep);
+    toolpex_assert(!!filep);
     const uintmax_t filesz = filep->file_size();
     buffer<> buf(filesz);
     const size_t readed = co_await filep->read(buf.writable_span());
-    assert(readed == filesz);
+    toolpex_assert(readed == filesz);
     buf.commit(readed);
 
     sequence_number_t max_seq{};

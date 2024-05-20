@@ -3,13 +3,13 @@
 
 #include <sys/file.h>
 #include <optional>
-#include <cassert>
+
+#include "toolpex/unique_posix_fd.h"
+#include "toolpex/assert.h"
 
 #include "koios/exceptions.h"
 #include "koios/async_awaiting_hub.h"
 #include "koios/task_on_the_fly.h"
-
-#include "toolpex/unique_posix_fd.h"
 
 namespace frenzykv
 {
@@ -72,7 +72,7 @@ public:
     { 
         if (!m_hold || !m_fd) return;
         [[maybe_unused]] int ret = ::flock(*m_fd, LOCK_UN | LOCK_NB); 
-        assert(ret == 0);
+        toolpex_assert(ret == 0);
         m_hold = false; 
         notify_hub();
     }

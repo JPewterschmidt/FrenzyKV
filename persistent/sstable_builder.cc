@@ -1,4 +1,4 @@
-#include <cassert>
+#include "toolpex/assert.h"
 
 #include "frenzykv/persistent/sstable_builder.h"
 #include "frenzykv/util/serialize_helper.h"
@@ -24,7 +24,7 @@ sstable_builder::sstable_builder(
       m_block_builder{ *m_deps, get_compressor(*m_deps->opt(), "zstd") },
       m_file{ file }
 {
-    assert(m_size_limit != 0);
+    toolpex_assert(m_size_limit != 0);
 }
 
 sstable_builder::sstable_builder(sstable_builder&& other) noexcept
@@ -58,8 +58,8 @@ void sstable_builder::swap(sstable_builder&& other)
 koios::task<bool> sstable_builder::add(
     const sequenced_key& key, const kv_user_value& value)
 {
-    assert(!was_finish());
-    assert(m_filter != nullptr);
+    toolpex_assert(!was_finish());
+    toolpex_assert(m_filter != nullptr);
     if (reach_the_size_limit())
     {
         co_return false;
@@ -125,7 +125,7 @@ bool sstable_builder::empty() const noexcept
 
 koios::task<bool> sstable_builder::finish()
 {
-    assert(!was_finish());
+    toolpex_assert(!was_finish());
     m_finish = true;
 
     if (!m_block_builder.was_finish())
@@ -139,9 +139,9 @@ koios::task<bool> sstable_builder::finish()
         co_return true;
     }
 
-    assert(!m_last_uk.empty());
-    assert(!m_first_uk.empty());
-    assert(!m_filter_rep.empty());
+    toolpex_assert(!m_last_uk.empty());
+    toolpex_assert(!m_first_uk.empty());
+    toolpex_assert(!m_filter_rep.empty());
     
     // Build meta block
     block_builder meta_builder{ *m_deps };

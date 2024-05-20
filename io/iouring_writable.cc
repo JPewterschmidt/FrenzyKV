@@ -4,7 +4,6 @@
 #include "toolpex/functional.h"
 #include "koios/iouring_awaitables.h"
 #include <fcntl.h>
-#include <cassert>
 
 namespace frenzykv
 {
