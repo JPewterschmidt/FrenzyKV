@@ -191,6 +191,11 @@ public:
         };
     }
 
+    static bool have_same_level(const file_guard& lhs, const file_guard& rhs) noexcept
+    {
+        return lhs.level() == rhs.level();
+    }
+
 private:
     void release() noexcept
     {

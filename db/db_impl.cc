@@ -7,6 +7,7 @@
 #include <iterator>
 #include <filesystem>
 #include <memory>
+#include <utility>
 
 #include "toolpex/skip_list.h"
 
@@ -294,6 +295,18 @@ db_impl::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noexc
     co_return {};
 }
 
+static koios::task<::std::optional<kv_entry>>
+find_from_potiential_results(auto& potiential_results, const auto& key)
+{
+    ::std::optional<kv_entry> result;
+    auto iter = potiential_results.find_last_less_equal(key);
+    if (iter != potiential_results.end())
+    {
+        co_return result.emplace(::std::move(iter->first), ::std::move(iter->second));
+    }
+    co_return result;
+}
+
 koios::task<::std::optional<kv_entry>> 
 db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
 {
@@ -303,36 +316,17 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
     r::sort(files);
 
     toolpex::skip_list<sequenced_key, kv_user_value> potiential_results(16);
-
-    auto find_from_potiential_results = 
-    [&potiential_results, &key] mutable -> koios::task<::std::optional<kv_entry>> { 
-        ::std::optional<kv_entry> result;
-        auto iter = potiential_results.find_last_less_equal(key);
-        if (iter != potiential_results.end())
-        {
-            co_return result.emplace(::std::move(iter->first), ::std::move(iter->second));
-        }
-        co_return result;
-    };
-
-    level_t cur_level{};
     auto env = m_deps.env();
-    for (auto fg : files)
-    {
-        if (level_t l = fg.level(); l != cur_level) 
-        {
-            spdlog::debug("db_impl::find_from_ssts() one level through, getting to next level{}", l);
-            cur_level = l;
-            if (auto ret = co_await find_from_potiential_results(); ret.has_value())
-                co_return ret;
-            potiential_results.clear();
-        }
 
+    auto file_to_async_potiential_ret = 
+    [&key, &env, &snap, this] (file_guard fg) mutable
+        -> koios::task<::std::optional<::std::pair<sequenced_key, kv_user_value>>>
+    {
         ::std::shared_ptr<sstable> sst = co_await m_cache.find_table(fg.name());
         if (!sst)
         {
             auto filep = co_await fg.open_read(env.get());
-            if (filep->file_size() == 0) continue;
+            if (filep->file_size() == 0) co_return {};
             sst = co_await m_cache.insert(fg);
         }
 
@@ -341,15 +335,39 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
         if (!entry_opt.has_value() 
             || (snap.valid() && entry_opt->key().sequence_number() > snap.sequence_number()))
         {
-            continue;
+            co_return {};
         }
-        potiential_results.insert(
+
+        co_return ::std::pair{
             ::std::move(entry_opt->key()), 
             ::std::move(entry_opt->value())
-        );
+        };
+    };
+
+    for (auto files_same_level : files | rv::chunk_by(file_guard::have_same_level))
+    {
+        ::std::vector<koios::future<::std::optional<::std::pair<sequenced_key, kv_user_value>>>> futvec;
+        for (auto fut : files_same_level 
+                      | rv::transform(file_to_async_potiential_ret) 
+                      | rv::transform([](auto task){ return task.run_and_get_future(); })
+                      )
+        {
+            futvec.emplace_back(::std::move(fut));
+        }
+
+        for (auto& fut : futvec)
+        {
+            auto opt = co_await fut.get_async();
+            if (opt) potiential_results.insert(::std::move(opt.value()));
+        }
+
+        spdlog::debug("db_impl::find_from_ssts() one level through, getting to next level");
+        if (auto ret = co_await find_from_potiential_results(potiential_results, key); ret.has_value())
+            co_return ret;
+        potiential_results.clear();
     }
 
-    co_return co_await find_from_potiential_results();
+    co_return {};
 }
 
 koios::task<sequenced_key> 
