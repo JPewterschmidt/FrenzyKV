@@ -344,6 +344,7 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
         };
     };
 
+    // Find record from each level *concurrently*
     for (auto files_same_level : files | rv::chunk_by(file_guard::have_same_level))
     {
         ::std::vector<koios::future<::std::optional<::std::pair<sequenced_key, kv_user_value>>>> futvec;
