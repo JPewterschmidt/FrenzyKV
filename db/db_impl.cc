@@ -322,13 +322,8 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
     [&key, &env, &snap, this] (file_guard fg) mutable
         -> koios::task<::std::optional<::std::pair<sequenced_key, kv_user_value>>>
     {
-        ::std::shared_ptr<sstable> sst = co_await m_cache.find_table(fg.name());
-        if (!sst)
-        {
-            auto filep = co_await fg.open_read(env.get());
-            if (filep->file_size() == 0) co_return {};
-            sst = co_await m_cache.insert(fg);
-        }
+        ::std::shared_ptr<sstable> sst = co_await m_cache.insert(fg);
+        toolpex_assert(sst);
 
         co_await sst->parse_meta_data();
         auto entry_opt = co_await sst->get_kv_entry(key);
