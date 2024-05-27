@@ -151,7 +151,6 @@ koios::task<::std::optional<block_with_storage>>
 sstable::get_block(uintmax_t offset, btl_t btl)
 {
     [[maybe_unused]] bool parse_ret = co_await parse_meta_data();
-    auto lk = co_await m_lock.acquire_shared();
     toolpex_assert(parse_ret);
     ::std::optional<block_with_storage> result{};
 
@@ -190,7 +189,6 @@ get_segment(const sequenced_key& user_key_ignore_seq)
 {
     [[maybe_unused]] bool parse_ret = co_await parse_meta_data();
     toolpex_assert(parse_ret);
-    auto lk = co_await m_lock.acquire_shared();
 
     auto user_key_rep = user_key_ignore_seq.serialize_user_key_as_string();
     auto user_key_rep_b = ::std::as_bytes(::std::span{ user_key_rep });
@@ -243,7 +241,6 @@ get_kv_entry(const sequenced_key& user_key)
 {
     [[maybe_unused]] bool parse_ret = co_await parse_meta_data();
     toolpex_assert(parse_ret);
-    auto lk = co_await m_lock.acquire_shared();
 
     auto seg_opt = co_await get_segment(user_key);
     if (!seg_opt) co_return {};

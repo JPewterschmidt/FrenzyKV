@@ -38,8 +38,10 @@ insert(const file_guard& fg)
     co_await fp->dump_to(*mem_file);
 
     result = ::std::make_shared<sstable>(*m_deps, m_filter, ::std::move(mem_file));
+    [[maybe_unused]] bool parse_ret = co_await result->parse_meta_data();
+    toolpex_assert(parse_ret);
     m_tables.put(name, result);
-    co_return result;   
+    co_return result;
 }
 
 koios::task<size_t> table_cache::size() const

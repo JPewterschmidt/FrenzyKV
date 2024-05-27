@@ -193,7 +193,8 @@ koios::eager_task<> db_impl::may_compact(level_t from)
         // Do the actual compaction
         auto [fake_file, delta] = co_await m_compactor.compact(
             ::std::move(ver), l, 
-            ::std::make_unique<sstable_getter_from_cache>(m_cache)
+            //::std::make_unique<sstable_getter_from_cache>(m_cache)
+            ::std::make_unique<sstable_getter_from_file>(m_deps, m_filter_policy.get())
         );
         co_await fake_file_to_disk(::std::move(fake_file), delta, l + 1);
         co_await update_current_version(::std::move(delta));

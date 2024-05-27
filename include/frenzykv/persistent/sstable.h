@@ -166,7 +166,7 @@ private:
     koios::task<bool>   generate_block_offsets_impl(mbo_t mbo);  // Required by `parse_meta_data()`
     
 private:
-    mutable koios::shared_mutex m_lock;
+    mutable koios::mutex m_lock;
     ::std::unique_ptr<random_readable> m_self_managed_file{};
     const kvdb_deps* m_deps{};
     ::std::atomic_bool m_meta_data_parsed{};
