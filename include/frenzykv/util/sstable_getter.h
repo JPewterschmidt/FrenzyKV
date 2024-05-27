@@ -3,7 +3,10 @@
 
 #include <memory>
 
+#include "koios/task.h"
+
 #include "frenzykv/util/file_guard.h"
+#include "frenzykv/persistent/sstable.h"
 
 namespace frenzykv
 {
@@ -11,7 +14,7 @@ namespace frenzykv
 class sstable_getter
 {
 public:
-    virtual ::std::shared_ptr<sstable> get(const file_gaurd& fg) const = 0;
+    virtual koios::task<::std::shared_ptr<sstable>> get(const file_guard& fg) const = 0;
 };
 
 } // namespace frenzykv
