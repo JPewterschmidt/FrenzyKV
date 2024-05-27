@@ -50,7 +50,7 @@ compactor::compact_tombstones(version_guard vg, level_t l) const
 }
 
 koios::task<::std::pair<::std::unique_ptr<in_mem_rw>, version_delta>>
-compactor::compact(version_guard version, level_t from) const
+compactor::compact(version_guard version, level_t from, ::std::unique_ptr<sstable_getter> table_getter) const
 {
     auto lk = co_await m_mutex.acquire();
     spdlog::debug("compact() start");
@@ -62,17 +62,10 @@ compactor::compact(version_guard version, level_t from) const
     version_delta compacted;
     compacted.add_compacted_files(file_guards);
 
-    auto fileps_view_aw = file_guards
-       | rv::transform([this](auto&& fguard) { 
-             return fguard.open_read(m_deps->env().get());
-         });
-    
-    ::std::vector files_aw(begin(fileps_view_aw), end(fileps_view_aw));
-    ::std::vector<sstable> tables;
-    for (auto& filep_aw : files_aw)
-        tables.emplace_back(*m_deps, m_filter_policy, co_await filep_aw);
+    ::std::vector<::std::shared_ptr<sstable>> tables;
+    for (auto& fg : file_guards)
+        tables.emplace_back(co_await table_getter->get(fg));
 
-    // To prevent ICE, See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=114850
     auto newfile = co_await merge_tables(tables, from);
 
     spdlog::debug("compact() complete");

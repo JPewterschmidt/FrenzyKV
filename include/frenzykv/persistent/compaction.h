@@ -10,6 +10,7 @@
 #include "frenzykv/types.h"
 #include "frenzykv/io/in_mem_rw.h"
 #include "frenzykv/db/version.h"
+#include "frenzykv/util/sstable_getter.h"
 #include "frenzykv/persistent/sstable.h"
 #include "frenzykv/persistent/sstable_builder.h"
 
@@ -34,7 +35,7 @@ public:
      *  keep those files of version alive
      */
     koios::task<::std::pair<::std::unique_ptr<in_mem_rw>, version_delta>>
-    compact(version_guard version, level_t from) const;
+    compact(version_guard version, level_t from, ::std::unique_ptr<sstable_getter> table_getter) const;
 
 //private: // TODO: rewrite the tests
     /*  \brief  Merge sstables
@@ -46,22 +47,22 @@ public:
      *          So you have to do the null pointer check.
      */
     koios::task<::std::unique_ptr<in_mem_rw>> 
-    merge_tables(::std::ranges::range auto& tables, level_t l) const
+    merge_tables(::std::ranges::range auto& table_ptrs, level_t l) const
     {
         namespace rv = ::std::ranges::views;
-        assert(tables.size() >= 2);
+        assert(table_ptrs.size() >= 2);
 
         spdlog::debug("compactor::merge_tables() start");
 
-        const auto first_two = tables | rv::take(2) | rv::adjacent<2>;
+        const auto first_two = table_ptrs | rv::take(2) | rv::adjacent<2>;
         auto [t1, t2] = *begin(first_two);
-        auto file = co_await merge_two_tables(t1, t2, l + 1);
+        auto file = co_await merge_two_tables(*t1, *t2, l + 1);
         spdlog::debug("compactor::merge_tables() one two tables merging complete");
 
-        for (auto& t : tables | rv::drop(2))
+        for (auto t : table_ptrs | rv::drop(2))
         {
             sstable temp{ *m_deps, m_filter_policy, file.get() };
-            file = co_await merge_two_tables(temp, t, l + 1);
+            file = co_await merge_two_tables(temp, *t, l + 1);
             spdlog::debug("compactor::merge_tables() one two tables merging complete");
         }
 

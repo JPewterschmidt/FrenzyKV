@@ -9,6 +9,7 @@
 #include <generator>
 
 #include "koios/task.h"
+#include "koios/coroutine_mutex.h"
 
 #include "frenzykv/io/readable.h"
 #include "frenzykv/kvdb_deps.h"
@@ -161,13 +162,14 @@ public:
     ::std::string_view filename() const noexcept;
 
 private:
-    koios::task<btl_t>  btl_value(uintmax_t offset);        // Required by `generate_block_offsets()`
-    koios::task<bool>   generate_block_offsets(mbo_t mbo);  // Required by `parse_meta_data()`
+    koios::task<btl_t>  btl_value_impl(uintmax_t offset);        // Required by `generate_block_offsets()`
+    koios::task<bool>   generate_block_offsets_impl(mbo_t mbo);  // Required by `parse_meta_data()`
     
 private:
+    mutable koios::shared_mutex m_lock;
     ::std::unique_ptr<random_readable> m_self_managed_file{};
     const kvdb_deps* m_deps{};
-    bool m_meta_data_parsed{};
+    ::std::atomic_bool m_meta_data_parsed{};
     random_readable* m_file;
     ::std::string m_filter_rep;
     ::std::string m_first_uk;

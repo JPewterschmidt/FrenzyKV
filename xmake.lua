@@ -1,5 +1,4 @@
 add_rules(
-    "mode.tsan", "mode.ubsan", "mode.asan", 
     "mode.debug", "mode.release"
 )
 

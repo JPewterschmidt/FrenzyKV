@@ -20,6 +20,8 @@
 
 #include "frenzykv/util/multi_dest_record_writer.h"
 #include "frenzykv/util/stdout_debug_record_writer.h"
+#include "frenzykv/util/sstable_getter_from_cache.h"
+#include "frenzykv/util/sstable_getter_from_file.h"
 
 #include "frenzykv/log/logger.h"
 
@@ -46,7 +48,7 @@ db_impl::db_impl(::std::string dbname, const options& opt)
       m_file_center{ m_deps }, 
       m_version_center{ m_file_center },
       m_compactor{ m_deps, m_filter_policy.get() }, 
-      m_cache{ m_deps, m_filter_policy.get(), 16 },
+      m_cache{ m_deps, m_filter_policy.get(), 32 },
       m_mem{ ::std::make_unique<memtable>(m_deps) }, 
       m_gcer{ &m_version_center, &m_file_center }, 
       m_flusher{ m_deps, &m_version_center, m_filter_policy.get(), &m_file_center }
@@ -189,7 +191,10 @@ koios::eager_task<> db_impl::may_compact(level_t from)
         }
         
         // Do the actual compaction
-        auto [fake_file, delta] = co_await m_compactor.compact(::std::move(ver), l);
+        auto [fake_file, delta] = co_await m_compactor.compact(
+            ::std::move(ver), l, 
+            ::std::make_unique<sstable_getter_from_cache>(m_cache)
+        );
         co_await fake_file_to_disk(::std::move(fake_file), delta, l + 1);
         co_await update_current_version(::std::move(delta));
         break;
@@ -322,13 +327,8 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
     [&key, &env, &snap, this] (file_guard fg) mutable
         -> koios::task<::std::optional<::std::pair<sequenced_key, kv_user_value>>>
     {
-        ::std::shared_ptr<sstable> sst = co_await m_cache.find_table(fg.name());
-        if (!sst)
-        {
-            auto filep = co_await fg.open_read(env.get());
-            if (filep->file_size() == 0) co_return {};
-            sst = co_await m_cache.insert(fg);
-        }
+        ::std::shared_ptr<sstable> sst = co_await m_cache.insert(fg);
+        toolpex_assert(sst);
 
         co_await sst->parse_meta_data();
         auto entry_opt = co_await sst->get_kv_entry(key);
@@ -362,9 +362,9 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
             if (opt) potiential_results.insert(::std::move(opt.value()));
         }
 
-        spdlog::debug("db_impl::find_from_ssts() one level through, getting to next level");
         if (auto ret = co_await find_from_potiential_results(potiential_results, key); ret.has_value())
             co_return ret;
+        spdlog::debug("db_impl::find_from_ssts() one level through, getting to next level");
         potiential_results.clear();
     }
 
