@@ -12,7 +12,7 @@ class sstable_getter_from_cache : public sstable_getter
 public:
     sstable_getter_from_cache(table_cache& cache) noexcept;
 
-    virtual koios::task<::std::shared_ptr<sstable>> get(const file_guard& fg) const override;
+    virtual koios::task<::std::shared_ptr<sstable>> get(file_guard fg) const override;
 
 private:
     table_cache& m_cache;

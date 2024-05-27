@@ -1,5 +1,4 @@
 add_rules(
-    "mode.tsan", "mode.ubsan", "mode.asan", 
     "mode.debug", "mode.release"
 )
 
@@ -77,8 +76,9 @@ target("FrenzyKV-test")
         "nlohmann_json"
     )
     after_build(function (target)
+        print("xmake.lua: unittest start.")
         os.exec(target:targetfile())
-        print("xmake: unittest complete.")
+        print("xmake.lua: unittest complete.")
     end)
     on_run(function (target)
         --nothing

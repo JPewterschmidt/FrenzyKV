@@ -14,7 +14,7 @@ public:
     {
     }
 
-    virtual koios::task<::std::shared_ptr<sstable>> get(const file_guard& fg) const override;
+    virtual koios::task<::std::shared_ptr<sstable>> get(file_guard fg) const override;
 
 private:
     const kvdb_deps* m_deps{};

@@ -29,7 +29,7 @@ int main(int argc, char** argv)
         auto opts = frenzykv::get_global_options();
         opts.root_path = "/tmp/frenzykv-unit-tests";
         frenzykv::set_global_options(::std::move(opts));
-        ::std::cout << argv[0] << ": Unittests will run with defualt config." << ::std::endl;
+        ::std::cout << argv[0] << ": Unittests will run with defualt config. root path : " << opts.root_path << ::std::endl;
     }
 
     ::testing::InitGoogleTest(&argc, argv);
@@ -39,5 +39,7 @@ int main(int argc, char** argv)
     spdlog::info("Working directory: {}", fs::current_path().string());
     if (running_with_user_config)
         spdlog::info("running with user config : ./test-config.json");
+
+    spdlog::info("Tests completed!");
     return result;
 }

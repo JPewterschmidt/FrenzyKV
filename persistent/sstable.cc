@@ -51,8 +51,9 @@ bool sstable::empty() const noexcept
 
 koios::task<bool> sstable::parse_meta_data()
 {
-    if (m_meta_data_parsed) co_return true;
+    if (m_meta_data_parsed.load()) co_return true;
     
+    auto lk = co_await m_lock.acquire();
     if (m_file == nullptr)
     {
         m_meta_data_parsed = true;
@@ -112,16 +113,16 @@ koios::task<bool> sstable::parse_meta_data()
     toolpex_assert(m_filter_rep.size() != 0);
     toolpex_assert(m_last_uk.size() != 0);
     toolpex_assert(m_first_uk.size() != 0);
-    if (!co_await generate_block_offsets(mbo)) 
+    if (!co_await generate_block_offsets_impl(mbo)) 
         co_return false;
 
     m_meta_data_parsed = true;
     co_return true;
 }
 
-koios::task<btl_t> sstable::btl_value(uintmax_t offset)
+koios::task<btl_t> sstable::btl_value_impl(uintmax_t offset)
 {
-    static ::std::array<::std::byte, sizeof(btl_t)> buffer{};
+    ::std::array<::std::byte, sizeof(btl_t)> buffer{};
     ::std::memset(buffer.data(), 0, buffer.size());
 
     if (!co_await m_file->read(buffer, offset))
@@ -130,13 +131,13 @@ koios::task<btl_t> sstable::btl_value(uintmax_t offset)
     co_return toolpex::decode_big_endian_from<btl_t>({ buffer.data(), sizeof(btl_t) });
 }
 
-koios::task<bool> sstable::generate_block_offsets(mbo_t mbo)
+koios::task<bool> sstable::generate_block_offsets_impl(mbo_t mbo)
 {
     btl_t current_btl{};
     uintmax_t offset{};
     while (offset < mbo)
     {
-        current_btl = co_await btl_value(offset);
+        current_btl = co_await btl_value_impl(offset);
         if (current_btl == 0)
             co_return false;
 
@@ -150,6 +151,7 @@ koios::task<::std::optional<block_with_storage>>
 sstable::get_block(uintmax_t offset, btl_t btl)
 {
     [[maybe_unused]] bool parse_ret = co_await parse_meta_data();
+    auto lk = co_await m_lock.acquire_shared();
     toolpex_assert(parse_ret);
     ::std::optional<block_with_storage> result{};
 
@@ -188,6 +190,7 @@ get_segment(const sequenced_key& user_key_ignore_seq)
 {
     [[maybe_unused]] bool parse_ret = co_await parse_meta_data();
     toolpex_assert(parse_ret);
+    auto lk = co_await m_lock.acquire_shared();
 
     auto user_key_rep = user_key_ignore_seq.serialize_user_key_as_string();
     auto user_key_rep_b = ::std::as_bytes(::std::span{ user_key_rep });
@@ -240,6 +243,7 @@ get_kv_entry(const sequenced_key& user_key)
 {
     [[maybe_unused]] bool parse_ret = co_await parse_meta_data();
     toolpex_assert(parse_ret);
+    auto lk = co_await m_lock.acquire_shared();
 
     auto seg_opt = co_await get_segment(user_key);
     if (!seg_opt) co_return {};
@@ -308,7 +312,9 @@ block_offsets() const noexcept
     toolpex_assert(m_meta_data_parsed);
 
     for (auto p : m_block_offsets)
+    {
         co_yield p;
+    }
 }
 
 koios::task<::std::list<kv_entry>>

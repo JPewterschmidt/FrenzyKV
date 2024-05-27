@@ -21,6 +21,7 @@
 #include "frenzykv/util/multi_dest_record_writer.h"
 #include "frenzykv/util/stdout_debug_record_writer.h"
 #include "frenzykv/util/sstable_getter_from_cache.h"
+#include "frenzykv/util/sstable_getter_from_file.h"
 
 #include "frenzykv/log/logger.h"
 
