@@ -14,6 +14,7 @@ namespace frenzykv
 class sstable_getter
 {
 public:
+    virtual ~sstable_getter() noexcept {}
     virtual koios::task<::std::shared_ptr<sstable>> get(const file_guard& fg) const = 0;
 };
 

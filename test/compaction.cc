@@ -59,9 +59,9 @@ public:
 
         compactor c(m_deps, m_filter.get());
         auto tables_view = fvec | rv::transform([this](auto&& f){ 
-            return sstable(m_deps, m_filter.get(), f.get()); 
+                return ::std::make_shared<sstable>(m_deps, m_filter.get(), f.get()); 
         });
-        ::std::vector<sstable> tables(tables_view.begin(), tables_view.end());
+        ::std::vector<::std::shared_ptr<sstable>> tables(tables_view.begin(), tables_view.end());
         ::std::unique_ptr<in_mem_rw> newfile = co_await c.merge_tables(tables, 3);
         sstable final_table(m_deps, m_filter.get(), newfile.get());
         [[maybe_unused]] bool parse_ret = co_await final_table.parse_meta_data();
