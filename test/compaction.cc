@@ -58,15 +58,19 @@ public:
         fvec.push_back(co_await make_sstable(500, 1500));
 
         compactor c(m_deps, m_filter.get());
-        auto tables_view = fvec | rv::transform([this](auto&& f){ 
-                return ::std::make_shared<sstable>(m_deps, m_filter.get(), f.get()); 
+        auto tables_async_view = fvec | rv::transform([this](auto&& f){ 
+            return sstable::make(m_deps, m_filter.get(), f.get()); 
         });
-        ::std::vector<::std::shared_ptr<sstable>> tables(tables_view.begin(), tables_view.end());
+
+        ::std::vector<::std::shared_ptr<sstable>> tables;
+        for (auto&& ta : tables_async_view)
+        {
+            tables.push_back(co_await ta);   
+        }
+
         ::std::unique_ptr<in_mem_rw> newfile = co_await c.merge_tables(tables, 3);
-        sstable final_table(m_deps, m_filter.get(), newfile.get());
-        [[maybe_unused]] bool parse_ret = co_await final_table.parse_meta_data();
-        assert(parse_ret);
-        const auto entries = co_await get_entries_from_sstable(final_table);
+        auto final_table = co_await sstable::make(m_deps, m_filter.get(), newfile.get());
+        const auto entries = co_await get_entries_from_sstable(*final_table);
         
         co_return newfile->file_size() < ::std::ranges::fold_left(
             fvec | rv::transform([](auto&& f){ 

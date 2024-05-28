@@ -77,6 +77,15 @@ struct block_with_storage
 class sstable
 {
 public:
+    static koios::task<::std::shared_ptr<sstable>>
+    make(const kvdb_deps& deps, filter_policy* filter, auto file)
+    {
+        ::std::shared_ptr<sstable> result{ new sstable(deps, filter, ::std::move(file)) };
+        co_await result->parse_meta_data();
+        co_return result;
+    }
+
+private:
     /*  \param  file A raw pointer pointed to a `random_readable` object, 
      *          without life time management, it could equals to nullptr, means the sstable is empty.
      *          But before use a `sstable` object with a nullptr file still need to `parse_meta_data()` first.
@@ -93,6 +102,7 @@ public:
             filter_policy* filter, 
             ::std::unique_ptr<random_readable> file);
 
+public:
     /*! \brief Searching specific user key from this sstable
      *  
      *  \return A ::std::optional<block_segment> 
@@ -107,7 +117,7 @@ public:
      *  \param  user_key_ignore_seq Only take the serialized user key part, ignore the seq part
      */
     koios::task<::std::optional<::std::pair<block_segment, block_with_storage>>> 
-    get_segment(const sequenced_key& user_key_ignore_seq);
+    get_segment(const sequenced_key& user_key_ignore_seq) const;
 
     /*! \brief Searching specific sequenced key from this sstable
      *  
@@ -119,7 +129,7 @@ public:
      *          get involved in the searching process unlike the member function `get_segment()`
      */
     koios::task<::std::optional<kv_entry>>
-    get_kv_entry(const sequenced_key& seq_key);
+    get_kv_entry(const sequenced_key& seq_key) const;
 
     sequenced_key last_user_key_without_seq() const noexcept;
     sequenced_key first_user_key_without_seq() const noexcept;
@@ -137,16 +147,15 @@ public:
 
     // Required by `get_segment()`
     koios::task<::std::optional<block_with_storage>> 
-    get_block(uintmax_t offset, btl_t btl);
+    get_block(uintmax_t offset, btl_t btl) const;
 
     koios::task<::std::optional<block_with_storage>> 
-    get_block(::std::pair<uintmax_t, btl_t> p)
+    get_block(::std::pair<uintmax_t, btl_t> p) const
     {
         return get_block(p.first, p.second);
     }
 
     ::std::generator<::std::pair<uintmax_t, btl_t>> block_offsets() const noexcept;
-    koios::task<bool>   parse_meta_data();
 
     /*! \brief  A function to get the hash value of the current sstable.
      *
@@ -164,8 +173,10 @@ public:
 private:
     koios::task<btl_t>  btl_value_impl(uintmax_t offset);        // Required by `generate_block_offsets()`
     koios::task<bool>   generate_block_offsets_impl(mbo_t mbo);  // Required by `parse_meta_data()`
+    koios::task<bool>   parse_meta_data();
     
 private:
+    // Only protect parse_meta_data member function
     mutable koios::mutex m_lock;
     ::std::unique_ptr<random_readable> m_self_managed_file{};
     const kvdb_deps* m_deps{};

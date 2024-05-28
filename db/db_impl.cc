@@ -48,7 +48,7 @@ db_impl::db_impl(::std::string dbname, const options& opt)
       m_file_center{ m_deps }, 
       m_version_center{ m_file_center },
       m_compactor{ m_deps, m_filter_policy.get() }, 
-      m_cache{ m_deps, m_filter_policy.get(), 32 },
+      m_cache{ m_deps, m_filter_policy.get(), 8 },
       m_mem{ ::std::make_unique<memtable>(m_deps) }, 
       m_gcer{ &m_version_center, &m_file_center }, 
       m_flusher{ m_deps, &m_version_center, m_filter_policy.get(), &m_file_center }
@@ -193,8 +193,7 @@ koios::eager_task<> db_impl::may_compact(level_t from)
         // Do the actual compaction
         auto [fake_file, delta] = co_await m_compactor.compact(
             ::std::move(ver), l, 
-            //::std::make_unique<sstable_getter_from_cache>(m_cache)
-            ::std::make_unique<sstable_getter_from_file>(m_deps, m_filter_policy.get())
+            ::std::make_unique<sstable_getter_from_cache>(m_cache)
         );
         co_await fake_file_to_disk(::std::move(fake_file), delta, l + 1);
         co_await update_current_version(::std::move(delta));
@@ -321,7 +320,6 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
     auto files = ver.files();
     r::sort(files);
 
-    toolpex::skip_list<sequenced_key, kv_user_value> potiential_results(16);
     auto env = m_deps.env();
 
     auto file_to_async_potiential_ret = 
@@ -331,7 +329,6 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
         ::std::shared_ptr<sstable> sst = co_await m_cache.insert(fg);
         toolpex_assert(sst);
 
-        co_await sst->parse_meta_data();
         auto entry_opt = co_await sst->get_kv_entry(key);
         if (!entry_opt.has_value() 
             || (snap.valid() && entry_opt->key().sequence_number() > snap.sequence_number()))
@@ -348,6 +345,7 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
     // Find record from each level *concurrently*
     for (auto files_same_level : files | rv::chunk_by(file_guard::have_same_level))
     {
+        toolpex::skip_list<sequenced_key, kv_user_value> potiential_results(16);
         ::std::vector<koios::future<::std::optional<::std::pair<sequenced_key, kv_user_value>>>> futvec;
         for (auto fut : files_same_level 
                       | rv::transform(file_to_async_potiential_ret) 
@@ -357,6 +355,7 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
             futvec.emplace_back(::std::move(fut));
         }
 
+        spdlog::debug("db_impl::find_from_ssts() start process current level");
         for (auto& fut : futvec)
         {
             auto opt = co_await fut.get_async();
@@ -366,7 +365,6 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
         if (auto ret = co_await find_from_potiential_results(potiential_results, key); ret.has_value())
             co_return ret;
         spdlog::debug("db_impl::find_from_ssts() one level through, getting to next level");
-        potiential_results.clear();
     }
 
     co_return {};
@@ -391,7 +389,6 @@ koios::task<snapshot> db_impl::get_snapshot()
 
 koios::eager_task<> db_impl::background_compacting_GC(::std::stop_token stp)
 {
-    spdlog::info("back ground GC emitted");
     auto lk = co_await m_flying_GC_mutex.acquire();
     const level_t max_level = m_deps.opt()->max_level;
     for (;;)
@@ -403,7 +400,6 @@ koios::eager_task<> db_impl::background_compacting_GC(::std::stop_token stp)
         }
         co_await do_GC();
         co_await koios::this_task::sleep_for(100ms);
-        spdlog::debug("back ground GC wakeup");
     }
 }
 

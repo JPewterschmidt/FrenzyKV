@@ -104,7 +104,7 @@ public:
         m_file2->clone_from(::std::move(*m_file_storage), 4096);
         m_file_storage = &m_file2->storage();
 
-        m_table = ::std::make_unique<sstable>(
+        m_table = co_await sstable::make(
             m_deps, m_filter.get(), m_file2.get()
         );
 
@@ -157,7 +157,7 @@ private:
     ::std::unique_ptr<in_mem_rw> m_file;
     ::std::unique_ptr<in_mem_rw> m_file2;
     ::std::unique_ptr<sstable_builder> m_builder;
-    ::std::unique_ptr<sstable> m_table;
+    ::std::shared_ptr<sstable> m_table;
     ::std::unique_ptr<filter_policy> m_filter;
     bool m_built{};
 };

@@ -50,7 +50,7 @@ bool sstable::empty() const noexcept
 }
 
 koios::task<bool> sstable::parse_meta_data()
-{
+{ 
     if (m_meta_data_parsed.load()) co_return true;
     
     auto lk = co_await m_lock.acquire();
@@ -148,10 +148,9 @@ koios::task<bool> sstable::generate_block_offsets_impl(mbo_t mbo)
 }
 
 koios::task<::std::optional<block_with_storage>> 
-sstable::get_block(uintmax_t offset, btl_t btl)
+sstable::get_block(uintmax_t offset, btl_t btl) const
 {
-    [[maybe_unused]] bool parse_ret = co_await parse_meta_data();
-    toolpex_assert(parse_ret);
+    toolpex_assert(m_meta_data_parsed);
     ::std::optional<block_with_storage> result{};
 
     buffer<> buff{btl + 10}; // extra bytes to avoid unknow reason buffer overflow.
@@ -185,10 +184,9 @@ sstable::get_block(uintmax_t offset, btl_t btl)
 
 koios::task<::std::optional<::std::pair<block_segment, block_with_storage>>> 
 sstable::
-get_segment(const sequenced_key& user_key_ignore_seq)
+get_segment(const sequenced_key& user_key_ignore_seq) const
 {
-    [[maybe_unused]] bool parse_ret = co_await parse_meta_data();
-    toolpex_assert(parse_ret);
+    toolpex_assert(m_meta_data_parsed);
 
     auto user_key_rep = user_key_ignore_seq.serialize_user_key_as_string();
     auto user_key_rep_b = ::std::as_bytes(::std::span{ user_key_rep });
@@ -237,10 +235,9 @@ get_segment(const sequenced_key& user_key_ignore_seq)
 
 koios::task<::std::optional<kv_entry>>
 sstable::
-get_kv_entry(const sequenced_key& user_key)
+get_kv_entry(const sequenced_key& user_key) const
 {
-    [[maybe_unused]] bool parse_ret = co_await parse_meta_data();
-    toolpex_assert(parse_ret);
+    toolpex_assert(m_meta_data_parsed);
 
     auto seg_opt = co_await get_segment(user_key);
     if (!seg_opt) co_return {};
@@ -317,7 +314,6 @@ block_offsets() const noexcept
 koios::task<::std::list<kv_entry>>
 get_entries_from_sstable(sstable& table)
 {
-    co_await table.parse_meta_data();
     ::std::list<kv_entry> result;
     for (auto blk_off : table.block_offsets())
     {

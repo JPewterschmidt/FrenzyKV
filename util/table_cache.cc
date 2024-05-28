@@ -37,9 +37,7 @@ insert(const file_guard& fg)
     auto fp = co_await fg.open_read(env.get());
     co_await fp->dump_to(*mem_file);
 
-    result = ::std::make_shared<sstable>(*m_deps, m_filter, ::std::move(mem_file));
-    [[maybe_unused]] bool parse_ret = co_await result->parse_meta_data();
-    toolpex_assert(parse_ret);
+    result = co_await sstable::make(*m_deps, m_filter, ::std::move(mem_file));
     m_tables.put(name, result);
     co_return result;
 }
