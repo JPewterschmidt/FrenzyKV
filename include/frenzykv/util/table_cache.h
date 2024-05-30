@@ -32,6 +32,10 @@ public:
     koios::task<size_t> size() const;
     
 private:
+    ::std::shared_ptr<sstable>
+    find_table_impl(const ::std::string& name);
+
+private:
     const kvdb_deps* m_deps{};
     filter_policy* m_filter{};
     toolpex::lru_cache<::std::string, ::std::shared_ptr<sstable>> m_tables;

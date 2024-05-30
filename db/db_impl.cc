@@ -326,8 +326,10 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
     [&key, &env, &snap, this] (file_guard fg) mutable
         -> koios::task<::std::optional<::std::pair<sequenced_key, kv_user_value>>>
     {
+        spdlog::debug("db_impl::find_from_ssts()::file_to_async_potiential_ret: getting table {} from cache", fg.name());
         ::std::shared_ptr<sstable> sst = co_await m_cache.insert(fg);
         toolpex_assert(sst);
+        spdlog::debug("db_impl::find_from_ssts()::file_to_async_potiential_ret: got table {} from cache", fg.name());
 
         auto entry_opt = co_await sst->get_kv_entry(key);
         if (!entry_opt.has_value() 
