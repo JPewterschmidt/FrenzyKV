@@ -28,8 +28,8 @@ koios::eager_task<> db_test()
     auto dbimpl = ::std::make_unique<db_impl>("test1", get_global_options());
     db_interface* db = dbimpl.get();
 
-    //const size_t scale = 100000;
-    const size_t scale = 50000;
+    const size_t scale = 100000;
+    //const size_t scale = 50000;
 
     co_await db->init();
 

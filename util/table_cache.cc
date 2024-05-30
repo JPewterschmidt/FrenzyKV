@@ -1,3 +1,5 @@
+#include "spdlog/spdlog.h"
+
 #include "frenzykv/util/table_cache.h"
 
 #include "frenzykv/io/in_mem_rw.h"
@@ -14,32 +16,49 @@ table_cache::table_cache(const kvdb_deps& deps,
 {
 }
 
+::std::shared_ptr<sstable>
+table_cache::
+find_table_impl(const ::std::string& name)
+{
+    auto result = m_tables.get(name);
+    return result ? ::std::move(*result) : nullptr;
+}
+
 koios::task<::std::shared_ptr<sstable>> 
 table_cache::
 find_table(const ::std::string& name)
 {
     auto lk = co_await m_mutex.acquire();
-    auto result = m_tables.get(name);
-    co_return result ? ::std::move(*result) : nullptr;
+    co_return find_table_impl(name);
 }
 
 koios::task<::std::shared_ptr<sstable>> table_cache::
 insert(const file_guard& fg)
 {
-    const auto name = fg.name();
-    auto result = co_await find_table(name);
-    if (result) co_return result;
-
+    spdlog::debug("table_cache::insert {}", fg.name());
+    const ::std::string& name = fg.name();
     auto lk = co_await m_mutex.acquire();
+
+    // Find from lru_cache first
+    auto result = find_table_impl(name);
+    if (result) 
+    {
+        spdlog::debug("table_cache::insert got existed {}", fg.name());
+        co_return result;
+    }
 
     auto mem_file = ::std::make_unique<in_mem_rw>();
     auto env = m_deps->env();
     auto fp = co_await fg.open_read(env.get());
     co_await fp->dump_to(*mem_file);
 
-    result = ::std::make_shared<sstable>(*m_deps, m_filter, ::std::move(mem_file));
+    result = co_await sstable::make(*m_deps, m_filter, ::std::move(mem_file));
+
+    spdlog::debug("table_cache::insert new {}", fg.name());
     m_tables.put(name, result);
-    co_return result;   
+    spdlog::debug("table_cache::inserted new {}", fg.name());
+
+    co_return result;
 }
 
 koios::task<size_t> table_cache::size() const

@@ -16,6 +16,11 @@ int main(int argc, char** argv)
     ::std::cout << fs::current_path() << ::std::endl;
     ::std::ifstream ifs{ "./test-config.json" };
     bool running_with_user_config{};
+    if (argc > 1)
+    {
+        ::std::cout << "first option:" << argv[1] << ::std::endl;
+    }
+
     if (ifs)
     {
         ifs >> config_j;

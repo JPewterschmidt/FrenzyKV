@@ -61,8 +61,8 @@ public:
 
         for (auto t : table_ptrs | rv::drop(2))
         {
-            sstable temp{ *m_deps, m_filter_policy, file.get() };
-            file = co_await merge_two_tables(temp, *t, l + 1);
+            auto temp = co_await sstable::make(*m_deps, m_filter_policy, file.get());
+            file = co_await merge_two_tables(*temp, *t, l + 1);
             spdlog::debug("compactor::merge_tables() one two tables merging complete");
         }
 

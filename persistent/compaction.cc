@@ -30,11 +30,10 @@ compactor::compact_tombstones(version_guard vg, level_t l) const
     const uintmax_t size_bound = m_deps->opt()->allowed_level_file_size(l);
     for (const file_guard& fg : files)
     {
-        sstable sst{ *m_deps, m_filter_policy, co_await fg.open_read(env.get()) };
-        co_await sst.parse_meta_data();
-        if (sst.empty()) [[unlikely]] continue;
+        auto sst = co_await sstable::make(*m_deps, m_filter_policy, co_await fg.open_read(env.get()));
+        if (sst->empty()) [[unlikely]] continue;
 
-        auto entries = co_await get_entries_from_sstable(sst);
+        auto entries = co_await get_entries_from_sstable(*sst);
         ::std::erase_if(entries, is_tomb_stone<kv_entry>);
         auto filep = ::std::make_unique<in_mem_rw>();
         sstable_builder builder{ *m_deps, size_bound, m_filter_policy, filep.get() };
@@ -76,10 +75,6 @@ koios::task<::std::unique_ptr<in_mem_rw>>
 compactor::
 merge_two_tables(sstable& lhs, sstable& rhs, level_t l) const 
 {
-    [[maybe_unused]] bool ok1 = co_await lhs.parse_meta_data();
-    [[maybe_unused]] bool ok2 = co_await rhs.parse_meta_data();
-    toolpex_assert(ok1 && ok2);
-
     ::std::vector<::std::unique_ptr<in_mem_rw>> result;
 
     ::std::list<kv_entry> lhs_entries; 
