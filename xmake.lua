@@ -35,6 +35,8 @@ if not is_mode("release") then
     )
 end
 
+add_cxxflags("-march=native", {force = true})
+
 target("FrenzyKV")
     set_kind("shared")
     add_deps("koios", "toolpex")
