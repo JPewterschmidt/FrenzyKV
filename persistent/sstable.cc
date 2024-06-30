@@ -45,7 +45,6 @@ sstable::sstable(const kvdb_deps& deps,
 
 bool sstable::empty() const noexcept
 {
-    toolpex_assert(m_meta_data_parsed);
     return m_file == nullptr;
 }
 
@@ -150,7 +149,6 @@ koios::task<bool> sstable::generate_block_offsets_impl(mbo_t mbo)
 koios::task<::std::optional<block_with_storage>> 
 sstable::get_block(uintmax_t offset, btl_t btl) const
 {
-    toolpex_assert(m_meta_data_parsed);
     ::std::optional<block_with_storage> result{};
 
     buffer<> buff{btl + 10}; // extra bytes to avoid unknow reason buffer overflow.
@@ -186,8 +184,6 @@ koios::task<::std::optional<::std::pair<block_segment, block_with_storage>>>
 sstable::
 get_segment(const sequenced_key& user_key_ignore_seq) const
 {
-    toolpex_assert(m_meta_data_parsed);
-
     auto user_key_rep = user_key_ignore_seq.serialize_user_key_as_string();
     auto user_key_rep_b = ::std::as_bytes(::std::span{ user_key_rep });
     if (!m_filter->may_match(user_key_rep_b, m_filter_rep))
@@ -237,8 +233,6 @@ koios::task<::std::optional<kv_entry>>
 sstable::
 get_kv_entry(const sequenced_key& user_key) const
 {
-    toolpex_assert(m_meta_data_parsed);
-
     auto seg_opt = co_await get_segment(user_key);
     if (!seg_opt) co_return {};
     const auto& seg = seg_opt->first;
@@ -254,8 +248,6 @@ get_kv_entry(const sequenced_key& user_key) const
 
 sequenced_key sstable::last_user_key_without_seq() const noexcept
 {
-    toolpex_assert(m_meta_data_parsed);
-
     ::std::string temp = m_last_uk;
     temp.resize(temp.size() + 8);
     auto tempb = ::std::span{ temp };
@@ -265,8 +257,6 @@ sequenced_key sstable::last_user_key_without_seq() const noexcept
 
 sequenced_key sstable::first_user_key_without_seq() const noexcept
 {
-    toolpex_assert(m_meta_data_parsed);
-
     ::std::string temp = m_first_uk;
     temp.resize(temp.size() + 8);
     auto tempb = ::std::span{ temp };
@@ -281,8 +271,6 @@ bool sstable::overlapped(const disk_table& other) const noexcept
 
 bool sstable::disjoint(const disk_table& other) const noexcept
 {
-    toolpex_assert(m_meta_data_parsed);
-
     /*
      *        A               B
      *   al|-----|ar    bl|-------|br
@@ -303,8 +291,6 @@ bool sstable::disjoint(const disk_table& other) const noexcept
 sstable::
 block_offsets() const noexcept
 {
-    toolpex_assert(m_meta_data_parsed);
-
     for (auto p : m_block_offsets)
     {
         co_yield p;
