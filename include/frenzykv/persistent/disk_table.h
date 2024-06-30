@@ -1,5 +1,5 @@
-#ifndef FRENZYKV_PERSISTENT_DISK_FILE_H
-#define FRENZYKV_PERSISTENT_DISK_FILE_H
+#ifndef FRENZYKV_PERSISTENT_disk_table_H
+#define FRENZYKV_PERSISTENT_disk_table_H
 
 #include <generator>
 #include <optional>
@@ -13,12 +13,12 @@
 namespace frenzykv
 {
 
-class disk_file
+class disk_table
 {
 public:
-    virtual ~disk_file() noexcept {}
+    virtual ~disk_table() noexcept {}
 
-    /*! \brief Searching specific user key from this disk_file
+    /*! \brief Searching specific user key from this disk_table
      *  
      *  \return A ::std::optional<block_segment> 
      *          represents a block segment that all elements 
@@ -34,7 +34,7 @@ public:
     virtual koios::task<::std::optional<::std::pair<block_segment, block_with_storage>>> 
     get_segment(const sequenced_key& user_key_ignore_seq) const = 0;
 
-    /*! \brief Searching specific sequenced key from this disk_file 
+    /*! \brief Searching specific sequenced key from this disk_table 
      *  
      *  \return A ::std::optional<kv_entry> 
      *          represents the kv_entry object that metch the sequenced key 
@@ -49,12 +49,12 @@ public:
     virtual sequenced_key last_user_key_without_seq() const = 0;
     virtual sequenced_key first_user_key_without_seq() const = 0;
 
-    virtual bool overlapped(const disk_file& other) const = 0;
-    virtual bool disjoint(const disk_file& other) const = 0;
+    virtual bool overlapped(const disk_table& other) const = 0;
+    virtual bool disjoint(const disk_table& other) const = 0;
     virtual bool empty() const = 0;
 
-    virtual bool operator<(const disk_file& other) const noexcept = 0;
-    virtual bool operator==(const disk_file& other) const noexcept = 0;
+    virtual bool operator<(const disk_table& other) const noexcept = 0;
+    virtual bool operator==(const disk_table& other) const noexcept = 0;
 
     // Required by `get_segment()`
     virtual koios::task<::std::optional<block_with_storage>> 

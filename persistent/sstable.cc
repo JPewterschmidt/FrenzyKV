@@ -274,12 +274,12 @@ sequenced_key sstable::first_user_key_without_seq() const noexcept
     return result;
 }
 
-bool sstable::overlapped(const disk_file& other) const noexcept
+bool sstable::overlapped(const disk_table& other) const noexcept
 {
     return !disjoint(other);
 }
 
-bool sstable::disjoint(const disk_file& other) const noexcept
+bool sstable::disjoint(const disk_table& other) const noexcept
 {
     toolpex_assert(m_meta_data_parsed);
 
@@ -339,7 +339,7 @@ get_entries_from_sstable(sstable& table)
     return m_file->filename();
 }
 
-bool sstable::operator==(const disk_file& other) const noexcept
+bool sstable::operator==(const disk_table& other) const noexcept
 {
     if (empty()) return other.empty();
     return filename() == other.filename();

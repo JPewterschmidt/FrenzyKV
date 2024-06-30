@@ -19,7 +19,7 @@
 #include "frenzykv/util/compressor.h"
 #include "frenzykv/io/inner_buffer.h"
 #include "frenzykv/persistent/sstable_builder.h"
-#include "frenzykv/persistent/disk_file.h"
+#include "frenzykv/persistent/disk_table.h"
 
 namespace frenzykv
 {
@@ -57,7 +57,7 @@ namespace frenzykv
  *              Or there suppose to be a assertion terminates the program 
  *              if you compile it with debug mode.
  */ 
-class sstable : public disk_file
+class sstable : public disk_table
 {
 public:
     static koios::task<::std::shared_ptr<sstable>>
@@ -117,16 +117,16 @@ public:
     sequenced_key last_user_key_without_seq() const noexcept override;
     sequenced_key first_user_key_without_seq() const noexcept override;
 
-    bool overlapped(const disk_file& other) const noexcept override;
-    bool disjoint(const disk_file& other) const noexcept override;
+    bool overlapped(const disk_table& other) const noexcept override;
+    bool disjoint(const disk_table& other) const noexcept override;
     bool empty() const noexcept override;
 
-    bool operator<(const disk_file& other) const noexcept override
+    bool operator<(const disk_table& other) const noexcept override
     {
         return first_user_key_without_seq() < other.first_user_key_without_seq();
     }
 
-    bool operator==(const disk_file& other) const noexcept override;
+    bool operator==(const disk_table& other) const noexcept override;
 
     // Required by `get_segment()`
     koios::task<::std::optional<block_with_storage>> 
