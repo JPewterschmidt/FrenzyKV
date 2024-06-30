@@ -19,27 +19,10 @@
 #include "frenzykv/util/compressor.h"
 #include "frenzykv/io/inner_buffer.h"
 #include "frenzykv/persistent/sstable_builder.h"
+#include "frenzykv/persistent/disk_file.h"
 
 namespace frenzykv
 {
-
-struct block_with_storage
-{
-    block_with_storage(block bb, buffer<> sto) noexcept
-        : b{ ::std::move(bb) }, s{ ::std::move(sto) }
-    {
-    }
-
-    block_with_storage(block bb) noexcept
-        : b{ ::std::move(bb) }
-    {
-    }
-
-    block b;
-
-    // Iff s.empty(), then the block uses sstable::s_storage
-    buffer<> s;
-};
 
 /*
  *      |-------------------|
@@ -74,7 +57,7 @@ struct block_with_storage
  *              Or there suppose to be a assertion terminates the program 
  *              if you compile it with debug mode.
  */ 
-class sstable
+class sstable : public disk_file
 {
 public:
     static koios::task<::std::shared_ptr<sstable>>
@@ -117,7 +100,7 @@ public:
      *  \param  user_key_ignore_seq Only take the serialized user key part, ignore the seq part
      */
     koios::task<::std::optional<::std::pair<block_segment, block_with_storage>>> 
-    get_segment(const sequenced_key& user_key_ignore_seq) const;
+    get_segment(const sequenced_key& user_key_ignore_seq) const override;
 
     /*! \brief Searching specific sequenced key from this sstable
      *  
@@ -129,33 +112,33 @@ public:
      *          get involved in the searching process unlike the member function `get_segment()`
      */
     koios::task<::std::optional<kv_entry>>
-    get_kv_entry(const sequenced_key& seq_key) const;
+    get_kv_entry(const sequenced_key& seq_key) const override;
 
-    sequenced_key last_user_key_without_seq() const noexcept;
-    sequenced_key first_user_key_without_seq() const noexcept;
+    sequenced_key last_user_key_without_seq() const noexcept override;
+    sequenced_key first_user_key_without_seq() const noexcept override;
 
-    bool overlapped(const sstable& other) const noexcept;
-    bool disjoint(const sstable& other) const noexcept;
-    bool empty() const noexcept;
+    bool overlapped(const disk_file& other) const noexcept override;
+    bool disjoint(const disk_file& other) const noexcept override;
+    bool empty() const noexcept override;
 
-    bool operator<(const sstable& other) const noexcept
+    bool operator<(const disk_file& other) const noexcept override
     {
         return first_user_key_without_seq() < other.first_user_key_without_seq();
     }
 
-    bool operator==(const sstable& other) const noexcept;
+    bool operator==(const disk_file& other) const noexcept override;
 
     // Required by `get_segment()`
     koios::task<::std::optional<block_with_storage>> 
-    get_block(uintmax_t offset, btl_t btl) const;
+    get_block(uintmax_t offset, btl_t btl) const override;
 
     koios::task<::std::optional<block_with_storage>> 
-    get_block(::std::pair<uintmax_t, btl_t> p) const
+    get_block(::std::pair<uintmax_t, btl_t> p) const override
     {
         return get_block(p.first, p.second);
     }
 
-    ::std::generator<::std::pair<uintmax_t, btl_t>> block_offsets() const noexcept;
+    ::std::generator<::std::pair<uintmax_t, btl_t>> block_offsets() const noexcept override;
 
     /*! \brief  A function to get the hash value of the current sstable.
      *
@@ -167,8 +150,8 @@ public:
      *
      *  \return The hash value.
      */
-    size_t hash() const noexcept { return m_hash_value; }
-    ::std::string_view filename() const noexcept;
+    size_t hash() const noexcept override { return m_hash_value; }
+    ::std::string_view filename() const noexcept override;
 
 private:
     koios::task<btl_t>  btl_value_impl(uintmax_t offset);        // Required by `generate_block_offsets()`
