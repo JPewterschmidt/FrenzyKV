@@ -1,5 +1,5 @@
-#ifndef FRENZYKV_PERSISTENT_SSTABLE_H
-#define FRENZYKV_PERSISTENT_SSTABLE_H
+#ifndef FRENZYKV_TABLE_SSTABLE_H
+#define FRENZYKV_TABLE_SSTABLE_H
 
 #include <optional>
 #include <vector>
@@ -18,8 +18,8 @@
 #include "frenzykv/persistent/block.h"
 #include "frenzykv/util/compressor.h"
 #include "frenzykv/io/inner_buffer.h"
-#include "frenzykv/persistent/sstable_builder.h"
-#include "frenzykv/persistent/disk_table.h"
+#include "frenzykv/table/sstable_builder.h"
+#include "frenzykv/table/disk_table.h"
 
 namespace frenzykv
 {

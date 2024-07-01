@@ -5,10 +5,10 @@
 #include "toolpex/functional.h"
 #include "koios/task.h"
 
-#include "frenzykv/persistent/sstable.h"
-#include "frenzykv/persistent/sstable_builder.h"
+#include "frenzykv/table/sstable.h"
+#include "frenzykv/table/sstable_builder.h"
 #include "frenzykv/write_batch.h"
-#include "frenzykv/db/memtable.h"
+#include "frenzykv/table/memtable.h"
 
 #include "frenzykv/io/in_mem_rw.h"
 

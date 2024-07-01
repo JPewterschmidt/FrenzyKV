@@ -1,5 +1,5 @@
-#ifndef FRENZYKV_UTIL_TABLE_CACHE_H
-#define FRENZYKV_UTIL_TABLE_CACHE_H
+#ifndef FRENZYKV_TABLE_TABLE_CACHE_H
+#define FRENZYKV_TABLE_TABLE_CACHE_H
 
 #include <memory>
 #include <string>
@@ -11,7 +11,7 @@
 
 #include "frenzykv/kvdb_deps.h"
 
-#include "frenzykv/persistent/sstable.h"
+#include "frenzykv/table/sstable.h"
 
 #include "frenzykv/db/filter.h"
 

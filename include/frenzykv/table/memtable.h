@@ -1,5 +1,5 @@
-#ifndef FRENZYKV_MEMTABLE_H
-#define FRENZYKV_MEMTABLE_H
+#ifndef FRENZYKV_TABLE_MEMTABLE_H
+#define FRENZYKV_TABLE_MEMTABLE_H
 
 #include <system_error>
 #include <optional>

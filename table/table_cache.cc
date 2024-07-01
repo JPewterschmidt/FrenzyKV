@@ -1,6 +1,6 @@
 #include "spdlog/spdlog.h"
 
-#include "frenzykv/util/table_cache.h"
+#include "frenzykv/table/table_cache.h"
 
 #include "frenzykv/io/in_mem_rw.h"
 

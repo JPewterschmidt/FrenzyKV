@@ -20,15 +20,16 @@
 
 #include "frenzykv/util/multi_dest_record_writer.h"
 #include "frenzykv/util/stdout_debug_record_writer.h"
-#include "frenzykv/util/sstable_getter_from_cache.h"
-#include "frenzykv/util/sstable_getter_from_file.h"
 
 #include "frenzykv/log/logger.h"
 
 #include "frenzykv/db/db_impl.h"
 #include "frenzykv/db/version_descriptor.h"
 
-#include "frenzykv/persistent/sstable_builder.h"
+#include "frenzykv/table/sstable_builder.h"
+#include "frenzykv/table/sstable_getter_from_cache.h"
+#include "frenzykv/table/sstable_getter_from_file.h"
+
 #include "frenzykv/persistent/compaction.h"
 
 namespace rv = ::std::ranges::views;

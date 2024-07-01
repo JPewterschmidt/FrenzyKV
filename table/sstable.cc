@@ -6,8 +6,8 @@
 #include "toolpex/exceptions.h"
 #include "toolpex/assert.h"
 
-#include "frenzykv/persistent/sstable.h"
-#include "frenzykv/persistent/sstable_builder.h"
+#include "frenzykv/table/sstable.h"
+#include "frenzykv/table/sstable_builder.h"
 #include "frenzykv/util/comp.h"
 #include "frenzykv/util/serialize_helper.h"
 

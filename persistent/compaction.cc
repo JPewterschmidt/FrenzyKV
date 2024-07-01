@@ -9,7 +9,8 @@
 #include "frenzykv/persistent/compaction.h"
 #include "frenzykv/persistent/compaction_policy.h"
 #include "frenzykv/persistent/compaction_policy_tombstone.h"
-#include "frenzykv/persistent/sstable.h"
+
+#include "frenzykv/table/sstable.h"
 
 namespace rv = ::std::ranges::views;
 

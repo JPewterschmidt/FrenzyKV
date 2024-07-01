@@ -10,9 +10,10 @@
 #include "frenzykv/types.h"
 #include "frenzykv/io/in_mem_rw.h"
 #include "frenzykv/db/version.h"
-#include "frenzykv/util/sstable_getter.h"
-#include "frenzykv/persistent/sstable.h"
-#include "frenzykv/persistent/sstable_builder.h"
+
+#include "frenzykv/table/sstable_getter.h"
+#include "frenzykv/table/sstable.h"
+#include "frenzykv/table/sstable_builder.h"
 
 namespace frenzykv
 {

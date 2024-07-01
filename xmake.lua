@@ -60,6 +60,7 @@ target("FrenzyKV")
     add_cxflags("-Wconversion", { force = true })
     add_files(
         "util/*.cc", 
+        "table/*.cc", 
         "io/*.cc", 
         "db/*.cc", 
         "log/*.cc",

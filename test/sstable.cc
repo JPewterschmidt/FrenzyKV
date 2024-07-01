@@ -15,8 +15,9 @@
 #include "frenzykv/util/comp.h"
 
 #include "frenzykv/persistent/block.h"
-#include "frenzykv/persistent/sstable.h"
-#include "frenzykv/persistent/sstable_builder.h"
+
+#include "frenzykv/table/sstable.h"
+#include "frenzykv/table/sstable_builder.h"
 
 using namespace frenzykv;
 using namespace ::std::string_literals;
