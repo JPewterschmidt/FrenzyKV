@@ -11,7 +11,7 @@
 
 #include "frenzykv/kvdb_deps.h"
 #include "frenzykv/db/version.h"
-#include "frenzykv/db/memtable.h"
+#include "frenzykv/table/memtable.h"
 #include "frenzykv/db/filter.h"
 #include "frenzykv/db/garbage_collector.h"
 

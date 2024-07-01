@@ -2,7 +2,7 @@
 
 #include "toolpex/assert.h"
 
-#include "frenzykv/db/memtable.h"
+#include "frenzykv/table/memtable.h"
 #include "frenzykv/error_category.h"
 
 namespace frenzykv

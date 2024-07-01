@@ -6,7 +6,8 @@
 #include "koios/task.h"
 
 #include "frenzykv/util/file_guard.h"
-#include "frenzykv/persistent/sstable.h"
+
+#include "frenzykv/table/sstable.h"
 
 namespace frenzykv
 {

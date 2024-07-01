@@ -10,8 +10,9 @@
 #include "frenzykv/io/in_mem_rw.h"
 #include "frenzykv/db/filter.h"
 #include "frenzykv/persistent/compaction.h"
-#include "frenzykv/persistent/sstable.h"
-#include "frenzykv/persistent/sstable_builder.h"
+
+#include "frenzykv/table/sstable.h"
+#include "frenzykv/table/sstable_builder.h"
 
 namespace
 {

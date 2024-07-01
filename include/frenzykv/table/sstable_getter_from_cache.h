@@ -1,8 +1,8 @@
 #ifndef FRENZYKV_SSTABLE_GETTER_FROM_CACHE_H
 #define FRENZYKV_SSTABLE_GETTER_FROM_CACHE_H
 
-#include "frenzykv/util/sstable_getter.h"
-#include "frenzykv/util/table_cache.h"
+#include "frenzykv/table/sstable_getter.h"
+#include "frenzykv/table/table_cache.h"
 
 namespace frenzykv
 {

@@ -14,11 +14,9 @@
 #include "frenzykv/io/in_mem_rw.h"
 #include "frenzykv/util/record_writer_wrapper.h"
 #include "frenzykv/util/file_center.h"
-#include "frenzykv/util/table_cache.h"
 
 #include "frenzykv/db.h"
 #include "frenzykv/db/kv_entry.h"
-#include "frenzykv/db/memtable.h"
 #include "frenzykv/db/memtable_flusher.h"
 #include "frenzykv/db/read_write_options.h"
 #include "frenzykv/db/filter.h"
@@ -26,7 +24,10 @@
 #include "frenzykv/db/snapshot.h"
 #include "frenzykv/db/garbage_collector.h"
 
-#include "frenzykv/persistent/sstable.h"
+#include "frenzykv/table/sstable.h"
+#include "frenzykv/table/table_cache.h"
+#include "frenzykv/table/memtable.h"
+
 #include "frenzykv/persistent/compaction.h"
 
 namespace frenzykv

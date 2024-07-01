@@ -20,15 +20,16 @@
 
 #include "frenzykv/util/multi_dest_record_writer.h"
 #include "frenzykv/util/stdout_debug_record_writer.h"
-#include "frenzykv/util/sstable_getter_from_cache.h"
-#include "frenzykv/util/sstable_getter_from_file.h"
 
 #include "frenzykv/log/logger.h"
 
 #include "frenzykv/db/db_impl.h"
 #include "frenzykv/db/version_descriptor.h"
 
-#include "frenzykv/persistent/sstable_builder.h"
+#include "frenzykv/table/sstable_builder.h"
+#include "frenzykv/table/sstable_getter_from_cache.h"
+#include "frenzykv/table/sstable_getter_from_file.h"
+
 #include "frenzykv/persistent/compaction.h"
 
 namespace rv = ::std::ranges::views;
@@ -345,7 +346,7 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
     };
 
     // Find record from each level *concurrently*
-    for (auto files_same_level : files | rv::chunk_by(file_guard::have_same_level))
+    for (auto [index, files_same_level] : files | rv::chunk_by(file_guard::have_same_level) | rv::enumerate)
     {
         toolpex::skip_list<sequenced_key, kv_user_value> potiential_results(16);
         ::std::vector<koios::future<::std::optional<::std::pair<sequenced_key, kv_user_value>>>> futvec;
@@ -357,7 +358,7 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
             futvec.emplace_back(::std::move(fut));
         }
 
-        spdlog::debug("db_impl::find_from_ssts() start process current level");
+        spdlog::debug("db_impl::find_from_ssts() start process current level{}", index);
         for (auto& fut : futvec)
         {
             auto opt = co_await fut.get_async();
@@ -366,7 +367,7 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
 
         if (auto ret = co_await find_from_potiential_results(potiential_results, key); ret.has_value())
             co_return ret;
-        spdlog::debug("db_impl::find_from_ssts() one level through, getting to next level");
+        spdlog::debug("db_impl::find_from_ssts() one level through, getting to next level{}", index);
     }
 
     co_return {};

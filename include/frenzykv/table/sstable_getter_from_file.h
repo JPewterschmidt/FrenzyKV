@@ -1,7 +1,7 @@
 #ifndef FRENZYKV_SSTABLE_GETTER_FROM_FILE_H
 #define FRENZYKV_SSTABLE_GETTER_FROM_FILE_H
 
-#include "frenzykv/util/sstable_getter.h"
+#include "frenzykv/table/sstable_getter.h"
 
 namespace frenzykv
 {

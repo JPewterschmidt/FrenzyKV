@@ -5,7 +5,8 @@
 #include "frenzykv/env.h"
 
 #include "frenzykv/persistent/compaction_policy_oldest.h"
-#include "frenzykv/persistent/sstable.h"
+
+#include "frenzykv/table/sstable.h"
 
 namespace fs = ::std::filesystem;
 namespace r = ::std::ranges;

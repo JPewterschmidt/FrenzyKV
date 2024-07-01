@@ -1,5 +1,5 @@
 #include "toolpex/assert.h"
-#include "frenzykv/util/sstable_getter_from_file.h"
+#include "frenzykv/table/sstable_getter_from_file.h"
 
 namespace frenzykv
 {

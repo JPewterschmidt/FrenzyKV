@@ -35,6 +35,8 @@ if not is_mode("release") then
     )
 end
 
+add_cxxflags("-march=native", {force = true})
+
 target("FrenzyKV")
     set_kind("shared")
     add_deps("koios", "toolpex")
@@ -58,6 +60,7 @@ target("FrenzyKV")
     add_cxflags("-Wconversion", { force = true })
     add_files(
         "util/*.cc", 
+        "table/*.cc", 
         "io/*.cc", 
         "db/*.cc", 
         "log/*.cc",

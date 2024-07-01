@@ -10,7 +10,8 @@
 #include "frenzykv/util/file_center.h"
 
 #include "frenzykv/persistent/compaction.h"
-#include "frenzykv/persistent/sstable_builder.h"
+
+#include "frenzykv/table/sstable_builder.h"
 
 namespace r = ::std::ranges;
 namespace rv = r::views;

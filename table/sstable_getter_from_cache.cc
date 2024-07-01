@@ -1,4 +1,4 @@
-#include "frenzykv/util/sstable_getter_from_cache.h"
+#include "frenzykv/table/sstable_getter_from_cache.h"
 
 namespace frenzykv
 {
