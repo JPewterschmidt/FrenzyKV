@@ -1,3 +1,12 @@
+// Copyright (c) 2012 The LevelDB Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file. See the AUTHORS file for names of contributors.
+//
+// https://github.com/google/leveldb/blob/main/util/bloom_test.cc
+
+// Tests for bloom filter are copied and modified from Google's LevelDB implementation. 
+// Thank you Google.
+
 #include "gtest/gtest.h"
 #include "frenzykv/db/filter.h"
 
@@ -104,13 +113,13 @@ TEST_F(bloom_test, empty_filter)
 TEST_F(bloom_test, small_filter)
 {
     reset();
-    add("fuck");
-    add("you");
+    add("Thanks");
+    add("Google");
     build();
-    ASSERT_TRUE(matches("fuck"));
-    ASSERT_TRUE(matches("you"));
-    ASSERT_TRUE(!matches("hello"));
-    ASSERT_TRUE(!matches("world"));
+    ASSERT_TRUE(matches("Thanks"));
+    ASSERT_TRUE(matches("You"));
+    ASSERT_TRUE(!matches("Hello"));
+    ASSERT_TRUE(!matches("World"));
 }
 
 TEST_F(bloom_test, var_length_filter)

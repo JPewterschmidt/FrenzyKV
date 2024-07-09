@@ -28,4 +28,3 @@ concept is_memtable = requires(M m)
 } // namespace frenzykv
 
 #endif
-
