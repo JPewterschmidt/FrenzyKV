@@ -117,7 +117,7 @@ TEST_F(bloom_test, small_filter)
     add("Google");
     build();
     ASSERT_TRUE(matches("Thanks"));
-    ASSERT_TRUE(matches("You"));
+    ASSERT_TRUE(matches("Google"));
     ASSERT_TRUE(!matches("Hello"));
     ASSERT_TRUE(!matches("World"));
 }
