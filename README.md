@@ -16,7 +16,7 @@ A LSM KV database.
 - [Koios](https://github.com/JPewterschmidt/koios): A C++ coroutine library.
 - [toolpex](https://github.com/JPewterschmidt/toolpex): A C++ Utility Toolbox.
 
-## Acknoledgements
+## Acknowledgement
 
 System API design and system structure were inspired by Google's LevelDB, 
 since I have not yet get enough experience to design such a system.
