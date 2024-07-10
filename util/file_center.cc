@@ -118,7 +118,7 @@ koios::task<file_guard> file_center::get_file(const ::std::string& name)
         )
     );
     auto insert_ret = m_name_rep.insert({ name, sp.get() });
-    toolpex_assert(insert_ret.second); // TODO May triggered
+    toolpex_assert(insert_ret.second); // May triggered
     co_return *((*(insert_ret.first)).second);
 }
 

@@ -112,7 +112,8 @@ struct adl_serializer<frenzykv::options>
         j.at("max_block_segments_number").get_to(opt.max_block_segments_number);
         if (opt.max_block_segments_number > ::std::numeric_limits<uint16_t>::max())
         {
-            spdlog::debug("TODO: the max_block_segments_number exceeds the limits. Something bad happenning.");
+            spdlog::debug("The `max_block_segments_number` exceeds the limits. Terminating.");
+            ::exit(1);
         }
         j.at("sync_write").get_to(opt.sync_write);
         j.at("buffered_read").get_to(opt.buffered_read);
