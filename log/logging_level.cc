@@ -1,3 +1,8 @@
+// This file is part of Koios
+// https://github.com/JPewterschmidt/FrenzyKV
+//
+// Copyleft 2023 - 2024, ShiXin Wang. All wrongs reserved.
+
 #include "frenzykv/log/logging_level.h"
 #include "toolpex/in_there.h"
 #include <stdexcept>

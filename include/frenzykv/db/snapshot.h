@@ -1,3 +1,8 @@
+// This file is part of Koios
+// https://github.com/JPewterschmidt/FrenzyKV
+//
+// Copyleft 2023 - 2024, ShiXin Wang. All wrongs reserved.
+
 #ifndef FRENZYKV_DB_SNAPSHOT_H
 #define FRENZYKV_DB_SNAPSHOT_H
 

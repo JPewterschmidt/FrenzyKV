@@ -1,3 +1,8 @@
+// This file is part of Koios
+// https://github.com/JPewterschmidt/FrenzyKV
+//
+// Copyleft 2023 - 2024, ShiXin Wang. All wrongs reserved.
+
 #include "gtest/gtest.h"
 
 #include <memory>
@@ -30,10 +35,10 @@ public:
         kvdb_deps_manipulator{m_deps}.exchange_option(opt);
     }
 
-    koios::task<memtable> make_memtable(write_batch batch)
+    koios::task<::std::unique_ptr<memtable>> make_memtable(write_batch batch)
     {
-        memtable result(m_deps);
-        co_await result.insert(::std::move(batch));
+        ::std::unique_ptr<memtable> result = ::std::make_unique<memtable>(m_deps);
+        co_await result->insert(::std::move(batch));
         co_return result;
     }
 
@@ -52,12 +57,12 @@ public:
         return result;
     }
 
-    koios::task<::std::unique_ptr<in_mem_rw>> make_sstable(memtable mem)
+    koios::task<::std::unique_ptr<in_mem_rw>> make_sstable(::std::unique_ptr<memtable> mem)
     {
         auto file = ::std::make_unique<in_mem_rw>();
         sstable_builder builder(m_deps, 8192 * 10, m_filter.get(), file.get());
 
-        auto sto = co_await mem.get_storage();
+        auto sto = co_await mem->get_storage();
         for (const auto& [k, v] : sto)
         {
             [[maybe_unused]] bool addret = co_await builder.add(k, v);
