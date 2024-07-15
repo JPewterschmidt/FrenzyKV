@@ -1,3 +1,8 @@
+// This file is part of Koios
+// https://github.com/JPewterschmidt/FrenzyKV
+//
+// Copyleft 2023 - 2024, ShiXin Wang. All wrongs reserved.
+
 #ifndef FRENZYKV_SSTABLE_GETTER_FROM_CACHE_H
 #define FRENZYKV_SSTABLE_GETTER_FROM_CACHE_H
 

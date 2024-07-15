@@ -1,3 +1,8 @@
+// This file is part of Koios
+// https://github.com/JPewterschmidt/FrenzyKV
+//
+// Copyleft 2023 - 2024, ShiXin Wang. All wrongs reserved.
+
 #include "frenzykv/io/iouring_writable.h"
 #include "frenzykv/error_category.h"
 #include "toolpex/errret_thrower.h"

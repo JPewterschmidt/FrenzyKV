@@ -1,3 +1,8 @@
+// This file is part of Koios
+// https://github.com/JPewterschmidt/FrenzyKV
+//
+// Copyleft 2023 - 2024, ShiXin Wang. All wrongs reserved.
+
 #include "frenzykv/util/compressor.h"
 #include "frenzykv/error_category.h"
 #include "zstd.h"
