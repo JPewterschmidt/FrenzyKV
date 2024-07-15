@@ -23,22 +23,22 @@ class memtable_test : public ::testing::Test
 {
 public:
     memtable_test()
-        : m_mem{ g_deps }
     {
+        reset();
     }
 
     void reset()
     {
-        m_mem = memtable{ g_deps };
+        m_mem = ::std::make_unique<memtable>(g_deps);
     }
 
     koios::task<bool> init_ok()
     {
         co_return {
-               co_await m_mem.count() == 0
-            && co_await m_mem.bound_size_bytes() != 0
-            && co_await m_mem.full() == false
-            && co_await m_mem.size_bytes() == 0
+               co_await m_mem->count() == 0
+            && co_await m_mem->bound_size_bytes() != 0
+            && co_await m_mem->full() == false
+            && co_await m_mem->size_bytes() == 0
         };
     }
 
@@ -52,16 +52,16 @@ public:
         const size_t bcount = b.count(), b2count = b2.count();
         const size_t bss = b.serialized_size(), b2ss = b2.serialized_size();
 
-        co_await m_mem.insert(b);
-        co_await m_mem.insert(::std::move(b2));
-        co_return co_await m_mem.count() == bcount + b2count 
-            && co_await m_mem.size_bytes() == bss + b2ss;
+        co_await m_mem->insert(b);
+        co_await m_mem->insert(::std::move(b2));
+        co_return co_await m_mem->count() == bcount + b2count 
+            && co_await m_mem->size_bytes() == bss + b2ss;
     }
 
     koios::task<bool> get_test(sequence_number_t seq_number)
     {
         sequenced_key k(seq_number, "abc1");
-        auto result_opt = co_await m_mem.get(k);
+        auto result_opt = co_await m_mem->get(k);
         if (!result_opt) co_return false;
         const auto& result = result_opt.value();
         co_return result.key().sequence_number() <= seq_number && result.value().value().size() == 0;
@@ -74,15 +74,15 @@ public:
         write_batch b;
         b.remove_from_db("abc1");
         b.set_first_sequence_num(100);
-        co_await m_mem.insert(::std::move(b));
+        co_await m_mem->insert(::std::move(b));
         sequenced_key k(100, "abc1");
 
-        auto opt = co_await m_mem.get(k);
+        auto opt = co_await m_mem->get(k);
         co_return !opt.has_value() || opt->is_tomb_stone();
     }
 
 private:
-    memtable m_mem;
+    ::std::unique_ptr<memtable> m_mem;
 };
 
 } // annoymous namespace 

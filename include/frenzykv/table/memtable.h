@@ -4,6 +4,8 @@
 #include <system_error>
 #include <optional>
 #include <utility>
+#include <memory_resource>
+
 #include "toolpex/skip_list.h"
 #include "frenzykv/write_batch.h"
 #include "frenzykv/kvdb_deps.h"
@@ -15,32 +17,22 @@ namespace frenzykv
 class memtable
 {
 public:
-    using container_type = toolpex::skip_list<sequenced_key, kv_user_value>;
+    using container_type = toolpex::skip_list<
+        sequenced_key, kv_user_value,
+        ::std::less<sequenced_key>, 
+        ::std::equal_to<sequenced_key>, 
+        ::std::pmr::polymorphic_allocator<::std::pair<sequenced_key, kv_user_value>>
+    >;
 
 public:
     memtable(const kvdb_deps& deps)
         : m_deps{ &deps },
-          m_list(toolpex::skip_list_suggested_max_level(m_deps->stat()->hot_data_scale_baseline())), 
-          m_bound_size_bytes{ m_deps->opt()->memory_page_bytes }
+          m_bound_size_bytes{ m_deps->opt()->memory_page_bytes },
+          m_mbr(m_bound_size_bytes),
+          m_pa(&m_mbr),
+          m_list(toolpex::skip_list_suggested_max_level(m_deps->stat()->hot_data_scale_baseline()), m_pa)
     {
         assert(m_deps);
-    }
-
-    memtable(memtable&& other) noexcept
-        : m_deps { ::std::exchange(other.m_deps, nullptr) }, 
-          m_list{ ::std::move(other.m_list) }, 
-          m_bound_size_bytes{ other.m_bound_size_bytes }
-    {
-        assert(m_deps);
-    }
-
-    memtable& operator=(memtable&& other) noexcept
-    {
-        m_deps = ::std::exchange(other.m_deps, nullptr);
-        m_list = ::std::move(other.m_list);
-        m_bound_size_bytes = ::std::exchange(other.m_bound_size_bytes, 0);
-
-        return *this;
     }
 
     koios::task<::std::error_code> insert(write_batch b);
@@ -70,11 +62,12 @@ private:
 private:
     const kvdb_deps* m_deps{};
 
-    container_type m_list;
-
     size_t m_bound_size_bytes{};
     size_t m_size_bytes{};
-    //mutable koios::shared_mutex m_list_mutex;
+
+    ::std::pmr::monotonic_buffer_resource m_mbr;
+    ::std::pmr::polymorphic_allocator<::std::pair<sequenced_key, kv_user_value>> m_pa;
+    container_type m_list;
 };
 
 } // namespace frenzykv
