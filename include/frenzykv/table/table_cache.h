@@ -35,6 +35,7 @@ public:
 
     koios::task<::std::shared_ptr<sstable>> insert(const file_guard& fg);
     koios::task<size_t> size() const;
+    koios::task<> clear();
     
 private:
     ::std::shared_ptr<sstable>

@@ -54,7 +54,7 @@ db_impl::db_impl(::std::string dbname, const options& opt)
       m_file_center{ m_deps }, 
       m_version_center{ m_file_center },
       m_compactor{ m_deps, m_filter_policy.get() }, 
-      m_cache{ m_deps, m_filter_policy.get(), 8 },
+      m_cache{ m_deps, m_filter_policy.get(), 32 },
       m_mem{ ::std::make_unique<memtable>(m_deps) }, 
       m_gcer{ &m_version_center, &m_file_center }, 
       m_flusher{ m_deps, &m_version_center, m_filter_policy.get(), &m_file_center }
@@ -232,6 +232,7 @@ koios::task<> db_impl::close()
     toolpex_assert(write_ret);
     co_await delete_all_prewrite_log();
     co_await m_gcer.do_GC();
+    co_await m_cache.clear();
     
     co_return;
 }

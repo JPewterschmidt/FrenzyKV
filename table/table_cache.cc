@@ -21,6 +21,14 @@ table_cache::table_cache(const kvdb_deps& deps,
 {
 }
 
+koios::task<> 
+table_cache::
+clear()
+{
+    auto lk = co_await m_mutex.acquire();
+    m_tables.clear();
+}
+
 ::std::shared_ptr<sstable>
 table_cache::
 find_table_impl(const ::std::string& name)

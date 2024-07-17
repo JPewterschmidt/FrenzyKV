@@ -19,12 +19,14 @@
 #include "frenzykv/write_batch.h"
 #include "frenzykv/db/db_impl.h"
 #include "koios/iouring_awaitables.h"
+#include "koios/this_task.h"
 
 #include "MurmurHash3.h"
 
 using namespace koios;
 using namespace frenzykv;
 using namespace ::std::string_view_literals;
+using namespace ::std::chrono_literals;
 
 koios::eager_task<> db_test()
 {
@@ -42,14 +44,26 @@ koios::eager_task<> db_test()
 
     snapshot s = co_await db->get_snapshot();
 
-    // #1
-    spdlog::debug("db_test: start insert");
-    for (size_t i{}; i < scale; ++i)
-    {
-        auto k = ::std::to_string(i);
-        co_await db->insert(k, "test value abcdefg abcdefg 3");
-    }
-    spdlog::debug("db_test: insert complete");
+    auto insertion_func = [&db] mutable -> koios::task<>
+    { 
+        spdlog::debug("A insertion_func emitted");
+        co_await koios::this_task::sleep_for(1s);
+        
+        // #1
+        spdlog::debug("db_test: start insert");
+        for (size_t i{}; i < scale; ++i)
+        {
+            auto k = ::std::to_string(i);
+            co_await db->insert(k, "test value abcdefg abcdefg 3");
+        }
+        spdlog::debug("db_test: insert complete");
+    };
+
+    auto fut1 = insertion_func().run_and_get_future();
+    auto fut2 = insertion_func().run_and_get_future();
+
+    co_await fut1.get_async();
+    co_await fut2.get_async();
 
     // #2
     //spdlog::debug("db_test: start insert");
