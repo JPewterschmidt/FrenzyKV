@@ -34,7 +34,7 @@ write_batch make_batch()
     return result;
 }
 
-koios::eager_task<bool> write(logger& l)
+koios::lazy_task<bool> write(logger& l)
 {
     auto w = make_batch();
     try
@@ -49,7 +49,7 @@ koios::eager_task<bool> write(logger& l)
     co_return true;
 }
 
-koios::eager_task<bool> read(env* e)
+koios::lazy_task<bool> read(env* e)
 {
     auto file = e->get_seq_readable(prewrite_log_path()/prewrite_log_name());
     buffer<> buf(file->file_size());

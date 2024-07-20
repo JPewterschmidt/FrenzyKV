@@ -116,7 +116,7 @@ recover(env* e) noexcept
     co_return { result, max_seq };
 }
 
-koios::eager_task<> logger::delete_file()
+koios::lazy_task<> logger::delete_file()
 {
     auto lk = co_await m_mutex.acquire();
     co_await koios::uring::unlink(prewrite_log_path()/prewrite_log_name());

@@ -71,7 +71,7 @@ retrive_level_and_id_from_sst_name(::std::string_view name)
     return result;
 }
 
-koios::eager_task<> file_center::load_files()
+koios::lazy_task<> file_center::load_files()
 {
     auto lk = co_await m_mutex.acquire();
     // Go through all the files.

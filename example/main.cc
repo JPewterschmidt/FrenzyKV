@@ -28,7 +28,7 @@ using namespace frenzykv;
 using namespace ::std::string_view_literals;
 using namespace ::std::chrono_literals;
 
-koios::eager_task<> db_test()
+koios::lazy_task<> db_test()
 {
     spdlog::set_level(spdlog::level::debug);
 

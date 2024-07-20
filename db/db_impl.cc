@@ -135,7 +135,7 @@ db_impl::need_compaction(level_t l)
     };
 }
 
-koios::eager_task<> db_impl::compact_tombstones()
+koios::lazy_task<> db_impl::compact_tombstones()
 {
     spdlog::debug("db_impl::compact_tombstones()");
     const level_t max_level = m_deps.opt()->max_level;
@@ -181,7 +181,7 @@ koios::task<> db_impl::fake_file_to_disk(::std::unique_ptr<in_mem_rw> fake_file,
     }
 }
 
-koios::eager_task<> db_impl::may_compact(level_t from)
+koios::lazy_task<> db_impl::may_compact(level_t from)
 {
     const level_t max_level = m_deps.opt()->max_level;
     auto env = m_deps.env();
@@ -392,7 +392,7 @@ koios::task<snapshot> db_impl::get_snapshot()
     co_return m_snapshot_center.get_snapshot(co_await m_version_center.current_version());
 }
 
-koios::eager_task<> db_impl::background_compacting_GC(::std::stop_token stp)
+koios::lazy_task<> db_impl::background_compacting_GC(::std::stop_token stp)
 {
     auto lk = co_await m_flying_GC_mutex.acquire();
     const level_t max_level = m_deps.opt()->max_level;

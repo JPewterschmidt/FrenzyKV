@@ -10,7 +10,7 @@
 namespace frenzykv
 {
 
-koios::eager_task<> garbage_collector::do_GC() const
+koios::lazy_task<> garbage_collector::do_GC() const
 {
     auto lk = co_await m_mutex.acquire();
 

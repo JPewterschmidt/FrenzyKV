@@ -50,7 +50,7 @@ public:
     }
 
     const kvdb_deps& deps() const noexcept { return *m_deps; }
-    koios::eager_task<> load_files();
+    koios::lazy_task<> load_files();
 
     koios::task<::std::vector<file_guard>>
     get_file_guards(const ::std::vector<::std::string>& names);
