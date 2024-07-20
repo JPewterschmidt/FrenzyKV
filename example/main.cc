@@ -44,7 +44,7 @@ koios::eager_task<> db_test()
 
     snapshot s = co_await db->get_snapshot();
 
-    auto insertion_func = [&db] mutable -> koios::task<>
+    auto insertion_func = [](db_interface* db) mutable -> koios::task<>
     { 
         spdlog::debug("A insertion_func emitted");
         co_await koios::this_task::sleep_for(1s);
@@ -59,8 +59,8 @@ koios::eager_task<> db_test()
         spdlog::debug("db_test: insert complete");
     };
 
-    //auto fut1 = insertion_func().run_and_get_future();
-    //auto fut2 = insertion_func().run_and_get_future();
+    //auto fut1 = insertion_func(db).run_and_get_future();
+    //auto fut2 = insertion_func(db).run_and_get_future();
 
     //co_await fut1.get_async();
     //co_await fut2.get_async();

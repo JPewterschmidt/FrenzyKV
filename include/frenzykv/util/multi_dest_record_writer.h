@@ -41,9 +41,10 @@ public:
 
     koios::task<> write(const write_batch& batch)
     {
-        co_await ::std::apply([&batch](auto&& ... writer_ptrs) -> koios::task<> {
+        auto batch_and_writers = ::std::tuple_cat(::std::tuple{ ::std::cref(batch) }, ::std::move(m_writers));
+        co_await ::std::apply([](const write_batch& batch, auto&& ... writer_ptrs) -> koios::task<> {
             (co_await writer_ptrs.write(batch), ...);
-        }, m_writers);
+        }, ::std::move(batch_and_writers));
     }
 
 private:

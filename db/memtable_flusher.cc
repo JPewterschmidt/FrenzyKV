@@ -45,11 +45,14 @@ flush_to_disk(::std::unique_ptr<memtable> table)
 
     version_delta delta;
 
-    auto finish_current_buiding = [&] -> koios::task<> { 
+    auto finish_current_buiding = 
+    [](sstable_builder& builder, version_delta& delta, seq_writable* file, file_guard sst_guard) 
+        -> koios::task<> 
+    { 
         co_await builder.finish();
         //co_await file->flush();
         co_await file->sync();
-        delta.add_new_file(sst_guard);
+        delta.add_new_file(::std::move(sst_guard));
     };
 
     auto env = m_deps->env();
@@ -61,7 +64,7 @@ flush_to_disk(::std::unique_ptr<memtable> table)
         bool add_result = co_await builder.add(k, v);
         if (!add_result)
         {
-            co_await finish_current_buiding();
+            co_await finish_current_buiding(builder, delta, file.get(), ::std::move(sst_guard));
             sst_guard = co_await m_file_center->get_file(name_a_sst(0));
             file = co_await sst_guard.open_write(env.get());
 
@@ -74,7 +77,7 @@ flush_to_disk(::std::unique_ptr<memtable> table)
             toolpex_assert(add_result);
         }
     }
-    co_await finish_current_buiding();
+    co_await finish_current_buiding(builder, delta, file.get(), sst_guard);
     
     spdlog::debug("flush_to_disk() updates version info");
     auto new_ver = co_await m_version_center->add_new_version();
