@@ -22,10 +22,10 @@ namespace frenzykv
 
 koios::task<bool> write_version_descriptor(const version_rep& version, seq_writable* file);
 koios::task<bool> append_version_descriptor(const version_rep& version, seq_writable* file);
-koios::task<bool> write_version_descriptor(const ::std::vector<::std::string>& filenames, seq_writable* file);
-koios::task<bool> append_version_descriptor(const ::std::vector<::std::string>& filenames, seq_writable* file);
+koios::task<bool> write_version_descriptor(::std::vector<::std::string> filenames, seq_writable* file);
+koios::task<bool> append_version_descriptor(::std::vector<::std::string> filenames, seq_writable* file);
 koios::task<bool> write_version_descriptor(const ::std::vector<file_guard>& filenames, seq_writable* file);
-koios::task<bool> append_version_descriptor(const ::std::vector<file_guard>& filenames, seq_writable* file);
+koios::task<bool> append_version_descriptor(::std::vector<file_guard> filenames, seq_writable* file);
 
 koios::task<::std::vector<::std::string>> read_version_descriptor(seq_readable* file);
 

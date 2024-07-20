@@ -26,17 +26,25 @@ namespace frenzykv
 koios::task<bool> 
 write_version_descriptor(const ::std::vector<file_guard>& filenames, seq_writable* file)
 {
-    auto names_view = filenames | rv::transform([](auto&& guard) { return ::std::string(guard); });
-    ::std::vector<::std::string> names(begin(names_view), end(names_view));
-    co_return co_await write_version_descriptor(names, file);
+    co_return co_await write_version_descriptor(
+        filenames 
+            | rv::transform([](auto&& guard) { return guard.name(); }) 
+            | r::to<::std::vector<::std::string>>()
+            , 
+        file
+    );
 }
 
 koios::task<bool> 
 append_version_descriptor(const ::std::vector<file_guard>& filenames, seq_writable* file)
 {
-    auto names_view = filenames | rv::transform([](auto&& guard) { return ::std::string(guard); });
-    ::std::vector<::std::string> names(begin(names_view), end(names_view));
-    co_return co_await append_version_descriptor(names, file);
+    co_return co_await append_version_descriptor(
+        filenames 
+            | rv::transform([](auto&& guard) { return ::std::string(guard); }) 
+            | r::to<::std::vector<::std::string>>()
+            , 
+        file
+    );
 }
 
 koios::task<bool> 
@@ -47,26 +55,27 @@ write_version_descriptor(const version_rep& version, seq_writable* file)
 }
 
 koios::task<bool> 
-write_version_descriptor(const ::std::vector<::std::string>& filenames, seq_writable* file)
+write_version_descriptor(::std::vector<::std::string> filenames, seq_writable* file)
 {
     toolpex_assert(file->file_size() == 0);
-    return append_version_descriptor(filenames, file);
+    return append_version_descriptor(::std::move(filenames), file);
 }
 
 koios::task<bool> 
 append_version_descriptor(const version_rep& version, seq_writable* file)
 {
-    ::std::vector<::std::string> name_vec;
-    for (const auto& guard : version.files())
-    {
-        name_vec.emplace_back(guard);
-    }
-    co_return co_await append_version_descriptor(::std::move(name_vec), file);
+    co_return co_await append_version_descriptor(
+        version.files() 
+            | rv::transform([](auto&& f){ return f.name(); })
+            | r::to<::std::vector<::std::string>>()
+            , 
+        file
+    );
 }
 
 koios::task<bool> 
 append_version_descriptor(
-    const ::std::vector<::std::string>& filenames, 
+    ::std::vector<::std::string> filenames, 
     seq_writable* file)
 {
     constexpr auto newline = "\n"sv;
