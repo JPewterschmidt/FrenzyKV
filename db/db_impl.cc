@@ -355,14 +355,11 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
     for (auto [index, files_same_level] : files | rv::chunk_by(file_guard::have_same_level) | rv::enumerate)
     {
         toolpex::skip_list<sequenced_key, kv_user_value> potiential_results(16);
-        ::std::vector<koios::future<::std::optional<::std::pair<sequenced_key, kv_user_value>>>> futvec;
-        for (auto fut : files_same_level 
+        auto futvec = files_same_level 
                       | rv::transform(file_to_async_potiential_ret) 
                       | rv::transform([](auto task){ return task.run_and_get_future(); })
-                      )
-        {
-            futvec.emplace_back(::std::move(fut));
-        }
+                      | r::to<::std::vector>()
+                      ;
 
         spdlog::debug("db_impl::find_from_ssts() start process current level{}", index);
         for (auto& fut : futvec)

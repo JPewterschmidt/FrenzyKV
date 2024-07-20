@@ -15,7 +15,8 @@
 using namespace frenzykv;
 using namespace ::std::string_view_literals;
 using namespace ::std::string_literals;
-namespace rv = ::std::ranges::views;
+namespace r = ::std::ranges;
+namespace rv = r::views;
 
 namespace
 {
@@ -32,8 +33,7 @@ public:
         {
             if (i % 200 == 0)
             {
-                auto newkview = key | rv::transform([](auto&& ch){ return ch + 1; });
-                key = ::std::string{ begin(newkview), end(newkview) };
+                key = key | rv::transform([](auto&& ch){ return ch + 1; }) | r::to<::std::string>();
             }
 
             kvs.emplace_back(

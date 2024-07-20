@@ -26,9 +26,9 @@ compacting_files(version_guard vc, level_t from) const
 {
     ::std::vector<file_guard> result;
 
-    const auto& files = vc.files();
-    auto files_level_from = files | rv::filter(file_guard::with_level_predicator(from));
-    ::std::vector file_vec_level_from(begin(files_level_from), end(files_level_from));
+    auto file_vec_level_from = vc.files() 
+        | rv::filter(file_guard::with_level_predicator(from)) 
+        | r::to<::std::vector<file_guard>>();
 
     r::sort(file_vec_level_from, [](const auto& lhs, const auto& rhs) { 
         return lhs.last_write_time() < rhs.last_write_time(); 
@@ -56,8 +56,9 @@ compacting_files(version_guard vc, level_t from) const
         auto from_l_sst = co_await sstable::make(*m_deps, m_filter, co_await result.front().open_read(env.get()));
 
         // Find overlapped tables from next level
-        auto files_level_next = files | rv::filter(file_guard::with_level_predicator(from + 1));
-        ::std::vector file_vec_level_next(begin(files_level_next), end(files_level_next));
+        auto file_vec_level_next = vc.files() 
+            | rv::filter(file_guard::with_level_predicator(from + 1))
+            | r::to<::std::vector<file_guard>>();
         
         r::sort(file_vec_level_next, [](const auto& lhs, const auto& rhs) { 
             return lhs.last_write_time() < rhs.last_write_time(); 

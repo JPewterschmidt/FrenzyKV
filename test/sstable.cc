@@ -27,7 +27,8 @@
 using namespace frenzykv;
 using namespace ::std::string_literals;
 using namespace ::std::string_view_literals;
-namespace rv = ::std::ranges::views;
+namespace r = ::std::ranges;
+namespace rv = r::views;
 
 namespace
 {
@@ -45,8 +46,7 @@ const ::std::string tomb_stone_key = "bbbdddccc";
     {
         if (i % 20 == 0)
         {
-            auto newkview = key | rv::transform([](auto&& ch){ return ch + 1; });
-            key = ::std::string{ begin(newkview), end(newkview) };
+            key = key | rv::transform([](auto&& ch){ return ch + 1; }) | r::to<::std::string>();
         }
 
         kvs.emplace_back((sequence_number_t)i, key, user_value);
