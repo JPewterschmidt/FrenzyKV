@@ -24,32 +24,24 @@ koios::task<::std::vector<file_guard>>
 compaction_policy_oldest::
 compacting_files(version_guard vc, level_t from) const
 {
-    ::std::vector<file_guard> result;
-
-    auto file_vec_level_from = vc.files() 
+    auto result = vc.files() 
         | rv::filter(file_guard::with_level_predicator(from)) 
         | r::to<::std::vector<file_guard>>();
 
-    r::sort(file_vec_level_from, [](const auto& lhs, const auto& rhs) { 
+    r::sort(result, [](const auto& lhs, const auto& rhs) { 
         return lhs.last_write_time() < rhs.last_write_time(); 
     });
+
+    // Drop the last one
+    result.resize(result.size() - 1);
     
+    // If there is no any file to be comapcted.
+    if (result.empty()) co_return {};
+
     auto opt = m_deps->opt();
     auto env = m_deps->env();
 
     assert(opt->allowed_level_file_number(from) >= 2);
-
-    // Suppose to be empalce_range, but GCC 13 not supports it.
-    for (auto& fg : file_vec_level_from 
-        | rv::take(file_vec_level_from.size() - 1))
-    {
-        assert(fg.valid());
-        result.push_back(::std::move(fg));
-    }
-    file_vec_level_from = {};
-    
-    // If there is no any file to be comapcted.
-    if (result.empty()) co_return {};
 
     if (from != 0)
     {

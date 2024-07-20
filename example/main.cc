@@ -59,11 +59,11 @@ koios::eager_task<> db_test()
         spdlog::debug("db_test: insert complete");
     };
 
-    auto fut1 = insertion_func().run_and_get_future();
-    auto fut2 = insertion_func().run_and_get_future();
+    //auto fut1 = insertion_func().run_and_get_future();
+    //auto fut2 = insertion_func().run_and_get_future();
 
-    co_await fut1.get_async();
-    co_await fut2.get_async();
+    //co_await fut1.get_async();
+    //co_await fut2.get_async();
 
     // #2
     //spdlog::debug("db_test: start insert");

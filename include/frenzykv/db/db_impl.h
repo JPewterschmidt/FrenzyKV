@@ -85,6 +85,9 @@ private:
 
     koios::eager_task<> background_compacting_GC(::std::stop_token tk);
 
+    koios::task<::std::optional<::std::pair<sequenced_key, kv_user_value>>> 
+    file_to_async_potiential_ret(const file_guard& fg, const sequenced_key& key, const snapshot& snap) const;
+
 private:
     ::std::string m_dbname;
     kvdb_deps m_deps;

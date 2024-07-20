@@ -319,6 +319,27 @@ find_from_potiential_results(auto& potiential_results, const auto& key)
     co_return result;
 }
 
+koios::task<::std::optional<::std::pair<sequenced_key, kv_user_value>>> 
+db_impl::file_to_async_potiential_ret(const file_guard& fg, const sequenced_key& key, const snapshot& snap) const
+{
+    spdlog::debug("db_impl::find_from_ssts() >=> file_to_async_potiential_ret: getting table {} from cache", fg.name());
+    ::std::shared_ptr<sstable> sst = co_await m_cache.insert(fg);
+    toolpex_assert(sst);
+    spdlog::debug("db_impl::find_from_ssts() >=> file_to_async_potiential_ret: got table {} from cache", fg.name());
+
+    auto entry_opt = co_await sst->get_kv_entry(key);
+    if (!entry_opt.has_value() 
+        || (snap.valid() && entry_opt->key().sequence_number() > snap.sequence_number()))
+    {
+        co_return {};
+    }
+
+    co_return ::std::pair{
+        ::std::move(entry_opt->key()), 
+        ::std::move(entry_opt->value())
+    };
+}
+
 koios::task<::std::optional<kv_entry>> 
 db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
 {
@@ -329,37 +350,15 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
 
     auto env = m_deps.env();
 
-    auto file_to_async_potiential_ret = 
-    [&key, &env, &snap, this] (file_guard fg) mutable
-        -> koios::task<::std::optional<::std::pair<sequenced_key, kv_user_value>>>
-    {
-        spdlog::debug("db_impl::find_from_ssts()::file_to_async_potiential_ret: getting table {} from cache", fg.name());
-        ::std::shared_ptr<sstable> sst = co_await m_cache.insert(fg);
-        toolpex_assert(sst);
-        spdlog::debug("db_impl::find_from_ssts()::file_to_async_potiential_ret: got table {} from cache", fg.name());
-
-        auto entry_opt = co_await sst->get_kv_entry(key);
-        if (!entry_opt.has_value() 
-            || (snap.valid() && entry_opt->key().sequence_number() > snap.sequence_number()))
-        {
-            co_return {};
-        }
-
-        co_return ::std::pair{
-            ::std::move(entry_opt->key()), 
-            ::std::move(entry_opt->value())
-        };
-    };
-
     // Find record from each level *concurrently*
     for (auto [index, files_same_level] : files | rv::chunk_by(file_guard::have_same_level) | rv::enumerate)
     {
         toolpex::skip_list<sequenced_key, kv_user_value> potiential_results(16);
         auto futvec = files_same_level 
-                      | rv::transform(file_to_async_potiential_ret) 
-                      | rv::transform([](auto task){ return task.run_and_get_future(); })
-                      | r::to<::std::vector>()
-                      ;
+                    | rv::transform([&](auto&& f){ return file_to_async_potiential_ret(f, key, snap); }) 
+                    | rv::transform([](auto task){ return task.run_and_get_future(); })
+                    | r::to<::std::vector>()
+                    ;
 
         spdlog::debug("db_impl::find_from_ssts() start process current level{}", index);
         for (auto& fut : futvec)
