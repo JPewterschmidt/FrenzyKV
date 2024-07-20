@@ -231,7 +231,7 @@ public:
 
     koios::task<mutable_version_guard>  add_new_version();
     koios::task<version_guard>          current_version() const noexcept;
-    koios::eager_task<>                 load_current_version();
+    koios::lazy_task<>                 load_current_version();
 
     //koios::task<void> GC_with(koios::awaitable_callable_concept auto async_func_file_range)
     koios::task<> GC_with(auto async_func_file_range)

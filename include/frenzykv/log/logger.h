@@ -37,7 +37,7 @@ public:
     koios::task<> insert(const write_batch& b);
     koios::task<bool> empty() const noexcept;
     koios::task<> truncate_file() noexcept;
-    koios::eager_task<> delete_file();
+    koios::lazy_task<> delete_file();
     koios::task<> may_flush(bool force = false);
     
 private:

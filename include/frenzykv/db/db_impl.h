@@ -55,7 +55,7 @@ public:
     koios::task<> close() override;
     koios::task<snapshot> get_snapshot() override;
 
-    koios::eager_task<> compact_tombstones();
+    koios::lazy_task<> compact_tombstones();
 
 private:
     koios::task<sequenced_key> make_query_key(const_bspan userkey, const snapshot& snap);
@@ -81,9 +81,9 @@ private:
     koios::task<> update_current_version(version_delta delta);
 
     koios::task<::std::pair<bool, version_guard>> need_compaction(level_t l);
-    koios::eager_task<> may_compact(level_t from = 0);
+    koios::lazy_task<> may_compact(level_t from = 0);
 
-    koios::eager_task<> background_compacting_GC(::std::stop_token tk);
+    koios::lazy_task<> background_compacting_GC(::std::stop_token tk);
 
     koios::task<::std::optional<::std::pair<sequenced_key, kv_user_value>>> 
     file_to_async_potiential_ret(const file_guard& fg, const sequenced_key& key, const snapshot& snap) const;

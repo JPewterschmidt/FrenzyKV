@@ -44,7 +44,7 @@ koios::task<::std::unique_ptr<in_mem_rw>> make_in_mem_source_file()
     co_return result;
 }
 
-koios::eager_task<::std::unique_ptr<iouring_writable>> make_real_file()
+koios::lazy_task<::std::unique_ptr<iouring_writable>> make_real_file()
 {
     static size_t count{};
     ::std::string filename = ::std::format("testfile{}", count++);
@@ -81,7 +81,7 @@ koios::task<bool> in_mem_dump_test()
     co_return true;
 }
 
-koios::eager_task<> delete_file()
+koios::lazy_task<> delete_file()
 {
     for (auto p : opened_files)
     {
@@ -89,7 +89,7 @@ koios::eager_task<> delete_file()
     }
 }
 
-koios::eager_task<bool> real_file_test()
+koios::lazy_task<bool> real_file_test()
 {
     auto file = co_await make_real_file();
     assert(file->file_size() == 0);
@@ -130,7 +130,7 @@ namespace
     auto optp = deps.opt();
     iouring_writable w{filename, *optp};
     
-    eager_task<bool> env_setup()
+    lazy_task<bool> env_setup()
     {
         seq_writable& w = r;
         const auto str = "123456789abcdefghijk"sv;
@@ -144,7 +144,7 @@ namespace
         co_return str.size() * 6 == count;
     }
 
-    eager_task<bool> testbody_in_mem_rw()
+    lazy_task<bool> testbody_in_mem_rw()
     {
         ::std::array<char, 5> buffer{};
         ::std::span sp{ buffer.begin(), buffer.end() };
@@ -158,7 +158,7 @@ namespace
         co_return ::std::memcmp(buffer.data(), "bcdef", 5) == 0 && partial_result;
     }
 
-    eager_task<bool> testbody_posix()
+    lazy_task<bool> testbody_posix()
     {
         seq_writable& ref = w;
         ::std::string test_txt = "1234567890abcdefg\n";
@@ -183,7 +183,7 @@ namespace
         co_return true;
     }
 
-    eager_task<bool> iouring_readable_dump_to()
+    lazy_task<bool> iouring_readable_dump_to()
     {
         auto opt = deps.opt();
         const ::std::string test_filename = "testfile-iouring_readable_dump_to";
