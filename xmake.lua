@@ -58,6 +58,7 @@ target("FrenzyKV")
     )
     set_warnings("all", "error")
     add_cxflags("-Wconversion", { force = true })
+    add_cxflags("-march=native -mtune=native", { force = true })
     add_files(
         "util/*.cc", 
         "table/*.cc", 

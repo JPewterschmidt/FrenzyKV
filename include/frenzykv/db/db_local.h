@@ -3,8 +3,8 @@
 //
 // Copyleft 2023 - 2024, ShiXin Wang. All wrongs reserved.
 
-#ifndef FRENZYKV_DB_IMPL_H
-#define FRENZYKV_DB_IMPL_H
+#ifndef FRENZYKV_DB_LOCAL_H
+#define FRENZYKV_DB_LOCAL_H
 
 #include <system_error>
 #include <memory>
@@ -38,11 +38,11 @@
 namespace frenzykv
 {
 
-class db_impl : public db_interface
+class db_local : public db_interface
 {
 public:
-    db_impl(::std::string dbname, const options& opt);
-    ~db_impl() noexcept;
+    db_local(::std::string dbname, const options& opt);
+    ~db_local() noexcept;
 
     koios::task<bool> init() override;
 

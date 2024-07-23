@@ -28,7 +28,7 @@
 
 #include "frenzykv/log/logger.h"
 
-#include "frenzykv/db/db_impl.h"
+#include "frenzykv/db/db_local.h"
 #include "frenzykv/db/version_descriptor.h"
 
 #include "frenzykv/table/sstable_builder.h"
@@ -46,7 +46,7 @@ using namespace ::std::chrono_literals;
 namespace frenzykv
 {
 
-db_impl::db_impl(::std::string dbname, const options& opt)
+db_local::db_local(::std::string dbname, const options& opt)
     : m_dbname{ ::std::move(dbname) }, 
       m_deps{ opt },
       m_log{ m_deps }, 
@@ -61,18 +61,18 @@ db_impl::db_impl(::std::string dbname, const options& opt)
 {
 }
 
-db_impl::~db_impl() noexcept
+db_local::~db_local() noexcept
 {
     close().result();
     m_bg_gc_stop_src.request_stop();
 }
 
-koios::task<bool> db_impl::init() 
+koios::task<bool> db_local::init() 
 {
     if (m_inited.load())
         co_return true;
 
-    spdlog::debug("db_impl::init() start");
+    spdlog::debug("db_local::init() start");
     m_inited.store(true);
 
     m_num_bound_level0 = m_deps.opt()->allowed_level_file_number(0);
@@ -88,11 +88,11 @@ koios::task<bool> db_impl::init()
     if (co_await m_log.empty())
     {
         background_compacting_GC(m_bg_gc_stop_src.get_token()).run();
-        spdlog::debug("db_impl::init() done");
+        spdlog::debug("db_local::init() done");
         co_return true;
     }
     
-    spdlog::debug("db_impl::init() recoverying from pre-write log");
+    spdlog::debug("db_local::init() recoverying from pre-write log");
     auto envp = m_deps.env();
     auto [batch, max_seq_from_log] = co_await recover(envp.get());
     co_await m_log.truncate_file();
@@ -105,19 +105,19 @@ koios::task<bool> db_impl::init()
     auto memp = ::std::exchange(m_mem, ::std::make_unique<memtable>(m_deps));
     lk.unlock();
 
-    spdlog::debug("db_impl::init() recoverying from pre-write log compact and flush and gc");
+    spdlog::debug("db_local::init() recoverying from pre-write log compact and flush and gc");
     co_await m_flusher.flush_to_disk(::std::move(memp));
     co_await may_compact();
     m_gcer.do_GC().run();
 
     background_compacting_GC(m_bg_gc_stop_src.get_token()).run();
-    spdlog::debug("db_impl::init() done");
+    spdlog::debug("db_local::init() done");
 
     co_return true;
 }
 
 koios::task<::std::pair<bool, version_guard>> 
-db_impl::need_compaction(level_t l)
+db_local::need_compaction(level_t l)
 {
     auto cur_ver = co_await m_version_center.current_version();
     auto level_files_view = cur_ver.files()
@@ -135,9 +135,9 @@ db_impl::need_compaction(level_t l)
     };
 }
 
-koios::lazy_task<> db_impl::compact_tombstones()
+koios::lazy_task<> db_local::compact_tombstones()
 {
-    spdlog::debug("db_impl::compact_tombstones()");
+    spdlog::debug("db_local::compact_tombstones()");
     const level_t max_level = m_deps.opt()->max_level;
     version_delta delta;
 
@@ -148,12 +148,12 @@ koios::lazy_task<> db_impl::compact_tombstones()
         if (fake_files.empty()) continue;
         co_await fake_file_to_disk(::std::move(fake_files), cur_delta, l);
         delta += ::std::move(cur_delta);
-        spdlog::debug("db_impl::compact_tombstones(): level{} compacted", l);
+        spdlog::debug("db_local::compact_tombstones(): level{} compacted", l);
     }
     co_await update_current_version(::std::move(delta));
 }
 
-koios::task<> db_impl::update_current_version(version_delta delta)
+koios::task<> db_local::update_current_version(version_delta delta)
 {
     // Add a new version
     auto cur_v = co_await m_version_center.add_new_version();
@@ -169,7 +169,7 @@ koios::task<> db_impl::update_current_version(version_delta delta)
     co_await set_current_version_file(m_deps, new_desc_name);
 }
 
-koios::task<> db_impl::fake_file_to_disk(::std::unique_ptr<in_mem_rw> fake_file, version_delta& delta, level_t l)
+koios::task<> db_local::fake_file_to_disk(::std::unique_ptr<in_mem_rw> fake_file, version_delta& delta, level_t l)
 {
     if (fake_file && fake_file->file_size())
     {
@@ -181,7 +181,7 @@ koios::task<> db_impl::fake_file_to_disk(::std::unique_ptr<in_mem_rw> fake_file,
     }
 }
 
-koios::lazy_task<> db_impl::may_compact(level_t from)
+koios::lazy_task<> db_local::may_compact(level_t from)
 {
     const level_t max_level = m_deps.opt()->max_level;
     auto env = m_deps.env();
@@ -207,7 +207,7 @@ koios::lazy_task<> db_impl::may_compact(level_t from)
     }
 }
 
-koios::task<> db_impl::close()
+koios::task<> db_local::close()
 {
     if (!m_inited.load())
         co_return;
@@ -237,7 +237,7 @@ koios::task<> db_impl::close()
     co_return;
 }
 
-koios::task<> db_impl::delete_all_prewrite_log()
+koios::task<> db_local::delete_all_prewrite_log()
 {
     for (const auto& dir_entry : fs::directory_iterator(prewrite_log_path()))
     {
@@ -246,7 +246,7 @@ koios::task<> db_impl::delete_all_prewrite_log()
 }
 
 koios::task<::std::error_code> 
-db_impl::
+db_local::
 insert(write_batch batch, write_options opt)
 {
     co_await init();
@@ -259,7 +259,7 @@ insert(write_batch batch, write_options opt)
     auto unilk = co_await m_mem_mutex.acquire();
     if (auto ec = co_await m_mem->insert(batch); is_frzkv_out_of_range(ec))
     {
-        spdlog::debug("db_impl::insert() need flushing");
+        spdlog::debug("db_local::insert() need flushing");
         auto flushing_file = ::std::move(m_mem);
         m_mem = ::std::make_unique<memtable>(m_deps);
         co_await m_flusher.flush_to_disk(::std::move(flushing_file));
@@ -271,7 +271,7 @@ insert(write_batch batch, write_options opt)
         }
 
         ec = co_await m_mem->insert(::std::move(batch));
-        spdlog::debug("db_impl::insert() after GC, then after insert to mem");
+        spdlog::debug("db_local::insert() after GC, then after insert to mem");
         co_return ec;
     }
     
@@ -279,19 +279,19 @@ insert(write_batch batch, write_options opt)
 }
 
 koios::task<> 
-db_impl::do_GC()
+db_local::do_GC()
 {
     co_await m_gcer.do_GC();
 }
 
 koios::task<::std::optional<kv_entry>> 
-db_impl::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noexcept
+db_local::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noexcept
 {
     co_await init();
     snapshot snap = opt.snap.valid() ? ::std::move(opt.snap) : co_await get_snapshot();
 
     const sequenced_key skey = co_await this->make_query_key(key, snap);
-    spdlog::debug("db_impl::get() get from mem");
+    spdlog::debug("db_local::get() get from mem");
 
     auto lk = co_await m_mem_mutex.acquire_shared();
     auto result_opt = co_await m_mem->get(skey);
@@ -299,7 +299,7 @@ db_impl::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noexc
 
     if (!result_opt) 
     {
-        spdlog::debug("db_impl::get() get from sst");
+        spdlog::debug("db_local::get() get from sst");
         result_opt = co_await find_from_ssts(skey, ::std::move(snap));
     }
 
@@ -320,12 +320,12 @@ find_from_potiential_results(auto& potiential_results, const auto& key)
 }
 
 koios::task<::std::optional<::std::pair<sequenced_key, kv_user_value>>> 
-db_impl::file_to_async_potiential_ret(const file_guard& fg, const sequenced_key& key, const snapshot& snap) const
+db_local::file_to_async_potiential_ret(const file_guard& fg, const sequenced_key& key, const snapshot& snap) const
 {
-    spdlog::debug("db_impl::find_from_ssts() >=> file_to_async_potiential_ret: getting table {} from cache", fg.name());
+    spdlog::debug("db_local::find_from_ssts() >=> file_to_async_potiential_ret: getting table {} from cache", fg.name());
     ::std::shared_ptr<sstable> sst = co_await m_cache.insert(fg);
     toolpex_assert(sst);
-    spdlog::debug("db_impl::find_from_ssts() >=> file_to_async_potiential_ret: got table {} from cache", fg.name());
+    spdlog::debug("db_local::find_from_ssts() >=> file_to_async_potiential_ret: got table {} from cache", fg.name());
 
     auto entry_opt = co_await sst->get_kv_entry(key);
     if (!entry_opt.has_value() 
@@ -341,9 +341,9 @@ db_impl::file_to_async_potiential_ret(const file_guard& fg, const sequenced_key&
 }
 
 koios::task<::std::optional<kv_entry>> 
-db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
+db_local::find_from_ssts(const sequenced_key& key, snapshot snap) const
 {
-    spdlog::debug("db_impl::find_from_ssts() start, not complete log");
+    spdlog::debug("db_local::find_from_ssts() start, not complete log");
     version_guard ver = snap.valid() ? snap.version() : co_await m_version_center.current_version();
     auto files = ver.files();
     r::sort(files);
@@ -360,7 +360,7 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
                     | r::to<::std::vector>()
                     ;
 
-        spdlog::debug("db_impl::find_from_ssts() start process current level{}", index);
+        spdlog::debug("db_local::find_from_ssts() start process current level{}", index);
         for (auto& fut : futvec)
         {
             auto opt = co_await fut.get_async();
@@ -369,14 +369,14 @@ db_impl::find_from_ssts(const sequenced_key& key, snapshot snap) const
 
         if (auto ret = co_await find_from_potiential_results(potiential_results, key); ret.has_value())
             co_return ret;
-        spdlog::debug("db_impl::find_from_ssts() one level through, getting to next level{}", index);
+        spdlog::debug("db_local::find_from_ssts() one level through, getting to next level{}", index);
     }
 
     co_return {};
 }
 
 koios::task<sequenced_key> 
-db_impl::make_query_key(const_bspan userkey, const snapshot& snap)
+db_local::make_query_key(const_bspan userkey, const snapshot& snap)
 {
     co_return { 
         (snap.valid() 
@@ -386,13 +386,13 @@ db_impl::make_query_key(const_bspan userkey, const snapshot& snap)
     };
 }
 
-koios::task<snapshot> db_impl::get_snapshot()
+koios::task<snapshot> db_local::get_snapshot()
 {
     co_await init();
     co_return m_snapshot_center.get_snapshot(co_await m_version_center.current_version());
 }
 
-koios::lazy_task<> db_impl::background_compacting_GC(::std::stop_token stp)
+koios::lazy_task<> db_local::background_compacting_GC(::std::stop_token stp)
 {
     auto lk = co_await m_flying_GC_mutex.acquire();
     const level_t max_level = m_deps.opt()->max_level;

@@ -17,7 +17,7 @@
 #include "frenzykv/util/multi_dest_record_writer.h"
 #include "frenzykv/util/stdout_debug_record_writer.h"
 #include "frenzykv/write_batch.h"
-#include "frenzykv/db/db_impl.h"
+#include "frenzykv/db/db_local.h"
 #include "koios/iouring_awaitables.h"
 #include "koios/this_task.h"
 
@@ -32,8 +32,8 @@ koios::lazy_task<> db_test()
 {
     spdlog::set_level(spdlog::level::debug);
 
-    auto dbimpl = ::std::make_unique<db_impl>("test1", get_global_options());
-    db_interface* db = dbimpl.get();
+    auto dblocal = ::std::make_unique<db_local>("test1", get_global_options());
+    db_interface* db = dblocal.get();
 
     const size_t scale = 100000;
     //const size_t scale = 50000;
