@@ -40,8 +40,7 @@ public:
     virtual koios::task<::std::error_code>
     insert(::std::string key, ::std::string value, write_options opt = {})
     {
-        // Call asynchorously to prevent lifetime issue for `key` and `value`.
-        co_return co_await insert(::std::as_bytes(::std::span{key}), ::std::as_bytes(::std::span{value}), ::std::move(opt));
+        return insert({ ::std::move(key), ::std::move(value) }, ::std::move(opt));
     }
 
     virtual koios::task<::std::error_code>
@@ -56,7 +55,7 @@ public:
         write_batch b;
         b.remove_from_db(key);
 
-        // OK, wont be a couroutine issue.
+        // OK, wont be a couroutine argument life time issue.
         // because we move this batch in.
         return insert(::std::move(b), ::std::move(opt));
     }

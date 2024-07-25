@@ -18,10 +18,16 @@ namespace frenzykv
     {
     public:
         constexpr write_batch() noexcept = default;
-        write_batch(const_bspan key, const_bspan value) { write(key, value); }
+
+        template<typename StrOrSpan>
+        write_batch(StrOrSpan&& key, StrOrSpan&& value) 
+        { 
+            write(::std::forward<StrOrSpan>(key), ::std::forward<StrOrSpan>(value)); 
+        }
+
         void    write(kv_entry entry);
         void    write(const_bspan key, const_bspan value);
-        void    write(::std::string key, ::std::string value); // Basically for debugging
+        void    write(::std::string key, ::std::string value);
         void    write(write_batch other);
         size_t  serialized_size() const;
         size_t  count() const noexcept { return m_entries.size(); }
