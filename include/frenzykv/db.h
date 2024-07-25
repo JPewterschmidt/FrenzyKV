@@ -37,10 +37,11 @@ public:
         return insert({key, value}, ::std::move(opt)); 
     }
 
-    virtual koios::task<::std::error_code> 
-    insert(::std::string_view key, ::std::string_view value, write_options opt = {}) 
-    { 
-        return insert(::std::as_bytes(::std::span{key}), ::std::as_bytes(::std::span{value}), ::std::move(opt)); 
+    virtual koios::task<::std::error_code>
+    insert(::std::string key, ::std::string value, write_options opt = {})
+    {
+        // Call asynchorously to prevent lifetime issue for `key` and `value`.
+        co_return co_await insert(::std::as_bytes(::std::span{key}), ::std::as_bytes(::std::span{value}), ::std::move(opt));
     }
 
     virtual koios::task<::std::error_code>

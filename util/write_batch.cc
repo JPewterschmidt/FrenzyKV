@@ -23,10 +23,9 @@ void write_batch::write(const_bspan key, const_bspan value)
     m_entries.emplace_back(first_sequence_num() + m_entries.size(), key, value);
 }
 
-void write_batch::write(::std::string_view k, ::std::string_view v)
+void write_batch::write(::std::string k, ::std::string v)
 {
-    ::std::span<const char> ks{k}, vs{v};
-    write(as_bytes(ks), as_bytes(vs));
+    m_entries.emplace_back(first_sequence_num() + m_entries.size(), ::std::move(k), ::std::move(v));
 }
 
 void write_batch::write(write_batch other)
