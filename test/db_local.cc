@@ -5,7 +5,7 @@
 
 #include <filesystem>
 #include "gtest/gtest.h"
-#include "frenzykv/db/db_impl.h"
+#include "frenzykv/db/db_local.h"
 
 namespace fs = ::std::filesystem;
 
@@ -14,21 +14,21 @@ namespace
 
 using namespace frenzykv;
 
-class db_impl_test : public ::testing::Test
+class db_local_test : public ::testing::Test
 {
 public:
-    db_impl_test()
+    db_local_test()
         : m_db{ "unittest_frenzykv", get_global_options() }
     {
     }
 
 private:
-    db_impl m_db;
+    db_local m_db;
 };
 
 } // annoymous namespace
 
-TEST_F(db_impl_test, basic)
+TEST_F(db_local_test, basic)
 {
     ::std::error_code ec;
     ASSERT_TRUE(fs::exists(sstables_path(), ec));

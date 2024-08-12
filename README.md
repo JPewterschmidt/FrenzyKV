@@ -8,6 +8,7 @@ A LSM KV database.
 - [nlohmann json](https://nlohmann.github.io/json/): JSON for Modern C++.
 - [Zstandard](https://facebook.github.io/zstd/): Zstandard - Fast real-time compression algorithm 
 - [crc32c](https://github.com/google/crc32c): CRC32C implementation with support for CPU-specific acceleration instructions.
+- [smhasher](https://github.com/aappleby/smhasher): A test suite designed to test the distribution, collision, and performance properties of non-cryptographic hash functions. 
 - [Magic Enum](https://github.com/Neargye/magic_enum): Static reflection for enums (to string, from string, iteration) for modern C++, work with any enum type without any macro or boilerplate code.
 - [libuuid](https://libuuid.sourceforge.io/): Portable uuid C library.
 - [GoogleTest](https://google.github.io/googletest/): GoogleTest - Google Testing and Mocking Framework.

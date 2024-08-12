@@ -7,7 +7,11 @@
 #include "frenzykv/write_batch.h"
 #include "google/protobuf/util/message_differencer.h"
 
+#include <ranges>
+
 using namespace frenzykv;
+namespace r = ::std::ranges;
+namespace rv = r::views;
 
 TEST(write_batch, basic)
 {
@@ -83,4 +87,20 @@ TEST(write_batch, from_another_batch)
     ASSERT_EQ(b.count(), 0);
     ASSERT_TRUE(b.empty());
     ASSERT_EQ(b2.count(), old_count);
+}
+
+TEST(write_batch, string_param)
+{
+    ::std::string kv = "keyvalue";
+    ::std::string k = kv | rv::take(3) | r::to<::std::string>();
+    ::std::string v = kv | rv::drop(3) | r::to<::std::string>();
+    
+    write_batch b{ k, v };
+    b.write(k, v);
+    b.write(k, v);
+    b.write(k, v);
+    b.write(::std::move(k), ::std::move(v));
+
+    ::std::array<::std::byte, 512> buffer{};
+    ASSERT_EQ(b.serialize_to(buffer), b.serialized_size());
 }

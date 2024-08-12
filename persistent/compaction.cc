@@ -79,7 +79,7 @@ compactor::compact(version_guard version, level_t from, ::std::unique_ptr<sstabl
 
 koios::task<::std::unique_ptr<in_mem_rw>>
 compactor::
-merge_two_tables(sstable& lhs, sstable& rhs, level_t l) const 
+merge_two_tables(sstable& lhs, sstable& rhs, level_t new_level) const 
 {
     ::std::vector<::std::unique_ptr<in_mem_rw>> result;
 
@@ -104,7 +104,7 @@ merge_two_tables(sstable& lhs, sstable& rhs, level_t l) const
 
     if (!merged.empty())
     {
-        const uintmax_t newfilesizebound = m_deps->opt()->allowed_level_file_size(l);
+        const uintmax_t newfilesizebound = m_deps->opt()->allowed_level_file_size(new_level);
         auto file = ::std::make_unique<in_mem_rw>(newfilesizebound);
         sstable_builder builder{ 
             *m_deps, newfilesizebound, 

@@ -37,10 +37,10 @@ public:
         return insert({key, value}, ::std::move(opt)); 
     }
 
-    virtual koios::task<::std::error_code> 
-    insert(::std::string_view key, ::std::string_view value, write_options opt = {}) 
-    { 
-        return insert(::std::as_bytes(::std::span{key}), ::std::as_bytes(::std::span{value}), ::std::move(opt)); 
+    virtual koios::task<::std::error_code>
+    insert(::std::string key, ::std::string value, write_options opt = {})
+    {
+        return insert({ ::std::move(key), ::std::move(value) }, ::std::move(opt));
     }
 
     virtual koios::task<::std::error_code>
@@ -55,7 +55,7 @@ public:
         write_batch b;
         b.remove_from_db(key);
 
-        // OK, wont be a couroutine issue.
+        // OK, wont be a couroutine argument life time issue.
         // because we move this batch in.
         return insert(::std::move(b), ::std::move(opt));
     }
@@ -70,10 +70,10 @@ public:
     }
 
     virtual koios::task<::std::optional<kv_entry>> 
-    get(::std::string_view key, read_options opt = {})
+    get(::std::string key, read_options opt = {})
     {
         ::std::span sp{ key.data(), key.size() };
-        return get(::std::as_bytes(sp), ::std::move(opt));
+        co_return co_await get(::std::as_bytes(sp), ::std::move(opt));
     }
 
     virtual koios::task<::std::optional<kv_entry>> 

@@ -17,7 +17,7 @@
 #include "frenzykv/util/multi_dest_record_writer.h"
 #include "frenzykv/util/stdout_debug_record_writer.h"
 #include "frenzykv/write_batch.h"
-#include "frenzykv/db/db_impl.h"
+#include "frenzykv/db/db_local.h"
 #include "koios/iouring_awaitables.h"
 #include "koios/this_task.h"
 
@@ -32,8 +32,8 @@ koios::lazy_task<> db_test()
 {
     spdlog::set_level(spdlog::level::debug);
 
-    auto dbimpl = ::std::make_unique<db_impl>("test1", get_global_options());
-    db_interface* db = dbimpl.get();
+    auto dblocal = ::std::make_unique<db_local>("test1", get_global_options());
+    db_interface* db = dblocal.get();
 
     const size_t scale = 100000;
     //const size_t scale = 50000;
@@ -53,16 +53,15 @@ koios::lazy_task<> db_test()
         spdlog::debug("db_test: start insert");
         for (size_t i{}; i < scale; ++i)
         {
-            auto k = ::std::to_string(i);
-            co_await db->insert(k, "test value abcdefg abcdefg 3");
+            co_await db->insert(::std::to_string(i), "test value abcdefg abcdefg 3");
         }
         spdlog::debug("db_test: insert complete");
     };
 
-    //auto fut1 = insertion_func(db).run_and_get_future();
+    auto fut1 = insertion_func(db).run_and_get_future();
     //auto fut2 = insertion_func(db).run_and_get_future();
 
-    //co_await fut1.get_async();
+    co_await fut1.get_async();
     //co_await fut2.get_async();
 
     // #2
@@ -83,23 +82,20 @@ koios::lazy_task<> db_test()
     //spdlog::debug("db_test: remove complete");
 
     {
-        auto k = ::std::to_string(50);
-        auto opt = co_await db->get(k);
+        auto opt = co_await db->get(::std::to_string(50));
         if (opt) ::std::cout << opt->to_string_debug() << ::std::endl;
         else ::std::cout << "not found" << ::std::endl;
     }
 
     {
-        auto k = ::std::to_string(1000);
-        auto opt = co_await db->get(k);
+        auto opt = co_await db->get(::std::to_string(1000));
         if (opt) ::std::cout << opt->to_string_debug() << ::std::endl;
         else ::std::cout << "not found" << ::std::endl;
     }
 
     for (size_t i{}; i < scale; i += 1000)
     {
-        auto k = ::std::to_string(i);
-        auto opt = co_await db->get(k, { .snap = s });
+        auto opt = co_await db->get(::std::to_string(i), { .snap = s });
         if (opt) ::std::cout << opt->to_string_debug() << ::std::endl;
         else ::std::cout << "not found" << ::std::endl;
     }

@@ -16,7 +16,7 @@
 namespace frenzykv
 {
 
-/*! \brief the dependencies of db_impl 
+/*! \brief the dependencies of db_local 
  *         which needed been shared among several components.
  *
  *  \attention This object has no any inner mutex.
@@ -37,7 +37,7 @@ namespace frenzykv
  *  returned by the member functions of this type, 
  *  because any potential update could cause dangling reference.
  *
- *  \see `db_impl`
+ *  \see `db_local`
  *  \see `options`
  *  \see `env`
  *  \see `statistics`
