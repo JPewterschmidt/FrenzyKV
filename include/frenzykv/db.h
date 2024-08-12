@@ -70,10 +70,10 @@ public:
     }
 
     virtual koios::task<::std::optional<kv_entry>> 
-    get(::std::string_view key, read_options opt = {})
+    get(::std::string key, read_options opt = {})
     {
         ::std::span sp{ key.data(), key.size() };
-        return get(::std::as_bytes(sp), ::std::move(opt));
+        co_return co_await get(::std::as_bytes(sp), ::std::move(opt));
     }
 
     virtual koios::task<::std::optional<kv_entry>> 
