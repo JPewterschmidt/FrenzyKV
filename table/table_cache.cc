@@ -21,14 +21,6 @@ table_cache::table_cache(const kvdb_deps& deps,
 {
 }
 
-koios::task<> 
-table_cache::
-clear()
-{
-    auto lk = co_await m_mutex.acquire();
-    m_tables.clear();
-}
-
 ::std::shared_ptr<sstable>
 table_cache::
 find_table_impl(const ::std::string& name)
@@ -41,7 +33,6 @@ koios::task<::std::shared_ptr<sstable>>
 table_cache::
 find_table(const ::std::string& name)
 {
-    auto lk = co_await m_mutex.acquire();
     co_return find_table_impl(name);
 }
 
@@ -50,7 +41,6 @@ insert(const file_guard& fg)
 {
     spdlog::debug("table_cache::insert {}", fg.name());
     const ::std::string& name = fg.name();
-    auto lk = co_await m_mutex.acquire();
 
     // Find from lru_cache first
     auto result = find_table_impl(name);
@@ -76,8 +66,7 @@ insert(const file_guard& fg)
 
 koios::task<size_t> table_cache::size() const
 {
-    auto lk = co_await m_mutex.acquire();
-    co_return m_tables.size();
+    co_return m_tables.size_approx();
 }
     
 } // namespace frenzykv

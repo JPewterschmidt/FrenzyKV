@@ -4,3 +4,6 @@
 [submodule "smhasher"]
 	path = smhasher
 	url = https://github.com/aappleby/smhasher
+[submodule "fifo-lru-cache"]
+	path = fifo-lru-cache
+	url = git@github.com:JPewterschmidt/fifo-lru-cache.git
