@@ -69,11 +69,11 @@ db_local::~db_local() noexcept
 
 koios::task<bool> db_local::init() 
 {
-    if (m_inited.load())
+    if (m_inited.load(::std::memory_order_acquire))
         co_return true;
 
     spdlog::debug("db_local::init() start");
-    m_inited.store(true);
+    m_inited.store(true, ::std::memory_order_release);
 
     m_num_bound_level0 = m_deps.opt()->allowed_level_file_number(0);
 
@@ -209,14 +209,16 @@ koios::lazy_task<> db_local::may_compact(level_t from)
 
 koios::task<> db_local::close()
 {
-    if (!m_inited.load())
+    if (!m_inited.load(::std::memory_order_acquire))
         co_return;
     
-    m_inited = false;
+    m_inited.store(false, ::std::memory_order_release);
     spdlog::debug("final table cache size = {}", co_await m_cache.size());
 
-    // Make sure the background be GC stoped.
+    // Make sure the background GC stopped.
     m_bg_gc_stop_src.request_stop();
+
+    // You get it, means you're the last one get the lock.
     auto fly_gc_lk = co_await m_flying_GC_mutex.acquire();
     fly_gc_lk.unlock();
 
@@ -232,7 +234,6 @@ koios::task<> db_local::close()
     toolpex_assert(write_ret);
     co_await delete_all_prewrite_log();
     co_await m_gcer.do_GC();
-    co_await m_cache.clear();
     
     co_return;
 }

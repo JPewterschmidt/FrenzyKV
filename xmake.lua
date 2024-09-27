@@ -58,7 +58,6 @@ target("FrenzyKV")
         "libuuid"
     )
     set_warnings("all", "error")
-    add_cxflags("-Wconversion", { force = true })
     add_cxflags("-march=native -mtune=native", { force = true })
     add_files(
         "util/*.cc", 
@@ -73,7 +72,6 @@ target("FrenzyKV-test")
     set_kind("binary")
     add_deps("FrenzyKV", "koios", "toolpex")
     add_packages("concurrentqueue")
-    add_cxflags("-Wconversion", { force = true })
     set_warnings("all", "error")
     add_files( "test/*.cc")
     add_packages(
@@ -92,7 +90,6 @@ target("FrenzyKV-test")
 target("FrenzyKV-example")
     set_kind("binary")
     add_deps("FrenzyKV", "koios", "toolpex")
-    add_cxflags("-Wconversion", { force = true })
     add_files( "example/*.cc")
     set_policy("build.warning", true)
     add_packages(
