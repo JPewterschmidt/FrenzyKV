@@ -46,9 +46,9 @@ using namespace ::std::chrono_literals;
 namespace frenzykv
 {
 
-db_local::db_local(::std::string dbname, const options& opt)
+db_local::db_local(::std::string dbname, options opt)
     : m_dbname{ ::std::move(dbname) }, 
-      m_deps{ opt },
+      m_deps{ ::std::move(opt) },
       m_log{ m_deps }, 
       m_filter_policy{ make_bloom_filter(64) }, 
       m_file_center{ m_deps }, 
@@ -240,7 +240,7 @@ koios::task<> db_local::close()
 
 koios::task<> db_local::delete_all_prewrite_log()
 {
-    for (const auto& dir_entry : fs::directory_iterator(prewrite_log_path()))
+    for (const auto& dir_entry : fs::directory_iterator(write_ahead_log_path()))
     {
         co_await koios::uring::unlink(dir_entry);
     }

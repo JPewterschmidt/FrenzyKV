@@ -41,7 +41,7 @@ namespace frenzykv
 class db_local : public db_interface
 {
 public:
-    db_local(::std::string dbname, const options& opt);
+    db_local(::std::string dbname, options opt);
     ~db_local() noexcept;
 
     koios::task<bool> init() override;
@@ -90,8 +90,9 @@ private:
 
 private:
     ::std::string m_dbname;
+
     kvdb_deps m_deps;
-    logger m_log;
+    write_ahead_logger m_log;
 
     // other===============================
     ::std::unique_ptr<filter_policy> m_filter_policy;

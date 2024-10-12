@@ -23,14 +23,14 @@
 namespace frenzykv
 {
 
-::std::string prewrite_log_name();
+::std::string write_ahead_log_name();
 
-class logger
+class write_ahead_logger 
 {
 public:
-    logger(const kvdb_deps& deps)
+    write_ahead_logger(const kvdb_deps& deps)
         : m_deps{ &deps }, 
-          m_log_file{ m_deps->env()->get_seq_writable(prewrite_log_path()/prewrite_log_name()) }
+          m_log_file{ m_deps->env()->get_seq_writable(write_ahead_log_path()/write_ahead_log_name()) }
     {
     }
 

@@ -132,7 +132,7 @@ fs::path sstables_path()
     return root_path/"sstable";
 }
 
-fs::path prewrite_log_path()
+fs::path write_ahead_log_path()
 {
     return root_path/"db_prewrite_log";
 }
@@ -157,9 +157,9 @@ fs::directory_entry sstables_dir(::std::error_code& ec)
     return { sstables_path(), ec };
 }
 
-fs::directory_entry prewrite_log_dir(::std::error_code& ec)
+fs::directory_entry write_ahead_log_dir(::std::error_code& ec)
 {
-    return { prewrite_log_path(), ec };
+    return { write_ahead_log_path(), ec };
 }
 
 fs::directory_entry system_log_dir(::std::error_code& ec)
@@ -186,10 +186,10 @@ fs::directory_entry sstables_dir()
     return result;
 }
 
-fs::directory_entry prewrite_log_dir()
+fs::directory_entry write_ahead_log_dir()
 {
 	::std::error_code ec;
-    fs::directory_entry result = prewrite_log_dir(ec);
+    fs::directory_entry result = write_ahead_log_dir(ec);
     if (ec) throw koios::exception(ec);
 
     return result;
@@ -239,7 +239,7 @@ fs::directory_entry version_dir()
 
     if (!fs::exists(sstables_path(), result) && !fs::create_directory(sstables_path(), result)) return result;
     result = {};
-    if (!fs::exists(prewrite_log_path(), result) && !fs::create_directory(prewrite_log_path(), result)) return result;
+    if (!fs::exists(write_ahead_log_path(), result) && !fs::create_directory(write_ahead_log_path(), result)) return result;
     result = {};
     if (!fs::exists(system_log_path(), result) && !fs::create_directory(system_log_path(), result)) return result;
     result = {};

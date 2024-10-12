@@ -22,12 +22,12 @@ namespace fs = ::std::filesystem;
 namespace frenzykv
 {
 
-::std::string prewrite_log_name()
+::std::string write_ahead_log_name()
 {
     return "log.frzkvlog";
 }
 
-koios::task<> logger::insert(const write_batch& b)
+koios::task<> write_ahead_logger::insert(const write_batch& b)
 {
     co_await koios::this_task::turn_into_scheduler();
     auto lk = co_await m_mutex.acquire();
@@ -53,27 +53,27 @@ koios::task<> logger::insert(const write_batch& b)
     co_await may_flush_impl();
 }
 
-koios::task<> logger::truncate_file() noexcept
+koios::task<> write_ahead_logger::truncate_file() noexcept
 {
     auto lk = co_await m_mutex.acquire();
-    m_log_file = m_deps->env()->get_truncate_seq_writable(prewrite_log_path()/prewrite_log_name());
+    m_log_file = m_deps->env()->get_truncate_seq_writable(write_ahead_log_path()/write_ahead_log_name());
     toolpex_assert(!!m_log_file);
     co_return;
 }
 
-koios::task<bool> logger::empty() const noexcept
+koios::task<bool> write_ahead_logger::empty() const noexcept
 {
     auto lk = co_await m_mutex.acquire();
     co_return m_log_file->file_size() == 0;
 }
 
-koios::task<> logger::may_flush(bool force)
+koios::task<> write_ahead_logger::may_flush(bool force)
 {
     auto lk = co_await m_mutex.acquire();
     co_await may_flush_impl(force);
 }
 
-koios::task<> logger::may_flush_impl(bool force) 
+koios::task<> write_ahead_logger::may_flush_impl(bool force) 
 {
     // If the data scale is not that big, just flush easy to debug.
     if (const auto s = m_deps->stat(); 
@@ -87,13 +87,13 @@ koios::task<::std::pair<write_batch, sequence_number_t>>
 recover(env* e) noexcept
 {
     ::std::error_code ec;
-    if (uintmax_t sz = fs::file_size(prewrite_log_path()/prewrite_log_name(), ec);
+    if (uintmax_t sz = fs::file_size(write_ahead_log_path()/write_ahead_log_name(), ec);
         ec || sz == 0)
     {
         co_return {};
     }
 
-    auto filep = e->get_seq_readable(prewrite_log_path()/prewrite_log_name());
+    auto filep = e->get_seq_readable(write_ahead_log_path()/write_ahead_log_name());
     toolpex_assert(!!filep);
     const uintmax_t filesz = filep->file_size();
     buffer<> buf(filesz);
@@ -116,10 +116,10 @@ recover(env* e) noexcept
     co_return { result, max_seq };
 }
 
-koios::lazy_task<> logger::delete_file()
+koios::lazy_task<> write_ahead_logger::delete_file()
 {
     auto lk = co_await m_mutex.acquire();
-    co_await koios::uring::unlink(prewrite_log_path()/prewrite_log_name());
+    co_await koios::uring::unlink(write_ahead_log_path()/write_ahead_log_name());
 }
 
 } // namespace frenzykv

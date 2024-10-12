@@ -49,14 +49,14 @@ public:
     kvdb_deps();
     kvdb_deps(options opt, ::std::move_only_function<void()> after_init = nullptr);
 
-    const auto opt() const noexcept { return m_opt.load(::std::memory_order_relaxed); }
+    const auto opt() const noexcept { return m_opt; }
     const auto env() const noexcept { return m_env.load(::std::memory_order_relaxed); } 
     auto stat()      const noexcept { return m_stat.load(::std::memory_order_relaxed); }
 
     // XXX Do not add any set_* function, see kvdb_deps_manipulator
 
 private: // Deps
-    ::std::atomic<::std::shared_ptr<options>>     m_opt;
+    ::std::shared_ptr<options> m_opt;
     ::std::atomic<::std::shared_ptr<frenzykv::env>>         m_env;
     ::std::atomic<::std::shared_ptr<statistics>>  m_stat;
 };
@@ -72,10 +72,9 @@ public:
     ::std::shared_ptr<options>  
     exchange_option(::std::shared_ptr<options> newopt)
     {
-        return m_deps.m_opt.exchange(
-            ::std::move(newopt), 
-            ::std::memory_order_relaxed
-        );
+        auto result = ::std::move(m_deps.m_opt);
+        m_deps.m_opt = ::std::move(newopt);
+        return result;
     }
 
     ::std::shared_ptr<env>      

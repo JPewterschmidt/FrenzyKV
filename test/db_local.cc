@@ -32,7 +32,7 @@ TEST_F(db_local_test, basic)
 {
     ::std::error_code ec;
     ASSERT_TRUE(fs::exists(sstables_path(), ec));
-    ASSERT_TRUE(fs::exists(prewrite_log_path(), ec));
+    ASSERT_TRUE(fs::exists(write_ahead_log_path(), ec));
     ASSERT_TRUE(fs::exists(system_log_path(), ec));
     ASSERT_TRUE(fs::exists(config_path(), ec));
 }
