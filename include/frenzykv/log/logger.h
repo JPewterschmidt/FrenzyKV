@@ -18,7 +18,6 @@
 #include "frenzykv/kvdb_deps.h"
 #include "frenzykv/write_batch.h"
 #include "frenzykv/env.h"
-#include "frenzykv/log/logging_level.h"
 
 namespace frenzykv
 {
