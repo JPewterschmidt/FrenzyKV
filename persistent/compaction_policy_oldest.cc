@@ -7,7 +7,6 @@
 #include <string>
 #include <ranges>
 
-#include "frenzykv/env.h"
 
 #include "frenzykv/persistent/compaction_policy_oldest.h"
 
@@ -39,13 +38,12 @@ compacting_files(version_guard vc, level_t from) const
     if (result.empty()) co_return {};
 
     auto opt = m_deps->opt();
-    auto env = m_deps->env();
 
     assert(opt->allowed_level_file_number(from) >= 2);
 
     if (from != 0)
     {
-        auto from_l_sst = co_await sstable::make(*m_deps, m_filter, co_await result.front().open_read(env.get()));
+        auto from_l_sst = co_await sstable::make(*m_deps, m_filter, co_await result.front().open_read());
 
         // Find overlapped tables from next level
         auto file_vec_level_next = vc.files() 
@@ -61,7 +59,7 @@ compacting_files(version_guard vc, level_t from) const
         
         for (const auto& fguard : file_vec_level_next)
         {
-            auto next_l_sst = co_await sstable::make(*m_deps, m_filter, co_await fguard.open_read(env.get()));
+            auto next_l_sst = co_await sstable::make(*m_deps, m_filter, co_await fguard.open_read());
 
             if (from_l_sst->overlapped(*next_l_sst))
             {

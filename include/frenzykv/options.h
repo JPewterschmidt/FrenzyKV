@@ -16,7 +16,6 @@
 #include "nlohmann/json.hpp"
 #include "spdlog/spdlog.h"
 
-#include "log/logging_level.h"
 #include "frenzykv/statistics.h"
 #include "frenzykv/types.h"
 
@@ -49,7 +48,6 @@ struct options
     ::std::filesystem::path     root_path;
     bool                        create_root_path_if_not_exists;
     ::std::filesystem::path     log_path;
-    logging_level               log_level;
     ::std::string               compressor_name;
 
     size_t allowed_level_file_number(level_t l) const noexcept;
@@ -91,7 +89,6 @@ struct adl_serializer<frenzykv::options>
             }}, 
             { "log", {
                 { "path", opt.log_path }, 
-                { "level", magic_enum::enum_name<frenzykv::logging_level>(opt.log_level) }, 
             }}, 
         };
     }
@@ -129,16 +126,6 @@ struct adl_serializer<frenzykv::options>
         temp.clear();
         
         ::std::string level_str;
-        j.at("log").at("level").get_to(level_str);
-        auto logl_opt = magic_enum::enum_cast<frenzykv::logging_level>(level_str);
-        if (logl_opt)
-        {
-            opt.log_level = logl_opt.value();
-        }
-        else
-        {
-            spdlog::error("could not retrive logging level from your conf file.");
-        }
 
         if (opt.level_file_number.size() < static_cast<size_t>(opt.max_level - 1))
             spdlog::error("wrong file number count");

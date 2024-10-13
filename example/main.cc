@@ -28,11 +28,14 @@ using namespace frenzykv;
 using namespace ::std::string_view_literals;
 using namespace ::std::chrono_literals;
 
-koios::lazy_task<> db_test()
+koios::lazy_task<> db_test(::std::string rootpath = "")
 {
     spdlog::set_level(spdlog::level::debug);
 
-    auto dblocal = ::std::make_unique<db_local>("test1", get_global_options());
+    auto opt = get_global_options();
+    if (!rootpath.empty())
+        opt.root_path = rootpath;
+    auto dblocal = ::std::make_unique<db_local>("test1", ::std::move(opt));
     db_interface* db = dblocal.get();
 
     const size_t scale = 100000;
@@ -113,7 +116,11 @@ int main()
 {
     koios::runtime_init(20);
 
-    db_test().result();
+    auto f1 = db_test("/tmp/frenzykv1").run_and_get_future();
+    auto f2 = db_test("/tmp/frenzykv2").run_and_get_future();
+
+    f1.get();
+    f2.get();
     
     koios::runtime_exit();
 }

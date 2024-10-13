@@ -15,7 +15,7 @@
 #include "koios/coroutine_shared_mutex.h"
 
 #include "frenzykv/kvdb_deps.h"
-#include "frenzykv/log/logger.h"
+#include "frenzykv/log/write_ahead_logger.h"
 #include "frenzykv/io/in_mem_rw.h"
 #include "frenzykv/util/record_writer_wrapper.h"
 #include "frenzykv/util/file_center.h"
@@ -41,7 +41,7 @@ namespace frenzykv
 class db_local : public db_interface
 {
 public:
-    db_local(::std::string dbname, const options& opt);
+    db_local(::std::string dbname, options opt);
     ~db_local() noexcept;
 
     koios::task<bool> init() override;
@@ -56,6 +56,8 @@ public:
     koios::task<snapshot> get_snapshot() override;
 
     koios::lazy_task<> compact_tombstones();
+
+    auto env() const noexcept { return m_deps.env(); }
 
 private:
     koios::task<sequenced_key> make_query_key(const_bspan userkey, const snapshot& snap);
@@ -90,8 +92,9 @@ private:
 
 private:
     ::std::string m_dbname;
+
     kvdb_deps m_deps;
-    logger m_log;
+    write_ahead_logger m_log;
 
     // other===============================
     ::std::unique_ptr<filter_policy> m_filter_policy;

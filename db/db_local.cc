@@ -26,7 +26,7 @@
 #include "frenzykv/util/multi_dest_record_writer.h"
 #include "frenzykv/util/stdout_debug_record_writer.h"
 
-#include "frenzykv/log/logger.h"
+#include "frenzykv/log/write_ahead_logger.h"
 
 #include "frenzykv/db/db_local.h"
 #include "frenzykv/db/version_descriptor.h"
@@ -46,9 +46,9 @@ using namespace ::std::chrono_literals;
 namespace frenzykv
 {
 
-db_local::db_local(::std::string dbname, const options& opt)
+db_local::db_local(::std::string dbname, options opt)
     : m_dbname{ ::std::move(dbname) }, 
-      m_deps{ opt },
+      m_deps{ ::std::move(opt) },
       m_log{ m_deps }, 
       m_filter_policy{ make_bloom_filter(64) }, 
       m_file_center{ m_deps }, 
@@ -56,7 +56,7 @@ db_local::db_local(::std::string dbname, const options& opt)
       m_compactor{ m_deps, m_filter_policy.get() }, 
       m_cache{ m_deps, m_filter_policy.get(), 32 },
       m_mem{ ::std::make_unique<memtable>(m_deps) }, 
-      m_gcer{ &m_version_center, &m_file_center }, 
+      m_gcer{ m_deps, &m_version_center, &m_file_center }, 
       m_flusher{ m_deps, &m_version_center, m_filter_policy.get(), &m_file_center }
 {
 }
@@ -69,11 +69,11 @@ db_local::~db_local() noexcept
 
 koios::task<bool> db_local::init() 
 {
-    if (m_inited.load())
+    if (m_inited.load(::std::memory_order_acquire))
         co_return true;
 
     spdlog::debug("db_local::init() start");
-    m_inited.store(true);
+    m_inited.store(true, ::std::memory_order_release);
 
     m_num_bound_level0 = m_deps.opt()->allowed_level_file_number(0);
 
@@ -161,7 +161,8 @@ koios::task<> db_local::update_current_version(version_delta delta)
 
     // Write new version to version descriptor
     const auto new_desc_name = cur_v.version_desc_name();
-    auto new_desc = m_deps.env()->get_seq_writable(version_path()/new_desc_name);
+    auto env = m_deps.env();
+    auto new_desc = env->get_seq_writable(env->version_path()/new_desc_name);
     [[maybe_unused]] bool write_ret = co_await write_version_descriptor(*cur_v, new_desc.get());
     toolpex_assert(write_ret);
 
@@ -174,7 +175,7 @@ koios::task<> db_local::fake_file_to_disk(::std::unique_ptr<in_mem_rw> fake_file
     if (fake_file && fake_file->file_size())
     {
         auto file = co_await m_file_center.get_file(name_a_sst(l));
-        auto fp = co_await file.open_write(m_deps.env().get());
+        auto fp = co_await file.open_write();
         co_await fake_file->dump_to(*fp);
         co_await fp->sync();
         delta.add_new_file(::std::move(file));
@@ -209,14 +210,16 @@ koios::lazy_task<> db_local::may_compact(level_t from)
 
 koios::task<> db_local::close()
 {
-    if (!m_inited.load())
+    if (!m_inited.load(::std::memory_order_acquire))
         co_return;
     
-    m_inited = false;
+    m_inited.store(false, ::std::memory_order_release);
     spdlog::debug("final table cache size = {}", co_await m_cache.size());
 
-    // Make sure the background be GC stoped.
+    // Make sure the background GC stopped.
     m_bg_gc_stop_src.request_stop();
+
+    // You get it, means you're the last one get the lock.
     auto fly_gc_lk = co_await m_flying_GC_mutex.acquire();
     fly_gc_lk.unlock();
 
@@ -232,14 +235,14 @@ koios::task<> db_local::close()
     toolpex_assert(write_ret);
     co_await delete_all_prewrite_log();
     co_await m_gcer.do_GC();
-    co_await m_cache.clear();
     
     co_return;
 }
 
 koios::task<> db_local::delete_all_prewrite_log()
 {
-    for (const auto& dir_entry : fs::directory_iterator(prewrite_log_path()))
+    auto env = m_deps.env();
+    for (const auto& dir_entry : fs::directory_iterator(env->write_ahead_log_path()))
     {
         co_await koios::uring::unlink(dir_entry);
     }

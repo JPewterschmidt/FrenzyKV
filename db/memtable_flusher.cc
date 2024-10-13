@@ -36,7 +36,8 @@ flush_to_disk(::std::unique_ptr<memtable> table)
     
     spdlog::debug("flush_to_disk() start");
     auto sst_guard = co_await m_file_center->get_file(name_a_sst(0));
-    auto file = m_deps->env()->get_seq_writable(sstables_path()/sst_guard);
+    auto env = m_deps->env();
+    auto file = env->get_seq_writable(env->sstables_path()/sst_guard);
     sstable_builder builder{ 
         *m_deps, 
         m_deps->opt()->level_file_size[0], 
@@ -55,7 +56,6 @@ flush_to_disk(::std::unique_ptr<memtable> table)
         delta.add_new_file(::std::move(sst_guard));
     };
 
-    auto env = m_deps->env();
 
     // Flush those KV into sstable
     auto list = co_await table->get_storage();
@@ -66,7 +66,7 @@ flush_to_disk(::std::unique_ptr<memtable> table)
         {
             co_await finish_current_buiding(builder, delta, file.get(), ::std::move(sst_guard));
             sst_guard = co_await m_file_center->get_file(name_a_sst(0));
-            file = co_await sst_guard.open_write(env.get());
+            file = co_await sst_guard.open_write();
 
             builder = { 
                 *m_deps, 
@@ -84,7 +84,7 @@ flush_to_disk(::std::unique_ptr<memtable> table)
     spdlog::debug("flush_to_disk() updates version info, get newly added version guard!");
     new_ver += delta;
     const auto vdname = new_ver.version_desc_name();
-    auto ver_file = m_deps->env()->get_seq_writable(version_path()/vdname);
+    auto ver_file = env->get_seq_writable(env->version_path()/vdname);
     co_await write_version_descriptor(*new_ver, ver_file.get());
     co_await set_current_version_file(*m_deps, vdname);
 

@@ -14,6 +14,8 @@
 
 #include "koios/coroutine_mutex.h"
 
+#include "fifo_hybrid_lru/fifo_hybrid_lru.h"
+
 #include "frenzykv/kvdb_deps.h"
 
 #include "frenzykv/table/sstable.h"
@@ -35,7 +37,6 @@ public:
 
     koios::task<::std::shared_ptr<sstable>> insert(const file_guard& fg);
     koios::task<size_t> size() const;
-    koios::task<> clear();
     
 private:
     ::std::shared_ptr<sstable>
@@ -44,8 +45,7 @@ private:
 private:
     const kvdb_deps* m_deps{};
     filter_policy* m_filter{};
-    toolpex::lru_cache<::std::string, ::std::shared_ptr<sstable>> m_tables;
-    mutable koios::mutex m_mutex;
+    fhl::fifo_hybrid_lru<::std::string, ::std::shared_ptr<sstable>> m_tables;
 };
 
 } // namespace frenzykv

@@ -3,8 +3,8 @@
 //
 // Copyleft 2023 - 2024, ShiXin Wang. All wrongs reserved.
 
-#ifndef FRENZYKV_LOGGER_H
-#define FRENZYKV_LOGGER_H
+#ifndef FRENZYKV_WRITE_AHEAD_LOGGER_H
+#define FRENZYKV_WRITE_AHEAD_LOGGER_H
 
 #include <string>
 #include <string_view>
@@ -18,20 +18,20 @@
 #include "frenzykv/kvdb_deps.h"
 #include "frenzykv/write_batch.h"
 #include "frenzykv/env.h"
-#include "frenzykv/log/logging_level.h"
 
 namespace frenzykv
 {
 
-::std::string prewrite_log_name();
+::std::string write_ahead_log_name();
 
-class logger
+class write_ahead_logger 
 {
 public:
-    logger(const kvdb_deps& deps)
-        : m_deps{ &deps }, 
-          m_log_file{ m_deps->env()->get_seq_writable(prewrite_log_path()/prewrite_log_name()) }
+    write_ahead_logger(const kvdb_deps& deps)
+        : m_deps{ &deps }
     {
+        auto env = m_deps->env();
+        m_log_file = env->get_seq_writable(env->write_ahead_log_path()/write_ahead_log_name());
     }
 
     koios::task<> insert(const write_batch& b);

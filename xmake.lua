@@ -17,7 +17,8 @@ add_requires(
 )
 
 includes(
-    "koios"
+    "koios", 
+    "fifo-lru-cache"
 )
 
 set_arch("x64")
@@ -39,7 +40,7 @@ add_cxxflags("-march=native", {force = true})
 
 target("FrenzyKV")
     set_kind("shared")
-    add_deps("koios", "toolpex")
+    add_deps("koios", "toolpex", "fifo-lru-cache")
     add_includedirs(
         "./include",
         { public = true }

@@ -42,7 +42,6 @@ namespace frenzykv
           root_path{ "/tmp/frenzykv" },
           create_root_path_if_not_exists{ true },
           log_path{ "frenzy-prewrite-log" },
-          log_level{ logging_level::INFO },
           compressor_name{ "zstd" }
     {
     }

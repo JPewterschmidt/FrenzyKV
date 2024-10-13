@@ -14,7 +14,7 @@
 #include "frenzykv/env.h"
 #include "frenzykv/write_batch.h"
 
-#include "frenzykv/log/logger.h"
+#include "frenzykv/log/write_ahead_logger.h"
 #include "frenzykv/io/inner_buffer.h"
 
 using namespace frenzykv;
@@ -34,7 +34,7 @@ write_batch make_batch()
     return result;
 }
 
-koios::lazy_task<bool> write(logger& l)
+koios::lazy_task<bool> write(write_ahead_logger& l)
 {
     auto w = make_batch();
     try
@@ -51,7 +51,7 @@ koios::lazy_task<bool> write(logger& l)
 
 koios::lazy_task<bool> read(env* e)
 {
-    auto file = e->get_seq_readable(prewrite_log_path()/prewrite_log_name());
+    auto file = e->get_seq_readable(e->write_ahead_log_path()/write_ahead_log_name());
     buffer<> buf(file->file_size());
     const uintmax_t readed = co_await file->read(buf.writable_span());
     assert(readed == file->file_size());
@@ -73,7 +73,7 @@ koios::lazy_task<bool> read(env* e)
 TEST(pre_write_log, basic)
 {
     kvdb_deps deps;
-    logger l(deps);
+    write_ahead_logger l(deps);
     ASSERT_TRUE(write(l).result());
     auto e = deps.env();
     ASSERT_TRUE(read(e.get()).result());
