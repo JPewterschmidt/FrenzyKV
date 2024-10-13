@@ -51,7 +51,7 @@ koios::lazy_task<bool> write(write_ahead_logger& l)
 
 koios::lazy_task<bool> read(env* e)
 {
-    auto file = e->get_seq_readable(write_ahead_log_path()/write_ahead_log_name());
+    auto file = e->get_seq_readable(e->write_ahead_log_path()/write_ahead_log_name());
     buffer<> buf(file->file_size());
     const uintmax_t readed = co_await file->read(buf.writable_span());
     assert(readed == file->file_size());

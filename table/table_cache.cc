@@ -51,8 +51,7 @@ insert(const file_guard& fg)
     }
 
     auto mem_file = ::std::make_unique<in_mem_rw>();
-    auto env = m_deps->env();
-    auto fp = co_await fg.open_read(env.get());
+    auto fp = co_await fg.open_read();
     co_await fp->dump_to(*mem_file);
 
     result = co_await sstable::make(*m_deps, m_filter, ::std::move(mem_file));

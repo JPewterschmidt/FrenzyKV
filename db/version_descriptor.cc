@@ -112,7 +112,8 @@ static constexpr size_t vd_name_length = 52; // See test of version descriptor
 
 koios::task<> set_current_version_file(const kvdb_deps& deps, ::std::string_view filename)
 {
-    auto file = deps.env()->get_truncate_seq_writable(version_path()/current_version_descriptor_name());
+    auto env = deps.env();
+    auto file = env->get_truncate_seq_writable(env->version_path()/current_version_descriptor_name());
     co_await file->append(filename);
     co_await file->sync();
     
@@ -121,7 +122,8 @@ koios::task<> set_current_version_file(const kvdb_deps& deps, ::std::string_view
 
 koios::task<::std::optional<::std::string>> current_descriptor_name(const kvdb_deps& deps)
 {
-    auto file = deps.env()->get_seq_readable(version_path()/current_version_descriptor_name());
+    auto env = deps.env();
+    auto file = env->get_seq_readable(env->version_path()/current_version_descriptor_name());
     ::std::string name(vd_name_length, 0);
     auto sp = ::std::as_writable_bytes(::std::span{name.data(), name.size()}.subspan(0, 52));
     const size_t readed = co_await file->read(sp);
@@ -137,7 +139,8 @@ koios::task<::std::optional<::std::string>> current_descriptor_name(const kvdb_d
 
 koios::task<version_delta> get_version(const kvdb_deps& deps, ::std::string_view desc_name, file_center* fc)
 {
-    auto version_file = deps.env()->get_seq_readable(version_path()/desc_name);
+    auto env = deps.env();
+    auto version_file = env->get_seq_readable(env->version_path()/desc_name);
     const auto name_vec = co_await read_version_descriptor(version_file.get());
 
     version_delta result;
@@ -172,7 +175,7 @@ koios::task<bool>
 write_leatest_sequence_number(const kvdb_deps& deps, sequence_number_t seq)
 {
     auto env = deps.env();
-    auto file = env->get_truncate_seq_writable(version_path()/seq_name);
+    auto file = env->get_truncate_seq_writable(env->version_path()/seq_name);
     ::std::array<::std::byte, sizeof(sequence_number_t)> buffer{};
     toolpex::encode_little_endian_to(seq, buffer);
     if (co_await file->append(buffer) != sizeof(sequence_number_t))
@@ -187,7 +190,7 @@ koios::task<sequence_number_t>
 get_leatest_sequence_number(const kvdb_deps& deps)
 {
     auto env = deps.env();
-    auto file = env->get_seq_readable(version_path()/seq_name);
+    auto file = env->get_seq_readable(env->version_path()/seq_name);
     ::std::array<::std::byte, sizeof(sequence_number_t)> buffer{};
     if (size_t readed = co_await file->read(buffer); readed == sizeof(sequence_number_t))
         co_return toolpex::decode_little_endian_from<sequence_number_t>(buffer);

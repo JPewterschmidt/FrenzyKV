@@ -18,7 +18,7 @@ namespace frenzykv
 class garbage_collector
 {
 public:
-    garbage_collector(version_center* vc, file_center* fc) noexcept
+    garbage_collector(kvdb_deps* deps, version_center* vc, file_center* fc) noexcept
         : m_version_center{ vc }, m_file_center{ fc }
     {
     }
@@ -26,6 +26,7 @@ public:
     koios::lazy_task<> do_GC() const;
 
 private:
+    kvdb_deps* m_deps{};
     version_center* m_version_center{};
     file_center* m_file_center{};
     mutable koios::mutex m_mutex;

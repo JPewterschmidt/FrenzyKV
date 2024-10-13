@@ -32,11 +32,10 @@ compactor::compact_tombstones(version_guard vg, level_t l) const
     ::std::vector<::std::unique_ptr<in_mem_rw>> result;
     version_delta delta;
 
-    auto env = m_deps->env();
     const uintmax_t size_bound = m_deps->opt()->allowed_level_file_size(l);
     for (const file_guard& fg : files)
     {
-        auto sst = co_await sstable::make(*m_deps, m_filter_policy, co_await fg.open_read(env.get()));
+        auto sst = co_await sstable::make(*m_deps, m_filter_policy, co_await fg.open_read());
         if (sst->empty()) [[unlikely]] continue;
 
         auto entries = co_await get_entries_from_sstable(*sst);

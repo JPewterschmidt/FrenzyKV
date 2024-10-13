@@ -83,9 +83,10 @@ koios::lazy_task<> version_center::load_current_version()
     version_delta delta = co_await get_current_version(deps, m_file_center);
     m_current = (m_versions.emplace_back((co_await current_descriptor_name(deps)).value_or(get_version_descriptor_name())) += delta);
     const ::std::string_view cvd_name = m_current.version_desc_name();
+    auto env = m_file_center->deps().env();
     
     // Load other versions for GC
-    for (const auto& dir_entry : fs::directory_iterator(version_path()))
+    for (const auto& dir_entry : fs::directory_iterator(env->version_path()))
     {
         if (const auto name = dir_entry.path().filename().string(); 
             name != cvd_name && is_version_descriptor_name(name))

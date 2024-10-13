@@ -121,63 +121,64 @@ public:
 
 ::std::unique_ptr<env> env::make_default_env(const options& opt)
 {
-    root_path = opt.root_path;
-    return ::std::make_unique<posix_uring_env>(opt);
+    auto result = ::std::make_unique<posix_uring_env>(opt);
+    result->m_root_path = opt.root_path;
+    return result;
 }
 
 namespace fs = fs;
 
-fs::path sstables_path()
+fs::path env::sstables_path()
 {
-    return root_path/"sstable";
+    return this->m_root_path/"sstable";
 }
 
-fs::path write_ahead_log_path()
+fs::path env::write_ahead_log_path()
 {
-    return root_path/"db_prewrite_log";
+    return this->m_root_path/"write_ahead_log";
 }
 
-fs::path system_log_path()
+fs::path env::system_log_path()
 {
-    return root_path/"system_log";
+    return this->m_root_path/"system_log";
 }
 
-fs::path config_path()
+fs::path env::config_path()
 {
-    return root_path/"config";
+    return this->m_root_path/"config";
 }
 
-::std::filesystem::path version_path()
+::std::filesystem::path env::version_path()
 {
-    return root_path/"version";
+    return this->m_root_path/"version";
 }
 
-fs::directory_entry sstables_dir(::std::error_code& ec)
+fs::directory_entry env::sstables_dir(::std::error_code& ec)
 {
     return { sstables_path(), ec };
 }
 
-fs::directory_entry write_ahead_log_dir(::std::error_code& ec)
+fs::directory_entry env::write_ahead_log_dir(::std::error_code& ec)
 {
     return { write_ahead_log_path(), ec };
 }
 
-fs::directory_entry system_log_dir(::std::error_code& ec)
+fs::directory_entry env::system_log_dir(::std::error_code& ec)
 {
     return { system_log_path(), ec };
 }
 
-fs::directory_entry config_dir(::std::error_code& ec)
+fs::directory_entry env::config_dir(::std::error_code& ec)
 {
     return { config_path(), ec };
 }
 
-::std::filesystem::directory_entry version_dir(::std::error_code& ec)
+::std::filesystem::directory_entry env::version_dir(::std::error_code& ec)
 {
     return { version_path(), ec };
 }
 
-fs::directory_entry sstables_dir()
+fs::directory_entry env::sstables_dir()
 {
 	::std::error_code ec;
     fs::directory_entry result = sstables_dir(ec);
@@ -186,7 +187,7 @@ fs::directory_entry sstables_dir()
     return result;
 }
 
-fs::directory_entry write_ahead_log_dir()
+fs::directory_entry env::write_ahead_log_dir()
 {
 	::std::error_code ec;
     fs::directory_entry result = write_ahead_log_dir(ec);
@@ -195,7 +196,7 @@ fs::directory_entry write_ahead_log_dir()
     return result;
 }
 
-fs::directory_entry system_log_dir()
+fs::directory_entry env::system_log_dir()
 {
 	::std::error_code ec;
     fs::directory_entry result = system_log_dir(ec);
@@ -204,7 +205,7 @@ fs::directory_entry system_log_dir()
     return result;
 }
 
-fs::directory_entry config_dir()
+fs::directory_entry env::config_dir()
 {
 	::std::error_code ec;
     fs::directory_entry result = config_dir(ec);
@@ -213,7 +214,7 @@ fs::directory_entry config_dir()
     return result;
 }
 
-fs::directory_entry version_dir()
+fs::directory_entry env::version_dir()
 {
 	::std::error_code ec;
     fs::directory_entry result = version_dir(ec);
@@ -222,7 +223,7 @@ fs::directory_entry version_dir()
     return result;
 }
 
-::std::error_code recreate_dirs_if_non_exists()
+::std::error_code env::recreate_dirs_if_non_exists()
 {
     // assume that we are already in the working directory
     ::std::error_code result{};

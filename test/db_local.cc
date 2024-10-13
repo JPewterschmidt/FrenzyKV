@@ -22,7 +22,6 @@ public:
     {
     }
 
-private:
     db_local m_db;
 };
 
@@ -31,8 +30,9 @@ private:
 TEST_F(db_local_test, basic)
 {
     ::std::error_code ec;
-    ASSERT_TRUE(fs::exists(sstables_path(), ec));
-    ASSERT_TRUE(fs::exists(write_ahead_log_path(), ec));
-    ASSERT_TRUE(fs::exists(system_log_path(), ec));
-    ASSERT_TRUE(fs::exists(config_path(), ec));
+    auto env = m_db.env();
+    ASSERT_TRUE(fs::exists(env->sstables_path(), ec));
+    ASSERT_TRUE(fs::exists(env->write_ahead_log_path(), ec));
+    ASSERT_TRUE(fs::exists(env->system_log_path(), ec));
+    ASSERT_TRUE(fs::exists(env->config_path(), ec));
 }

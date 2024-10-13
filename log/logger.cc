@@ -56,7 +56,8 @@ koios::task<> write_ahead_logger::insert(const write_batch& b)
 koios::task<> write_ahead_logger::truncate_file() noexcept
 {
     auto lk = co_await m_mutex.acquire();
-    m_log_file = m_deps->env()->get_truncate_seq_writable(write_ahead_log_path()/write_ahead_log_name());
+    auto env = m_deps->env();
+    m_log_file = env->get_truncate_seq_writable(env->write_ahead_log_path()/write_ahead_log_name());
     toolpex_assert(!!m_log_file);
     co_return;
 }
@@ -87,13 +88,13 @@ koios::task<::std::pair<write_batch, sequence_number_t>>
 recover(env* e) noexcept
 {
     ::std::error_code ec;
-    if (uintmax_t sz = fs::file_size(write_ahead_log_path()/write_ahead_log_name(), ec);
+    if (uintmax_t sz = fs::file_size(e->write_ahead_log_path()/write_ahead_log_name(), ec);
         ec || sz == 0)
     {
         co_return {};
     }
 
-    auto filep = e->get_seq_readable(write_ahead_log_path()/write_ahead_log_name());
+    auto filep = e->get_seq_readable(e->write_ahead_log_path()/write_ahead_log_name());
     toolpex_assert(!!filep);
     const uintmax_t filesz = filep->file_size();
     buffer<> buf(filesz);
@@ -119,7 +120,7 @@ recover(env* e) noexcept
 koios::lazy_task<> write_ahead_logger::delete_file()
 {
     auto lk = co_await m_mutex.acquire();
-    co_await koios::uring::unlink(write_ahead_log_path()/write_ahead_log_name());
+    co_await koios::uring::unlink(m_deps->env()->write_ahead_log_path()/write_ahead_log_name());
 }
 
 } // namespace frenzykv

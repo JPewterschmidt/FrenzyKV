@@ -26,7 +26,7 @@ kvdb_deps::kvdb_deps(options opt, ::std::move_only_function<void()> after_init)
     if (!fs::exists(rp, ec)) fs::create_directory(rp);
     if (ec) throw koios::exception{ec};
 
-    recreate_dirs_if_non_exists();
+    env()->recreate_dirs_if_non_exists();
     
     if (after_init) after_init();
 }

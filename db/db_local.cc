@@ -56,7 +56,7 @@ db_local::db_local(::std::string dbname, options opt)
       m_compactor{ m_deps, m_filter_policy.get() }, 
       m_cache{ m_deps, m_filter_policy.get(), 32 },
       m_mem{ ::std::make_unique<memtable>(m_deps) }, 
-      m_gcer{ &m_version_center, &m_file_center }, 
+      m_gcer{ &m_deps, &m_version_center, &m_file_center }, 
       m_flusher{ m_deps, &m_version_center, m_filter_policy.get(), &m_file_center }
 {
 }
@@ -161,7 +161,8 @@ koios::task<> db_local::update_current_version(version_delta delta)
 
     // Write new version to version descriptor
     const auto new_desc_name = cur_v.version_desc_name();
-    auto new_desc = m_deps.env()->get_seq_writable(version_path()/new_desc_name);
+    auto env = m_deps.env();
+    auto new_desc = env->get_seq_writable(env->version_path()/new_desc_name);
     [[maybe_unused]] bool write_ret = co_await write_version_descriptor(*cur_v, new_desc.get());
     toolpex_assert(write_ret);
 
@@ -174,7 +175,7 @@ koios::task<> db_local::fake_file_to_disk(::std::unique_ptr<in_mem_rw> fake_file
     if (fake_file && fake_file->file_size())
     {
         auto file = co_await m_file_center.get_file(name_a_sst(l));
-        auto fp = co_await file.open_write(m_deps.env().get());
+        auto fp = co_await file.open_write();
         co_await fake_file->dump_to(*fp);
         co_await fp->sync();
         delta.add_new_file(::std::move(file));
@@ -240,7 +241,8 @@ koios::task<> db_local::close()
 
 koios::task<> db_local::delete_all_prewrite_log()
 {
-    for (const auto& dir_entry : fs::directory_iterator(write_ahead_log_path()))
+    auto env = m_deps.env();
+    for (const auto& dir_entry : fs::directory_iterator(env->write_ahead_log_path()))
     {
         co_await koios::uring::unlink(dir_entry);
     }

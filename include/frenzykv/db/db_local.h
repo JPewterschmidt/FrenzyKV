@@ -57,6 +57,8 @@ public:
 
     koios::lazy_task<> compact_tombstones();
 
+    auto env() const noexcept { return m_deps.env(); }
+
 private:
     koios::task<sequenced_key> make_query_key(const_bspan userkey, const snapshot& snap);
     koios::task<> merge_tables(::std::vector<sstable>& tables, level_t target_l);

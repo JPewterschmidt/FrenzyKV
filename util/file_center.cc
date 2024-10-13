@@ -73,9 +73,10 @@ retrive_level_and_id_from_sst_name(::std::string_view name)
 
 koios::lazy_task<> file_center::load_files()
 {
+    auto env = m_deps->env();
     auto lk = co_await m_mutex.acquire();
     // Go through all the files.
-    for (const auto& dir_entry : fs::directory_iterator{ sstables_path() })
+    for (const auto& dir_entry : fs::directory_iterator{ env->sstables_path() })
     {
         if (dir_entry.file_size() == 0) 
         {
@@ -86,7 +87,7 @@ koios::lazy_task<> file_center::load_files()
         toolpex_assert(is_sst_name(name));
 
         auto level_and_id_opt = retrive_level_and_id_from_sst_name(name);
-        auto& sp = m_reps.emplace_back(::std::make_unique<file_rep>(level_and_id_opt->first, level_and_id_opt->second, name));
+        auto& sp = m_reps.emplace_back(::std::make_unique<file_rep>(this, level_and_id_opt->first, level_and_id_opt->second, name));
         m_name_rep[name] = sp.get();
     }
 
@@ -119,7 +120,7 @@ koios::task<file_guard> file_center::get_file(const ::std::string& name)
     auto level_and_id_opt = retrive_level_and_id_from_sst_name(name);
     auto& sp = m_reps.emplace_back(
         ::std::make_unique<file_rep>(
-            level_and_id_opt->first, level_and_id_opt->second, name
+            this, level_and_id_opt->first, level_and_id_opt->second, name
         )
     );
     auto insert_ret = m_name_rep.insert({ name, sp.get() });
@@ -132,10 +133,11 @@ koios::task<> file_center::GC()
     auto lk = co_await m_mutex.acquire();
     auto removing = r::partition(m_reps, [](auto&& rep){ return rep->approx_ref_count() != 0; });
     auto names_removing = removing | rv::transform([](auto&& r) { toolpex_assert(r->approx_ref_count() == 0); return r->name(); });
+    auto env = m_deps->env();
     for (auto name : names_removing)
     {
         m_name_rep.erase(::std::string(name));
-        co_await koios::uring::unlink(sstables_path()/name);
+        co_await koios::uring::unlink(env->sstables_path()/name);
     }
     m_reps.erase(begin(removing), end(removing));
 

@@ -14,9 +14,9 @@ koios::lazy_task<> garbage_collector::do_GC() const
 {
     auto lk = co_await m_mutex.acquire();
 
-    auto delete_garbage_version_desc = [](const auto& vrep) -> koios::task<> { 
+    auto delete_garbage_version_desc = [env = this->m_deps->env()](const auto& vrep) -> koios::task<> { 
         assert(vrep.approx_ref_count() == 0);
-        co_await koios::uring::unlink(version_path()/vrep.version_desc_name());
+        co_await koios::uring::unlink(env->version_path()/vrep.version_desc_name());
     };
 
     // delete those garbage version descriptor files

@@ -46,27 +46,27 @@ public:
     virtual ::std::filesystem::path current_directory() const = 0;
 
     static ::std::unique_ptr<env> make_default_env(const options& opt);
+
+    virtual ::std::error_code recreate_dirs_if_non_exists();
+    virtual ::std::filesystem::directory_entry sstables_dir(::std::error_code& ec);
+    virtual ::std::filesystem::directory_entry write_ahead_log_dir(::std::error_code& ec);
+    virtual ::std::filesystem::directory_entry system_log_dir(::std::error_code& ec);
+    virtual ::std::filesystem::directory_entry config_dir(::std::error_code& ec);
+    virtual ::std::filesystem::directory_entry version_dir(::std::error_code& ec);
+    virtual ::std::filesystem::directory_entry sstables_dir();
+    virtual ::std::filesystem::directory_entry write_ahead_log_dir();
+    virtual ::std::filesystem::directory_entry system_log_dir();
+    virtual ::std::filesystem::directory_entry config_dir();
+    virtual ::std::filesystem::directory_entry version_dir();
+    virtual ::std::filesystem::path sstables_path();
+    virtual ::std::filesystem::path write_ahead_log_path();
+    virtual ::std::filesystem::path system_log_path();
+    virtual ::std::filesystem::path config_path();
+    virtual ::std::filesystem::path version_path();
+
+private:
+    ::std::filesystem::path m_root_path;
 };
-
-::std::error_code recreate_dirs_if_non_exists();
-
-::std::filesystem::directory_entry sstables_dir(::std::error_code& ec);
-::std::filesystem::directory_entry write_ahead_log_dir(::std::error_code& ec);
-::std::filesystem::directory_entry system_log_dir(::std::error_code& ec);
-::std::filesystem::directory_entry config_dir(::std::error_code& ec);
-::std::filesystem::directory_entry version_dir(::std::error_code& ec);
-
-::std::filesystem::directory_entry sstables_dir();
-::std::filesystem::directory_entry write_ahead_log_dir();
-::std::filesystem::directory_entry system_log_dir();
-::std::filesystem::directory_entry config_dir();
-::std::filesystem::directory_entry version_dir();
-
-::std::filesystem::path sstables_path();
-::std::filesystem::path write_ahead_log_path();
-::std::filesystem::path system_log_path();
-::std::filesystem::path config_path();
-::std::filesystem::path version_path();
 
 inline consteval ::std::string_view current_version_descriptor_name()
 {
