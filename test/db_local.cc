@@ -17,20 +17,21 @@ using namespace frenzykv;
 class db_local_test : public ::testing::Test
 {
 public:
-    db_local_test()
-        : m_db{ "unittest_frenzykv", get_global_options() }
+    koios::task<> init() 
     {
+        if (!m_db) m_db = co_await db_local::make_unique_db_local("test1", get_global_options());
     }
 
-    db_local m_db;
+    ::std::unique_ptr<db_local> m_db;
 };
 
 } // annoymous namespace
 
 TEST_F(db_local_test, basic)
 {
+    init().result();
     ::std::error_code ec;
-    auto env = m_db.env();
+    auto env = m_db->env();
     ASSERT_TRUE(fs::exists(env->sstables_path(), ec));
     ASSERT_TRUE(fs::exists(env->write_ahead_log_path(), ec));
     ASSERT_TRUE(fs::exists(env->system_log_path(), ec));

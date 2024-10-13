@@ -70,6 +70,9 @@ public:
 
     version_delta& operator+=(version_delta other_delta);
 
+    bool only_added() const noexcept { return m_compacted.empty() && !m_added.empty(); }
+    bool only_compacted() const noexcept { return !m_compacted.empty() && m_added.empty(); }
+
 private:
     ::std::vector<file_guard> m_compacted;
     ::std::vector<file_guard> m_added;

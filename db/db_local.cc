@@ -67,6 +67,20 @@ db_local::~db_local() noexcept
     m_bg_gc_stop_src.request_stop();
 }
 
+koios::task<db_local*> db_local::new_db_local(::std::string dbname, options opt)
+{
+    db_local* result = new db_local(::std::move(dbname), ::std::move(opt));
+    co_await result->init();
+    co_return result;
+}
+
+koios::task<::std::unique_ptr<db_local>> 
+db_local::make_unique_db_local(::std::string dbname, options opt)
+{
+    auto* result = co_await new_db_local(::std::move(dbname), ::std::move(opt));
+    co_return ::std::unique_ptr<db_local>{ result };
+}
+
 koios::task<bool> db_local::init() 
 {
     if (m_inited.load(::std::memory_order_acquire))
@@ -252,8 +266,6 @@ koios::task<::std::error_code>
 db_local::
 insert(write_batch batch, write_options opt)
 {
-    co_await init();
-
     sequence_number_t seq = m_snapshot_center.get_next_unused_sequence_number(batch.count());
     batch.set_first_sequence_num(seq);
 
@@ -290,7 +302,6 @@ db_local::do_GC()
 koios::task<::std::optional<kv_entry>> 
 db_local::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noexcept
 {
-    co_await init();
     snapshot snap = opt.snap.valid() ? ::std::move(opt.snap) : co_await get_snapshot();
 
     const sequenced_key skey = co_await this->make_query_key(key, snap);
@@ -391,7 +402,6 @@ db_local::make_query_key(const_bspan userkey, const snapshot& snap)
 
 koios::task<snapshot> db_local::get_snapshot()
 {
-    co_await init();
     co_return m_snapshot_center.get_snapshot(co_await m_version_center.current_version());
 }
 

@@ -35,7 +35,7 @@ koios::lazy_task<> db_test(::std::string rootpath = "")
     auto opt = get_global_options();
     if (!rootpath.empty())
         opt.root_path = rootpath;
-    auto dblocal = ::std::make_unique<db_local>("test1", ::std::move(opt));
+    auto dblocal = co_await db_local::make_unique_db_local("test1", ::std::move(opt));
     db_interface* db = dblocal.get();
 
     const size_t scale = 100000;
@@ -61,10 +61,10 @@ koios::lazy_task<> db_test(::std::string rootpath = "")
         spdlog::debug("db_test: insert complete");
     };
 
-    auto fut1 = insertion_func(db).run_and_get_future();
-    //auto fut2 = insertion_func(db).run_and_get_future();
-
-    co_await fut1.get_async();
+//    auto fut1 = insertion_func(db).run_and_get_future();
+//    //auto fut2 = insertion_func(db).run_and_get_future();
+//
+//    co_await fut1.get_async();
     //co_await fut2.get_async();
 
     // #2
@@ -96,9 +96,15 @@ koios::lazy_task<> db_test(::std::string rootpath = "")
         else ::std::cout << "not found" << ::std::endl;
     }
 
+    ::std::vector<koios::future<::std::optional<kv_entry>>> futs_aw;
     for (size_t i{}; i < scale; i += 1000)
     {
-        auto opt = co_await db->get(::std::to_string(i), { .snap = s });
+        futs_aw.emplace_back(db->get(::std::to_string(i), { .snap = s }).run_and_get_future());
+    }
+
+    for (auto& futaw : futs_aw)
+    {
+        auto opt = co_await futaw.get_async();
         if (opt) ::std::cout << opt->to_string_debug() << ::std::endl;
         else ::std::cout << "not found" << ::std::endl;
     }
@@ -117,10 +123,10 @@ int main()
     koios::runtime_init(20);
 
     auto f1 = db_test("/tmp/frenzykv1").run_and_get_future();
-    auto f2 = db_test("/tmp/frenzykv2").run_and_get_future();
+    //auto f2 = db_test("/tmp/frenzykv2").run_and_get_future();
 
     f1.get();
-    f2.get();
+    //f2.get();
     
     koios::runtime_exit();
 }

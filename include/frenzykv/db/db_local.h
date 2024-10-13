@@ -40,11 +40,17 @@ namespace frenzykv
 
 class db_local : public db_interface
 {
-public:
+private:
     db_local(::std::string dbname, options opt);
+    koios::task<bool> init() override;
+
+public:
     ~db_local() noexcept;
 
-    koios::task<bool> init() override;
+    static koios::task<db_local*> new_db_local(::std::string dbname, options opt);
+
+    static koios::task<::std::unique_ptr<db_local>> 
+    make_unique_db_local(::std::string dbname, options opt);
 
     koios::task<::std::error_code> 
     insert(write_batch batch, write_options opt = {}) override;
