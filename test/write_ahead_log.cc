@@ -14,7 +14,7 @@
 #include "frenzykv/env.h"
 #include "frenzykv/write_batch.h"
 
-#include "frenzykv/log/logger.h"
+#include "frenzykv/log/write_ahead_logger.h"
 #include "frenzykv/io/inner_buffer.h"
 
 using namespace frenzykv;

@@ -3,8 +3,8 @@
 //
 // Copyleft 2023 - 2024, ShiXin Wang. All wrongs reserved.
 
-#ifndef FRENZYKV_LOGGER_H
-#define FRENZYKV_LOGGER_H
+#ifndef FRENZYKV_WRITE_AHEAD_LOGGER_H
+#define FRENZYKV_WRITE_AHEAD_LOGGER_H
 
 #include <string>
 #include <string_view>

@@ -15,7 +15,7 @@
 #include "koios/coroutine_shared_mutex.h"
 
 #include "frenzykv/kvdb_deps.h"
-#include "frenzykv/log/logger.h"
+#include "frenzykv/log/write_ahead_logger.h"
 #include "frenzykv/io/in_mem_rw.h"
 #include "frenzykv/util/record_writer_wrapper.h"
 #include "frenzykv/util/file_center.h"

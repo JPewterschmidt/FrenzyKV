@@ -26,7 +26,7 @@
 #include "frenzykv/util/multi_dest_record_writer.h"
 #include "frenzykv/util/stdout_debug_record_writer.h"
 
-#include "frenzykv/log/logger.h"
+#include "frenzykv/log/write_ahead_logger.h"
 
 #include "frenzykv/db/db_local.h"
 #include "frenzykv/db/version_descriptor.h"
