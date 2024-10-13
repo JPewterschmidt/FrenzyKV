@@ -56,7 +56,7 @@ db_local::db_local(::std::string dbname, options opt)
       m_compactor{ m_deps, m_filter_policy.get() }, 
       m_cache{ m_deps, m_filter_policy.get(), 32 },
       m_mem{ ::std::make_unique<memtable>(m_deps) }, 
-      m_gcer{ &m_deps, &m_version_center, &m_file_center }, 
+      m_gcer{ m_deps, &m_version_center, &m_file_center }, 
       m_flusher{ m_deps, &m_version_center, m_filter_policy.get(), &m_file_center }
 {
 }

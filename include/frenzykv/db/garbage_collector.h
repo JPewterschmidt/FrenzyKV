@@ -18,8 +18,8 @@ namespace frenzykv
 class garbage_collector
 {
 public:
-    garbage_collector(kvdb_deps* deps, version_center* vc, file_center* fc) noexcept
-        : m_version_center{ vc }, m_file_center{ fc }
+    garbage_collector(kvdb_deps& deps, version_center* vc, file_center* fc) noexcept
+        : m_deps{ &deps }, m_version_center{ vc }, m_file_center{ fc }
     {
     }
 

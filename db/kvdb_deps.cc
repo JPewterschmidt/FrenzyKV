@@ -20,7 +20,7 @@ kvdb_deps::kvdb_deps(options opt, ::std::move_only_function<void()> after_init)
       m_stat{ ::std::make_shared<statistics>() }
 {
     namespace fs = ::std::filesystem;
-    assert(m_opt.load() && m_env.load() && m_stat.load());
+    assert(m_opt && m_env.load() && m_stat.load());
     ::std::error_code ec{};
     const auto rp = this->opt()->root_path;
     if (!fs::exists(rp, ec)) fs::create_directory(rp);
