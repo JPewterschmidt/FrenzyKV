@@ -29,6 +29,14 @@ find_table_impl(const ::std::string& name)
     return result ? ::std::move(*result) : nullptr;
 }
 
+::std::shared_ptr<sstable>
+table_cache::
+find_table_phantom_impl(const ::std::string& name)
+{
+    auto result = m_tables.get(name);
+    return result ? ::std::move(*result) : nullptr;
+}
+
 koios::task<::std::shared_ptr<sstable>> 
 table_cache::
 find_table(const ::std::string& name)
@@ -37,16 +45,16 @@ find_table(const ::std::string& name)
 }
 
 koios::task<::std::shared_ptr<sstable>> table_cache::
-insert(const file_guard& fg)
+finsert(const file_guard& fg, bool phantom)
 {
-    spdlog::debug("table_cache::insert {}", fg.name());
+    spdlog::debug("table_cache::finsert{} {}", (phantom ? "_phantom" : ""), fg.name());
     const ::std::string& name = fg.name();
 
     // Find from lru_cache first
-    auto result = find_table_impl(name);
+    auto result = phantom ? find_table_phantom_impl(name) : find_table_impl(name);
     if (result) 
     {
-        spdlog::debug("table_cache::insert got existed {}", fg.name());
+        spdlog::debug("table_cache::finsert{} got existed {}", (phantom ? "_phantom" : ""), fg.name());
         co_return result;
     }
 
@@ -56,7 +64,7 @@ insert(const file_guard& fg)
 
     result = co_await sstable::make(*m_deps, m_filter, ::std::move(mem_file));
 
-    spdlog::debug("table_cache::insert new {}", fg.name());
+    spdlog::debug("table_cache::finsert{} new {}", (phantom ? "_phantom" : ""), fg.name());
     m_tables.put(name, result);
     spdlog::debug("table_cache::inserted new {}", fg.name());
 

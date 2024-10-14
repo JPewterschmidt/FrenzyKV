@@ -17,7 +17,7 @@ sstable_getter_from_cache(table_cache& cache) noexcept
 koios::task<::std::shared_ptr<sstable>> sstable_getter_from_cache::
 get(file_guard fg) const 
 {
-    co_return co_await m_cache.insert(fg);   
+    co_return co_await m_cache.finsert(fg);   
 }
 
 } // namespace frenzykv

@@ -340,7 +340,7 @@ koios::task<::std::optional<::std::pair<sequenced_key, kv_user_value>>>
 db_local::file_to_async_potiential_ret(const file_guard& fg, const sequenced_key& key, const snapshot& snap) const
 {
     spdlog::debug("db_local::find_from_ssts() >=> file_to_async_potiential_ret: getting table {} from cache", fg.name());
-    ::std::shared_ptr<sstable> sst = co_await m_cache.insert(fg);
+    ::std::shared_ptr<sstable> sst = co_await m_cache.finsert(fg);
     toolpex_assert(sst);
     spdlog::debug("db_local::find_from_ssts() >=> file_to_async_potiential_ret: got table {} from cache", fg.name());
 

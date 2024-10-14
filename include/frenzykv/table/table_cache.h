@@ -35,12 +35,21 @@ public:
     koios::task<::std::shared_ptr<sstable>> 
     find_table(const ::std::string& name);
 
-    koios::task<::std::shared_ptr<sstable>> insert(const file_guard& fg);
+    // Find or insert
+    koios::task<::std::shared_ptr<sstable>> finsert(const file_guard& fg, bool phantom = false);
+    koios::task<::std::shared_ptr<sstable>> finsert_phantom(const file_guard& fg)
+    {
+        return finsert(fg, true);
+    }
+
     koios::task<size_t> size() const;
     
 private:
     ::std::shared_ptr<sstable>
     find_table_impl(const ::std::string& name);
+
+    ::std::shared_ptr<sstable>
+    find_table_phantom_impl(const ::std::string& name);
 
 private:
     const kvdb_deps* m_deps{};
