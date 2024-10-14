@@ -65,8 +65,15 @@ finsert(const file_guard& fg, bool phantom)
     result = co_await sstable::make(*m_deps, m_filter, ::std::move(mem_file));
 
     spdlog::debug("table_cache::finsert{} new {}", (phantom ? "_phantom" : ""), fg.name());
-    m_tables.put(name, result);
-    spdlog::debug("table_cache::inserted new {}", fg.name());
+    if (!phantom) 
+    {
+        m_tables.put(name, result);
+        spdlog::debug("table_cache::finsert{} new {}", fg.name());
+    }
+    else
+    {
+        spdlog::debug("table_cache::finsert_phantom return a sstable {} without insert into cache", fg.name());
+    }
 
     co_return result;
 }
