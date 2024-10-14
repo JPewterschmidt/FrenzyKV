@@ -10,6 +10,7 @@
 #include <vector>
 #include <cstdint>
 #include <generator>
+#include <string>
 
 #include "toolpex/move_only.h"
 #include "koios/generator.h"
@@ -231,6 +232,11 @@ public:
     // No any size limit. The caller manager size bounding.
     bool add(const kv_entry& kv);
     bool add(const sequenced_key& key, const kv_user_value& value);
+    bool add(::std::string key, const kv_user_value& value)
+    {
+        return add({ 0, ::std::move(key) }, value);
+    }
+
     ::std::string finish();
     size_t segment_count() const noexcept { return m_seg_count; }
     bool was_finish() const noexcept { return m_finish; }

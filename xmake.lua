@@ -1,5 +1,5 @@
 add_rules(
-    "mode.debug", "mode.release"
+    "mode.debug", "mode.release", "mode.asan"
 )
 
 add_requires(
