@@ -302,22 +302,19 @@ block_offsets() const noexcept
     }
 }
 
-koios::task<::std::list<kv_entry>>
+koios::generator<kv_entry>
 get_entries_from_sstable(sstable& table)
 {
-    ::std::list<kv_entry> result;
+    if (table.empty()) co_return;
     for (auto blk_off : table.block_offsets())
     {
         auto blk_opt = co_await table.get_block(blk_off);
         toolpex_assert(blk_opt.has_value());
         for (auto kv : blk_opt->b.entries())
         {
-            result.push_back(::std::move(kv));
+            co_yield ::std::move(kv);
         }
     }
-    toolpex_assert(::std::is_sorted(result.begin(), result.end()));
-
-    co_return result;
 }
 
 ::std::string_view sstable::filename() const noexcept

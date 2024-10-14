@@ -75,7 +75,7 @@ public:
     koios::task<bool> sstable_test(random_readable* table, const write_batch& batch)
     {
         auto tab = co_await sstable::make(m_deps, m_filter.get(), table);
-        auto entries = co_await get_entries_from_sstable(*tab);
+        auto entries = co_await get_entries_from_sstable(*tab).to<::std::vector>();
         co_return ::std::ranges::equal(entries, batch);
     }
 

@@ -15,6 +15,7 @@
 
 #include "koios/task.h"
 #include "koios/coroutine_mutex.h"
+#include "koios/generator.h"
 
 #include "frenzykv/io/readable.h"
 #include "frenzykv/kvdb_deps.h"
@@ -181,7 +182,7 @@ private:
     size_t m_hash_value{};
 };
 
-koios::task<::std::list<kv_entry>>
+koios::generator<kv_entry>
 get_entries_from_sstable(sstable& table);
 
 } // namespace frenzykv

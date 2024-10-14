@@ -38,7 +38,7 @@ compactor::compact_tombstones(version_guard vg, level_t l) const
         auto sst = co_await sstable::make(*m_deps, m_filter_policy, co_await fg.open_read());
         if (sst->empty()) [[unlikely]] continue;
 
-        auto entries = co_await get_entries_from_sstable(*sst);
+        auto entries = co_await get_entries_from_sstable(*sst).to<::std::vector>();
         ::std::erase_if(entries, is_tomb_stone<kv_entry>);
         auto filep = ::std::make_unique<in_mem_rw>();
         sstable_builder builder{ *m_deps, size_bound, m_filter_policy, filep.get() };
@@ -82,16 +82,11 @@ merge_two_tables(sstable& lhs, sstable& rhs, level_t new_level) const
 {
     ::std::vector<::std::unique_ptr<in_mem_rw>> result;
 
-    ::std::list<kv_entry> lhs_entries; 
-    ::std::list<kv_entry> rhs_entries; 
-
-    if (!lhs.empty()) lhs_entries = co_await get_entries_from_sstable(lhs);
-    if (!rhs.empty()) rhs_entries = co_await get_entries_from_sstable(rhs);
-
     ::std::list<kv_entry> merged;
-    ::std::merge(::std::move_iterator{ lhs_entries.begin() }, ::std::move_iterator{ lhs_entries.end() }, 
-                 ::std::move_iterator{ rhs_entries.begin() }, ::std::move_iterator{ rhs_entries.end() }, 
-                 ::std::front_inserter(merged));
+    co_await koios::merge(
+        get_entries_from_sstable(lhs), 
+        get_entries_from_sstable(rhs)
+    ).to(::std::front_inserter(merged));
 
     toolpex_assert(::std::is_sorted(merged.rbegin(), merged.rend()));
 
