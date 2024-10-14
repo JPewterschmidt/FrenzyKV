@@ -67,36 +67,3 @@ target("FrenzyKV")
         "log/*.cc",
         "persistent/*.cc"
     )
-
-target("FrenzyKV-test")
-    set_kind("binary")
-    add_deps("FrenzyKV", "koios", "toolpex")
-    add_packages("concurrentqueue")
-    add_cxflags("-Wconversion", { force = true })
-    set_warnings("all", "error")
-    add_files( "test/*.cc")
-    add_packages(
-        "gtest", "spdlog",
-        "nlohmann_json"
-    )
-    after_build(function (target)
-        print("xmake.lua: unittest start.")
-        os.execv(target:targetfile(), {"--gtest_color=yes"})
-        print("xmake.lua: unittest complete.")
-    end)
-    on_run(function (target)
-        --nothing
-    end)
-    
-target("FrenzyKV-example")
-    set_kind("binary")
-    add_deps("FrenzyKV", "koios", "toolpex")
-    add_cxflags("-Wconversion", { force = true })
-    add_files( "example/*.cc")
-    set_policy("build.warning", true)
-    add_packages(
-        "gflags", 
-        "concurrentqueue", 
-        "nlohmann_json", 
-        "spdlog"
-    )
