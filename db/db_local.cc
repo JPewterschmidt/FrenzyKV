@@ -35,6 +35,7 @@
 #include "frenzykv/table/sstable_getter_from_cache.h"
 #include "frenzykv/table/sstable_getter_from_cache_phantom.h"
 #include "frenzykv/table/sstable_getter_from_file.h"
+#include "frenzykv/table/sstable_getter_from_file_and_cache.h"
 
 #include "frenzykv/persistent/compaction.h"
 
@@ -215,7 +216,7 @@ koios::lazy_task<> db_local::may_compact(level_t from)
         // Do the actual compaction
         auto [fake_file, delta] = co_await m_compactor.compact(
             ::std::move(ver), l, 
-            ::std::make_unique<sstable_getter_from_cache_phantom>(m_cache)
+            ::std::make_unique<sstable_getter_from_file_and_cache>(m_cache)
         );
         co_await fake_file_to_disk(::std::move(fake_file), delta, l + 1);
         co_await update_current_version(::std::move(delta));

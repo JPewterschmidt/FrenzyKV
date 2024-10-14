@@ -12,10 +12,10 @@
 namespace frenzykv
 {
 
-class sstable_getter_from_file : public sstable_getter
+class sstable_getter_from_file_and_cache : public sstable_getter
 {
 public:
-    sstable_getter_from_file(table_cache& cache, const kvdb_deps& deps, filter_policy* filter) noexcept
+    sstable_getter_from_file_and_cache(table_cache& cache, const kvdb_deps& deps, filter_policy* filter) noexcept
         : m_cache{ cache }, m_deps{ &deps }, m_filter{ filter }
     {
     }
