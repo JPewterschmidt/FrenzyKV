@@ -9,7 +9,7 @@
 namespace frenzykv
 {
 
-koios::task<::std::shared_ptr<sstable>> sstable_getter_from_file::
+koios::task<::std::shared_ptr<sstable>> sstable_getter_from_file_and_cache::
 get(file_guard fg) const 
 {
     auto result = co_await m_cache.find_table_phantom(fg.name());
