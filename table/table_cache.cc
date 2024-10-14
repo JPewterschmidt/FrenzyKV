@@ -33,7 +33,7 @@ find_table_impl(const ::std::string& name)
 table_cache::
 find_table_phantom_impl(const ::std::string& name)
 {
-    auto result = m_tables.get(name);
+    auto result = m_tables.phantom_get(name);
     return result ? ::std::move(*result) : nullptr;
 }
 
@@ -42,6 +42,13 @@ table_cache::
 find_table(const ::std::string& name)
 {
     co_return find_table_impl(name);
+}
+
+koios::task<::std::shared_ptr<sstable>> 
+table_cache::
+find_table_phantom(const ::std::string& name)
+{
+    co_return find_table_phantom_impl(name);
 }
 
 koios::task<::std::shared_ptr<sstable>> table_cache::
@@ -68,7 +75,7 @@ finsert(const file_guard& fg, bool phantom)
     if (!phantom) 
     {
         m_tables.put(name, result);
-        spdlog::debug("table_cache::finsert{} new {}", fg.name());
+        spdlog::debug("table_cache::finsert{} new {}", (phantom ? "_phantom" : ""), fg.name());
     }
     else
     {

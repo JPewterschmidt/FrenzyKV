@@ -35,6 +35,9 @@ public:
     koios::task<::std::shared_ptr<sstable>> 
     find_table(const ::std::string& name);
 
+    koios::task<::std::shared_ptr<sstable>> 
+    find_table_phantom(const ::std::string& name);
+
     // Find or insert
     koios::task<::std::shared_ptr<sstable>> finsert(const file_guard& fg, bool phantom = false);
     koios::task<::std::shared_ptr<sstable>> finsert_phantom(const file_guard& fg)
