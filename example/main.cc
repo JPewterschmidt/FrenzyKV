@@ -28,6 +28,9 @@ using namespace frenzykv;
 using namespace ::std::string_view_literals;
 using namespace ::std::chrono_literals;
 
+namespace r = ::std::ranges;
+namespace rv = r::views;
+
 koios::lazy_task<> db_test(::std::string rootpath = "")
 {
     spdlog::set_level(spdlog::level::debug);
@@ -47,24 +50,34 @@ koios::lazy_task<> db_test(::std::string rootpath = "")
 
     snapshot s = co_await db->get_snapshot();
 
-    auto insertion_func = [](db_interface* db) mutable -> koios::task<>
+    auto insertion_func = [scale](db_interface* db) mutable -> koios::task<>
     { 
         spdlog::debug("A insertion_func emitted");
         co_await koios::this_task::sleep_for(1s);
-        
+
         // #1
-        spdlog::debug("db_test: start insert");
-        for (size_t i{}; i < scale; ++i)
-        {
-            co_await db->insert(::std::to_string(i), "test value abcdefg abcdefg 3");
-        }
+        auto fut_aw = rv::iota(0) | rv::take(scale) | rv::transform([db](int i) { 
+            return db->insert(::std::to_string(i), "test value abcdefg abcdefg 3").run_and_get_future();
+        }) | r::to<::std::vector>();
+        
+        //// #1
+        //spdlog::debug("db_test: start insert");
+        //for (size_t i{}; i < scale; ++i)
+        //{
+        //    //co_await db->insert(::std::to_string(i), "test value abcdefg abcdefg 3");
+        //    db->insert(::std::to_string(i), "test value abcdefg abcdefg 3").run();
+        //}
+
+        for (auto& item : fut_aw)
+            co_await item.get_async();
+
         spdlog::debug("db_test: insert complete");
     };
 
-//    auto fut1 = insertion_func(db).run_and_get_future();
-//    //auto fut2 = insertion_func(db).run_and_get_future();
-//
-//    co_await fut1.get_async();
+    auto fut1 = insertion_func(db).run_and_get_future();
+    //auto fut2 = insertion_func(db).run_and_get_future();
+
+    co_await fut1.get_async();
     //co_await fut2.get_async();
 
     // #2

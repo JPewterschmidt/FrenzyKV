@@ -29,11 +29,6 @@ flush_to_disk(::std::unique_ptr<memtable> table)
 {
     if (co_await table->empty()) co_return;
 
-    // Really important lock, the underlying implmentation guarantee that the FIFO execution order.
-    // Which natually form the flushing call into a queue.
-    // So this is an easy Consumer/Producer module.
-    auto lk = co_await m_mutex.acquire();
-    
     spdlog::debug("flush_to_disk() start");
     auto sst_guard = co_await m_file_center->get_file(name_a_sst(0));
     auto env = m_deps->env();
@@ -55,7 +50,6 @@ flush_to_disk(::std::unique_ptr<memtable> table)
         co_await file->sync();
         delta.add_new_file(::std::move(sst_guard));
     };
-
 
     // Flush those KV into sstable
     auto list = co_await table->get_storage();

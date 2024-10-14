@@ -272,25 +272,28 @@ insert(write_batch batch, write_options opt)
     co_await m_log.insert(batch);
     
     auto unilk = co_await m_mem_mutex.acquire();
-    if (auto ec = co_await m_mem->insert(batch); is_frzkv_out_of_range(ec))
+    ::std::error_code ec{};
+    while (is_frzkv_out_of_range(ec = co_await m_mem->insert(batch)))
     {
         spdlog::debug("db_local::insert() need flushing");
         auto flushing_file = ::std::move(m_mem);
         m_mem = ::std::make_unique<memtable>(m_deps);
-        co_await m_flusher.flush_to_disk(::std::move(flushing_file));
-        if (m_force_GC_hint.fetch_add(1, ::std::memory_order_acq_rel) % (m_num_bound_level0 * 2) == 0)
+        unilk.unlock();
+        const size_t gc_hint = m_force_GC_hint.fetch_add(1, ::std::memory_order_acq_rel);
+        if (gc_hint % (m_num_bound_level0 - 1) == 0)
         {
+            co_await unilk.lock();
             spdlog::debug("force compacting");
             co_await may_compact();
             do_GC().run();
+            continue;
         }
-
-        ec = co_await m_mem->insert(::std::move(batch));
-        spdlog::debug("db_local::insert() after GC, then after insert to mem");
-        co_return ec;
+        co_await m_flusher.flush_to_disk(::std::move(flushing_file));
+        co_await unilk.lock();
     }
+    spdlog::debug("db_local::insert() after insert to mem");
     
-    co_return {};
+    co_return ec; 
 }
 
 koios::task<> 
