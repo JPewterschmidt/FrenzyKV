@@ -109,17 +109,17 @@ koios::lazy_task<> db_test(::std::string rootpath = "")
         else ::std::cout << "not found" << ::std::endl;
     }
 
-    ::std::vector<koios::future<::std::optional<kv_entry>>> futs_aw;
+    ::std::vector<::std::pair<int, koios::future<::std::optional<kv_entry>>>> futs_aw;
     for (size_t i{}; i < scale; i += 1000)
     {
-        futs_aw.emplace_back(db->get(::std::to_string(i), { .snap = s }).run_and_get_future());
+        futs_aw.emplace_back(i, db->get(::std::to_string(i), { .snap = s }).run_and_get_future());
     }
 
-    for (auto& futaw : futs_aw)
+    for (auto& [i, futaw] : futs_aw)
     {
         auto opt = co_await futaw.get_async();
         if (opt) ::std::cout << opt->to_string_debug() << ::std::endl;
-        else ::std::cout << "not found" << ::std::endl;
+        else ::std::cout << "key: " << i << " not found" << ::std::endl;
     }
 
     spdlog::info(toolpex::toc(t));

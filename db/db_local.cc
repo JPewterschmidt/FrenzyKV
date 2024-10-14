@@ -218,6 +218,7 @@ koios::lazy_task<> db_local::may_compact(level_t from)
             ::std::move(ver), l, 
             ::std::make_unique<sstable_getter_from_file_and_cache>(m_cache, m_deps, m_filter_policy.get())
             //::std::make_unique<sstable_getter_from_cache>(m_cache)
+            //::std::make_unique<sstable_getter_from_file>(m_deps, m_filter_policy.get())
         );
         co_await fake_file_to_disk(::std::move(fake_file), delta, l + 1);
         co_await update_current_version(::std::move(delta));
