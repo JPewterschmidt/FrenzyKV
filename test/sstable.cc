@@ -153,7 +153,8 @@ public:
 
     koios::task<bool> entries_sorted()
     {
-        auto vec = co_await get_entries_from_sstable(*m_table).to<::std::vector>();
+        auto vec_gen = get_entries_from_sstable(*m_table);
+        auto vec = co_await vec_gen.to<::std::vector>();
         co_return ::std::is_sorted(vec.begin(), vec.end());
     }
 

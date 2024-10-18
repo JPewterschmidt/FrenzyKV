@@ -282,18 +282,18 @@ insert(write_batch batch, write_options opt)
         spdlog::debug("db_local::insert() need flushing");
         auto flushing_file = ::std::move(m_mem);
         m_mem = ::std::make_unique<memtable>(m_deps);
-        unilk.unlock();
+        //unilk.unlock();
         const size_t gc_hint = m_force_GC_hint.fetch_add(1, ::std::memory_order_acq_rel);
         co_await m_flusher.flush_to_disk(::std::move(flushing_file));
         if (gc_hint % (m_num_bound_level0 - 1) == 0)
         {
-            co_await unilk.lock();
+            //co_await unilk.lock();
             spdlog::debug("force compacting");
             co_await may_compact();
             do_GC().run();
             continue;
         }
-        co_await unilk.lock();
+        //co_await unilk.lock();
     }
     spdlog::debug("db_local::insert() after insert to mem");
     

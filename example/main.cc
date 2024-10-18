@@ -131,9 +131,13 @@ koios::lazy_task<> db_test(::std::string rootpath = "")
     co_return;
 }
 
-int main()
+int main(int argc, char** argv)
 {
-    koios::runtime_init(20);
+    size_t thrs{};
+    if (argc == 1) thrs = 20;
+    else thrs = static_cast<size_t>(::atoi(argv[1]));
+
+    koios::runtime_init(thrs);
 
     auto f1 = db_test("/tmp/frenzykv1").run_and_get_future();
     //auto f2 = db_test("/tmp/frenzykv2").run_and_get_future();
