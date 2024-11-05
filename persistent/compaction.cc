@@ -54,11 +54,34 @@ compactor::compact_tombstones(version_guard vg, level_t l) const
     co_return { ::std::move(result), ::std::move(delta) };
 }
 
+koios::task<::std::unique_ptr<in_mem_rw>> 
+compactor::merge_tables(::std::vector<::std::shared_ptr<sstable>>& table_ptrs, 
+                        level_t tables_level) const
+{
+    assert(table_ptrs.size() >= 2);
+
+    spdlog::debug("compactor::merge_tables() start");
+
+    const auto first_two = table_ptrs | rv::take(2) | rv::adjacent<2>;
+    auto [t1, t2] = *begin(first_two);
+    auto file = co_await merge_two_tables(t1, t2, tables_level + 1);
+    spdlog::debug("compactor::merge_tables() the first two tables merged");
+
+    for (auto t : table_ptrs | rv::drop(2))
+    {
+        auto temp = co_await sstable::make(*m_deps, m_filter_policy, file.get());
+        file = co_await merge_two_tables(temp, t, tables_level + 1);
+        spdlog::debug("compactor::merge_tables() two following tables merged");
+    }
+
+    co_return file;
+}
+
 koios::task<::std::pair<::std::unique_ptr<in_mem_rw>, version_delta>>
 compactor::compact(version_guard version, level_t from, ::std::unique_ptr<sstable_getter> table_getter) const
 {
     auto lk = co_await m_mutex.acquire();
-    spdlog::debug("compact() start");
+    spdlog::debug("compact() start - level: {}", from);
 
     auto policy = make_default_compaction_policy(*m_deps, m_filter_policy);
     auto file_guards = co_await policy->compacting_files(version, from);
@@ -73,20 +96,20 @@ compactor::compact(version_guard version, level_t from, ::std::unique_ptr<sstabl
 
     auto newfile = co_await merge_tables(tables, from);
 
-    spdlog::debug("compact() complete");
+    spdlog::debug("compact() complete - level: {}", from);
     co_return { ::std::move(newfile), ::std::move(compacted) };
 }
 
 koios::task<::std::unique_ptr<in_mem_rw>>
 compactor::
-merge_two_tables(sstable& lhs, sstable& rhs, level_t new_level) const 
+merge_two_tables(::std::shared_ptr<sstable> lhs, ::std::shared_ptr<sstable> rhs, level_t new_level) const
 {
     ::std::vector<::std::unique_ptr<in_mem_rw>> result;
 
     ::std::list<kv_entry> merged;
     auto merged_gen = koios::merge(
-        get_entries_from_sstable(lhs), 
-        get_entries_from_sstable(rhs)
+        get_entries_from_sstable(*lhs), 
+        get_entries_from_sstable(*rhs)
     );
     co_await merged_gen.to(::std::front_inserter(merged));
 

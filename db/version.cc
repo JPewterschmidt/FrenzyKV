@@ -62,9 +62,7 @@ version_rep& version_rep::operator+=(const version_delta& delta)
 
 koios::task<mutable_version_guard> version_center::add_new_version()
 {
-    spdlog::debug("before get verison center modify lock");
     auto lk = co_await m_modify_lock.acquire();
-    spdlog::debug("after get verison center modify lock");
     auto& new_ver = m_versions.emplace_back(m_versions.back());
     new_ver.set_version_desc_name(get_version_descriptor_name());
     m_current = { new_ver };

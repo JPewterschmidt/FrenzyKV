@@ -56,27 +56,7 @@ public:
      *          So you have to do the null pointer check.
      */
     koios::task<::std::unique_ptr<in_mem_rw>> 
-    merge_tables(::std::ranges::range auto& table_ptrs, level_t tables_level) const
-    {
-        namespace rv = ::std::ranges::views;
-        assert(table_ptrs.size() >= 2);
-
-        spdlog::debug("compactor::merge_tables() start");
-
-        const auto first_two = table_ptrs | rv::take(2) | rv::adjacent<2>;
-        auto [t1, t2] = *begin(first_two);
-        auto file = co_await merge_two_tables(*t1, *t2, tables_level + 1);
-        spdlog::debug("compactor::merge_tables() one two tables merging complete");
-
-        for (auto t : table_ptrs | rv::drop(2))
-        {
-            auto temp = co_await sstable::make(*m_deps, m_filter_policy, file.get());
-            file = co_await merge_two_tables(*temp, *t, tables_level + 1);
-            spdlog::debug("compactor::merge_tables() one two tables merging complete");
-        }
-
-        co_return file;
-    }
+    merge_tables(::std::vector<::std::shared_ptr<sstable>>& table_ptrs, level_t tables_level) const;
 
     koios::task<::std::pair<::std::vector<::std::unique_ptr<in_mem_rw>>, version_delta>>
     compact_tombstones(version_guard vg, level_t l) const;
@@ -94,7 +74,7 @@ private:
      *          So you have to do the null pointer check.
      */
     koios::task<::std::unique_ptr<in_mem_rw>>
-    merge_two_tables(sstable& lhs, sstable& rhs, level_t new_level) const;
+    merge_two_tables(::std::shared_ptr<sstable> lhs, ::std::shared_ptr<sstable> rhs, level_t new_level) const;
 
 private:
     mutable koios::mutex m_mutex;

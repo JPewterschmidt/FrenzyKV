@@ -134,6 +134,8 @@ koios::lazy_task<> db_test(::std::string rootpath = "")
 int main(int argc, char** argv)
 {
     size_t thrs{};
+    spdlog::info("addr of the first variable: 0x{:x}", reinterpret_cast<uint64_t>(&thrs));
+
     if (argc == 1) thrs = 20;
     else thrs = static_cast<size_t>(::atoi(argv[1]));
 

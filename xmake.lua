@@ -6,15 +6,15 @@ add_requires(
     "gflags", 
     "gtest", 
     "concurrentqueue master",
-    "benchmark", 
     "nlohmann_json", 
     "spdlog", 
     "jemalloc", 
     "zstd", 
-    "crc32c", 
     "magic_enum", 
     "libuuid"
 )
+add_requires("crc32c", { configs = { pic = true } })
+add_requireconfs("crc32c", { override = true }, { configs = { cxflags = "-fPIC" } })
 
 includes(
     "koios", 

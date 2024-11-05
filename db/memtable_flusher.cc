@@ -29,7 +29,6 @@ flush_to_disk(::std::unique_ptr<memtable> table)
 {
     if (co_await table->empty()) co_return;
 
-    spdlog::debug("flush_to_disk() start");
     auto sst_guard = co_await m_file_center->get_file(name_a_sst(0));
     auto env = m_deps->env();
     auto file = env->get_seq_writable(env->sstables_path()/sst_guard);
@@ -73,16 +72,12 @@ flush_to_disk(::std::unique_ptr<memtable> table)
     }
     co_await finish_current_buiding(builder, delta, file.get(), sst_guard);
     
-    spdlog::debug("flush_to_disk() updates version info");
     auto new_ver = co_await m_version_center->add_new_version();
-    spdlog::debug("flush_to_disk() updates version info, get newly added version guard!");
     new_ver += delta;
     const auto vdname = new_ver.version_desc_name();
     auto ver_file = env->get_seq_writable(env->version_path()/vdname);
     co_await write_version_descriptor(*new_ver, ver_file.get());
     co_await set_current_version_file(*m_deps, vdname);
-
-    spdlog::debug("flush_to_disk() complete");
 }
 
 } // namespace frenzykv

@@ -295,7 +295,6 @@ insert(write_batch batch, write_options opt)
         }
         //co_await unilk.lock();
     }
-    spdlog::debug("db_local::insert() after insert to mem");
     
     co_return ec; 
 }
