@@ -56,8 +56,7 @@ bool sstable::empty() const noexcept
 koios::task<bool> sstable::parse_meta_data()
 { 
     if (m_meta_data_parsed.load()) co_return true;
-    
-    auto lk = co_await m_lock.acquire();
+
     if (m_file == nullptr)
     {
         m_meta_data_parsed = true;

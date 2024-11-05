@@ -85,11 +85,9 @@ compactor::compact(version_guard version, level_t from, ::std::unique_ptr<sstabl
     // for debug
     static ::std::unordered_map<level_t, size_t> count{};
     spdlog::debug("compact() start - level: {}, count: {}", from, count[from]++);
-    if (count[1] == 27) spdlog::info("debug mark 1");
 
     auto policy = make_default_compaction_policy(*m_deps, m_filter_policy);
     auto file_guards = co_await policy->compacting_files(version, from);
-    if (count[1] == 27) spdlog::info("debug mark 2");
     if (count[1] == 27) spdlog::debug("compact() after chosing compacting_files()");
 
     version_delta compacted;
@@ -100,7 +98,6 @@ compactor::compact(version_guard version, level_t from, ::std::unique_ptr<sstabl
         tables.emplace_back(co_await table_getter->get(fg));
 
     auto newfile = co_await merge_tables(tables, from);
-    if (count[1] == 27) spdlog::info("debug mark 3");
 
     spdlog::debug("compact() complete - level: {}", from);
     co_return { ::std::move(newfile), ::std::move(compacted) };

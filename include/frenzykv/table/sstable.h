@@ -70,7 +70,10 @@ public:
     make(const kvdb_deps& deps, filter_policy* filter, auto file)
     {
         ::std::shared_ptr<sstable> result{ new sstable(deps, filter, ::std::move(file)) };
-        co_await result->parse_meta_data();
+        const bool parse_ret = co_await result->parse_meta_data();
+        toolpex_assert(parse_ret);
+        (void)parse_ret;
+
         co_return result;
     }
 
@@ -165,8 +168,6 @@ private:
     koios::task<bool>   parse_meta_data();
     
 private:
-    // Only protect parse_meta_data member function
-    mutable koios::mutex m_lock;
     ::std::unique_ptr<random_readable> m_self_managed_file{};
     const kvdb_deps* m_deps{};
     ::std::atomic_bool m_meta_data_parsed{};

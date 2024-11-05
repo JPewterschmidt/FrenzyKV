@@ -7,7 +7,6 @@
 #include <string>
 #include <ranges>
 
-
 #include "frenzykv/persistent/compaction_policy_oldest.h"
 
 #include "frenzykv/table/sstable.h"
