@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 #include "nlohmann/json.hpp"
 
 #include "toolpex/tic_toc.h"
@@ -30,9 +31,12 @@ using namespace ::std::chrono_literals;
 
 namespace r = ::std::ranges;
 namespace rv = r::views;
+namespace fs = ::std::filesystem;
 
 koios::lazy_task<> db_test(::std::string rootpath = "")
 {
+    fs::remove_all(rootpath);
+
     spdlog::set_level(spdlog::level::debug);
 
     auto opt = get_global_options();
