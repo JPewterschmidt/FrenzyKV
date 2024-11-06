@@ -12,7 +12,9 @@ namespace frenzykv
 
 koios::lazy_task<> garbage_collector::do_GC() const
 {
-    auto lk = co_await m_mutex.acquire();
+    auto lk_opt = co_await m_mutex.try_acquire();
+    if (!lk_opt)
+        co_return;
 
     auto delete_garbage_version_desc = [env = this->m_deps->env()](const auto& vrep) -> koios::task<> { 
         assert(vrep.approx_ref_count() == 0);

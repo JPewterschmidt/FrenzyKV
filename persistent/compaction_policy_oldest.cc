@@ -40,7 +40,7 @@ compacting_files(version_guard vc, level_t from) const
 
     assert(opt->allowed_level_file_number(from) >= 2);
 
-    if (from != 0)
+    if (from > 1)
     {
         auto from_l_sst = co_await sstable::make(*m_deps, m_filter, co_await result.front().open_read());
 

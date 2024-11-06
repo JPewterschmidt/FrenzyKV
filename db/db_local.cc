@@ -146,7 +146,7 @@ db_local::need_compaction(level_t l, double thresh_ratio)
     const size_t num = r::fold_left(level_files_view, 0, ::std::plus<size_t>{});
 
     co_return { 
-        !m_deps.opt()->is_appropriate_level_file_number(l, static_cast<size_t>(num * thresh_ratio)), 
+        !m_deps.opt()->is_appropriate_level_file_number(l, num, thresh_ratio),
         ::std::move(cur_ver)
     };
 }
