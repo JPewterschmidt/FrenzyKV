@@ -22,36 +22,14 @@ namespace rv = ::std::ranges::views;
 namespace frenzykv
 {
 
-koios::task<::std::pair<::std::vector<::std::unique_ptr<in_mem_rw>>, version_delta>>
-compactor::compact_tombstones(version_guard vg, level_t l) const
+compactor::compactor(const kvdb_deps& deps, filter_policy* filter) noexcept
+    : m_deps{ &deps }, 
+      m_filter_policy{ filter }
 {
-    auto lk = co_await m_mutex.acquire();
-    spdlog::debug("compact_tombstones() start");
-    auto files = co_await compaction_policy_tombstone{*m_deps, m_filter_policy}.compacting_files(vg, l);
-    
-    ::std::vector<::std::unique_ptr<in_mem_rw>> result;
-    version_delta delta;
-
-    const uintmax_t size_bound = m_deps->opt()->allowed_level_file_size(l);
-    for (const file_guard& fg : files)
+    for (level_t i{}; i < m_deps->opt()->max_level; ++i)
     {
-        auto sst = co_await sstable::make(*m_deps, m_filter_policy, co_await fg.open_read());
-        if (sst->empty()) [[unlikely]] continue;
-
-        auto entries_gen = get_entries_from_sstable(*sst);
-        auto entries = co_await entries_gen.to<std::vector>();
-        ::std::erase_if(entries, is_tomb_stone<kv_entry>);
-        auto filep = ::std::make_unique<in_mem_rw>();
-        sstable_builder builder{ *m_deps, size_bound, m_filter_policy, filep.get() };
-        [[maybe_unused]] bool add_ret = co_await builder.add(entries); toolpex_assert(add_ret);       
-        [[maybe_unused]] bool finish_ret = co_await builder.finish(); toolpex_assert(finish_ret);
-
-        result.emplace_back(::std::move(filep));
-        delta.add_compacted_file(fg);
+        m_mutexes.emplace_back(new koios::mutex{});
     }
-
-    spdlog::debug("compact_tombstones() complete");
-    co_return { ::std::move(result), ::std::move(delta) };
 }
 
 koios::task<::std::unique_ptr<in_mem_rw>> 
@@ -78,9 +56,13 @@ compactor::merge_tables(::std::vector<::std::shared_ptr<sstable>>& table_ptrs,
 }
 
 koios::task<::std::pair<::std::unique_ptr<in_mem_rw>, version_delta>>
-compactor::compact(version_guard version, level_t from, ::std::unique_ptr<sstable_getter> table_getter) const
+compactor::compact(version_guard version, 
+                   level_t from, 
+                   ::std::unique_ptr<sstable_getter> table_getter, 
+                   double thresh_ratio)
 {
-    auto lk = co_await m_mutex.acquire();
+    auto lk_opt = co_await m_mutexes[from]->try_acquire();   
+    if (!lk_opt) co_return {};
 
     // for debug
     static ::std::unordered_map<level_t, size_t> count{};
@@ -88,7 +70,8 @@ compactor::compact(version_guard version, level_t from, ::std::unique_ptr<sstabl
 
     auto policy = make_default_compaction_policy(*m_deps, m_filter_policy);
     auto file_guards = co_await policy->compacting_files(version, from);
-    if (count[1] == 27) spdlog::debug("compact() after chosing compacting_files()");
+    const size_t dropped_sz = static_cast<size_t>(file_guards.size() * (1.0 - thresh_ratio));
+    if (dropped_sz) file_guards.resize(file_guards.size() - dropped_sz);   
 
     version_delta compacted;
     compacted.add_compacted_files(file_guards);

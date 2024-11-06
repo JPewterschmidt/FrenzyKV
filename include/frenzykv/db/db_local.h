@@ -88,8 +88,8 @@ private:
 
     koios::task<> update_current_version(version_delta delta);
 
-    koios::task<::std::pair<bool, version_guard>> need_compaction(level_t l);
-    koios::lazy_task<> may_compact(level_t from = 0);
+    koios::task<::std::pair<bool, version_guard>> need_compaction(level_t l, double thresh_ratio = 1);
+    koios::lazy_task<> may_compact(level_t from = 0, double thresh_ratio = 1);
 
     koios::lazy_task<> background_compacting_GC(::std::stop_token tk);
 

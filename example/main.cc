@@ -38,6 +38,7 @@ koios::lazy_task<> db_test(::std::string rootpath = "")
     fs::remove_all(rootpath);
 
     spdlog::set_level(spdlog::level::debug);
+    spdlog::set_pattern("[%H:%M:%S %z] [%^---%L---%$] [thread %t] %v");
 
     auto opt = get_global_options();
     if (!rootpath.empty())
@@ -72,8 +73,12 @@ koios::lazy_task<> db_test(::std::string rootpath = "")
         //    db->insert(::std::to_string(i), "test value abcdefg abcdefg 3").run();
         //}
 
-        for (auto& item : fut_aw)
+        for (size_t i{}; i < fut_aw.size(); ++i)
+        {
+            auto& item = fut_aw[i];
+            if (i % 100 == 0) spdlog::info("insert {}", i);
             co_await item.get_async();
+        }
 
         spdlog::debug("db_test: insert complete");
     };

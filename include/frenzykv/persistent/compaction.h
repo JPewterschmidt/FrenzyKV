@@ -9,6 +9,7 @@
 #include <utility>
 #include <memory>
 #include <vector>
+#include <atomic>
 
 #include "koios/task.h"
 
@@ -26,11 +27,7 @@ namespace frenzykv
 class compactor
 {
 public:
-    compactor(const kvdb_deps& deps, filter_policy* filter) noexcept
-        : m_deps{ &deps }, 
-          m_filter_policy{ filter }
-    {
-    }
+    compactor(const kvdb_deps& deps, filter_policy* filter) noexcept;
 
     /*! \brief  Compact the version `from`
      *  \param  version the version going to be compacted
@@ -44,7 +41,9 @@ public:
      *  keep those files of version alive
      */
     koios::task<::std::pair<::std::unique_ptr<in_mem_rw>, version_delta>>
-    compact(version_guard version, level_t from, ::std::unique_ptr<sstable_getter> table_getter) const;
+    compact(version_guard version, level_t from, 
+            ::std::unique_ptr<sstable_getter> table_getter, 
+            double thresh_ratio = 1);
 
     /*  \brief  Merge sstables
      *  \param  tables a vector conatins several sstable pointer (not file pointer).
@@ -57,9 +56,6 @@ public:
      */
     koios::task<::std::unique_ptr<in_mem_rw>> 
     merge_tables(::std::vector<::std::shared_ptr<sstable>>& table_ptrs, level_t tables_level) const;
-
-    koios::task<::std::pair<::std::vector<::std::unique_ptr<in_mem_rw>>, version_delta>>
-    compact_tombstones(version_guard vg, level_t l) const;
 
 private:
     /*  \brief  Functiuon which merges two tables.
@@ -77,7 +73,7 @@ private:
     merge_two_tables(::std::shared_ptr<sstable> lhs, ::std::shared_ptr<sstable> rhs, level_t new_level) const;
 
 private:
-    mutable koios::mutex m_mutex;
+    mutable ::std::vector<::std::unique_ptr<koios::mutex>> m_mutexes{};
     const kvdb_deps* m_deps;
     filter_policy* m_filter_policy;
 };
