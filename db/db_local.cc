@@ -61,6 +61,8 @@ db_local::db_local(::std::string dbname, options opt)
       m_gcer{ m_deps, &m_version_center, &m_file_center }, 
       m_flusher{ m_deps, &m_version_center, m_filter_policy.get(), &m_file_center }
 {
+    m_mem_mutex.set_name("db_local: mem_mutex");
+    m_flying_GC_mutex.set_name("db_local: flying_gc");
 }
 
 db_local::~db_local() noexcept
@@ -160,8 +162,9 @@ koios::lazy_task<> db_local::compact_tombstones()
 koios::task<> db_local::update_current_version(version_delta delta)
 {
     // Add a new version
-    auto cur_v = co_await m_version_center.add_new_version();
-    cur_v += delta;
+    auto mut_cur_v = co_await m_version_center.add_new_version();
+    mut_cur_v += delta;
+    auto cur_v = mut_cur_v.decay_as_immutable();
 
     // Write new version to version descriptor
     const auto new_desc_name = cur_v.version_desc_name();
@@ -305,7 +308,7 @@ db_local::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noex
     const sequenced_key skey = co_await this->make_query_key(key, snap);
     spdlog::debug("db_local::get() get from mem");
 
-    auto lk = co_await m_mem_mutex.acquire_shared();
+    auto lk = co_await m_mem_mutex.acquire();
     auto result_opt = co_await m_mem->get(skey);
     lk.unlock();
 

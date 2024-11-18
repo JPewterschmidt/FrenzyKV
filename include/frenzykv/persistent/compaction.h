@@ -55,7 +55,7 @@ public:
      *          So you have to do the null pointer check.
      */
     koios::task<::std::unique_ptr<in_mem_rw>> 
-    merge_tables(::std::vector<::std::shared_ptr<sstable>>& table_ptrs, level_t tables_level) const;
+    merge_tables(::std::vector<::std::shared_ptr<sstable>> table_ptrs, level_t tables_level) const;
 
 private:
     /*  \brief  Functiuon which merges two tables.

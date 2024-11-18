@@ -24,6 +24,19 @@ namespace rv = r::views;
 namespace frenzykv
 {
 
+memtable_flusher::
+memtable_flusher(const kvdb_deps& deps, 
+                 version_center* vc, 
+                 filter_policy* filter, 
+                 file_center* filec) noexcept
+    : m_deps{ &deps }, 
+      m_version_center{ vc },
+      m_filter{ filter }, 
+      m_file_center{ filec }
+{
+    m_mutex.set_name("memtable_flusher");
+}
+
 koios::task<> memtable_flusher::
 flush_to_disk(::std::unique_ptr<memtable> table)
 {
@@ -72,8 +85,9 @@ flush_to_disk(::std::unique_ptr<memtable> table)
     }
     co_await finish_current_buiding(builder, delta, file.get(), sst_guard);
     
-    auto new_ver = co_await m_version_center->add_new_version();
-    new_ver += delta;
+    auto mut_new_ver = co_await m_version_center->add_new_version();
+    mut_new_ver += delta;
+    auto new_ver = mut_new_ver.decay_as_immutable();
     const auto vdname = new_ver.version_desc_name();
     auto ver_file = env->get_seq_writable(env->version_path()/vdname);
     co_await write_version_descriptor(*new_ver, ver_file.get());

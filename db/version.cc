@@ -94,6 +94,11 @@ koios::lazy_task<> version_center::load_current_version()
     }
 }
 
+version_center::version_center(file_center& fc) noexcept
+    : m_file_center{ &fc }
+{
+}
+
 version_center::version_center(version_center&& other) noexcept
     : m_versions{ ::std::move(other.m_versions) }, 
       m_current{ ::std::move(other.m_current) }, 

@@ -71,6 +71,12 @@ retrive_level_and_id_from_sst_name(::std::string_view name)
     return result;
 }
 
+file_center::file_center(const kvdb_deps& deps) noexcept
+    : m_deps{ &deps }
+{
+    m_mutex.set_name("file_center");
+}
+
 koios::lazy_task<> file_center::load_files()
 {
     auto env = m_deps->env();
@@ -98,7 +104,7 @@ koios::task<::std::vector<file_guard>>
 file_center::get_file_guards(const ::std::vector<::std::string>& names)
 {
     ::std::vector<file_guard> result;
-    auto lk = co_await m_mutex.acquire_shared();
+    auto lk = co_await m_mutex.acquire();
 
     for (const auto& name : names)
     {

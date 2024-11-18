@@ -10,6 +10,13 @@
 namespace frenzykv
 {
 
+garbage_collector::
+garbage_collector(kvdb_deps& deps, version_center* vc, file_center* fc) noexcept
+    : m_deps{ &deps }, m_version_center{ vc }, m_file_center{ fc }
+{
+    m_mutex.set_name("garbage_collector");
+}
+
 koios::lazy_task<> garbage_collector::do_GC() const
 {
     auto lk_opt = co_await m_mutex.try_acquire();

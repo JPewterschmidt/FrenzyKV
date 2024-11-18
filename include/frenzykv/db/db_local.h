@@ -12,7 +12,6 @@
 #include <utility>
 
 #include "koios/coroutine_mutex.h"
-#include "koios/coroutine_shared_mutex.h"
 
 #include "frenzykv/kvdb_deps.h"
 #include "frenzykv/log/write_ahead_logger.h"
@@ -112,7 +111,7 @@ private:
     mutable table_cache m_cache;
 
     // mamtable===============================
-    mutable koios::shared_mutex m_mem_mutex;
+    mutable koios::mutex m_mem_mutex;
     ::std::unique_ptr<memtable> m_mem;
     garbage_collector m_gcer;
     memtable_flusher m_flusher;

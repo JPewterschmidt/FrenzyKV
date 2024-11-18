@@ -14,7 +14,6 @@
 #include "toolpex/skip_list.h"
 #include "frenzykv/write_batch.h"
 #include "frenzykv/kvdb_deps.h"
-#include "koios/coroutine_shared_mutex.h"
 
 namespace frenzykv
 {

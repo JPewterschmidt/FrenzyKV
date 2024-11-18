@@ -28,28 +28,22 @@ compactor::compactor(const kvdb_deps& deps, filter_policy* filter) noexcept
 {
     for (level_t i{}; i < m_deps->opt()->max_level; ++i)
     {
-        m_mutexes.emplace_back(new koios::mutex{});
+        m_mutexes.emplace_back(new koios::mutex{toolpex::lazy_string_concater{} + "compactor No." + i});
     }
 }
 
 koios::task<::std::unique_ptr<in_mem_rw>> 
-compactor::merge_tables(::std::vector<::std::shared_ptr<sstable>>& table_ptrs, 
+compactor::merge_tables(::std::vector<::std::shared_ptr<sstable>> table_ptrs, 
                         level_t tables_level) const
 {
     assert(table_ptrs.size() >= 2);
 
-    spdlog::debug("compactor::merge_tables() start");
-
-    const auto first_two = table_ptrs | rv::take(2) | rv::adjacent<2>;
-    auto [t1, t2] = *begin(first_two);
-    auto file = co_await merge_two_tables(t1, t2, tables_level + 1);
-    spdlog::debug("compactor::merge_tables() the first two tables merged");
+    auto file = co_await merge_two_tables(table_ptrs[0], table_ptrs[1], tables_level + 1);
 
     for (auto t : table_ptrs | rv::drop(2))
     {
         auto temp = co_await sstable::make(*m_deps, m_filter_policy, file.get());
         file = co_await merge_two_tables(temp, t, tables_level + 1);
-        spdlog::debug("compactor::merge_tables() two following tables merged");
     }
 
     co_return file;
@@ -80,7 +74,7 @@ compactor::compact(version_guard version,
     for (auto& fg : file_guards)
         tables.emplace_back(co_await table_getter->get(fg));
 
-    auto newfile = co_await merge_tables(tables, from);
+    auto newfile = co_await merge_tables(::std::move(tables), from);
 
     spdlog::debug("compact() complete - level: {}", from);
     co_return { ::std::move(newfile), ::std::move(compacted) };

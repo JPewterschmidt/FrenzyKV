@@ -3,8 +3,6 @@
 //
 // Copyleft 2023 - 2024, ShiXin Wang. All wrongs reserved.
 
-#include "spdlog/spdlog.h"
-
 #include "frenzykv/table/table_cache.h"
 
 #include "frenzykv/io/in_mem_rw.h"
@@ -54,14 +52,12 @@ find_table_phantom(const ::std::string& name)
 koios::task<::std::shared_ptr<sstable>> table_cache::
 finsert(const file_guard& fg, bool phantom)
 {
-    spdlog::debug("table_cache::finsert{} {}", (phantom ? "_phantom" : ""), fg.name());
     const ::std::string& name = fg.name();
 
     // Find from lru_cache first
     auto result = phantom ? find_table_phantom_impl(name) : find_table_impl(name);
     if (result) 
     {
-        spdlog::debug("table_cache::finsert{} got existed {}", (phantom ? "_phantom" : ""), fg.name());
         co_return result;
     }
 
@@ -71,15 +67,9 @@ finsert(const file_guard& fg, bool phantom)
 
     result = co_await sstable::make(*m_deps, m_filter, ::std::move(mem_file));
 
-    spdlog::debug("table_cache::finsert{} new {}", (phantom ? "_phantom" : ""), fg.name());
     if (!phantom) 
     {
         m_tables.put(name, result);
-        spdlog::debug("table_cache::finsert{} new {}", (phantom ? "_phantom" : ""), fg.name());
-    }
-    else
-    {
-        spdlog::debug("table_cache::finsert_phantom return a sstable {} without insert into cache", fg.name());
     }
 
     co_return result;

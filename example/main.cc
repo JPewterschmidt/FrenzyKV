@@ -76,7 +76,6 @@ koios::lazy_task<> db_test(::std::string rootpath = "")
         for (size_t i{}; i < fut_aw.size(); ++i)
         {
             auto& item = fut_aw[i];
-            if (i % 100 == 0) spdlog::info("insert {}", i);
             co_await item.get_async();
         }
 
