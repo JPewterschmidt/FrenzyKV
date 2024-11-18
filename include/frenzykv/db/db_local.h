@@ -12,7 +12,6 @@
 #include <utility>
 
 #include "koios/coroutine_mutex.h"
-#include "koios/coroutine_shared_mutex.h"
 
 #include "frenzykv/kvdb_deps.h"
 #include "frenzykv/log/write_ahead_logger.h"
@@ -88,8 +87,8 @@ private:
 
     koios::task<> update_current_version(version_delta delta);
 
-    koios::task<::std::pair<bool, version_guard>> need_compaction(level_t l);
-    koios::lazy_task<> may_compact(level_t from = 0);
+    koios::task<::std::pair<bool, version_guard>> need_compaction(level_t l, double thresh_ratio = 1);
+    koios::lazy_task<> may_compact(level_t from = 0, double thresh_ratio = 1);
 
     koios::lazy_task<> background_compacting_GC(::std::stop_token tk);
 
@@ -112,7 +111,7 @@ private:
     mutable table_cache m_cache;
 
     // mamtable===============================
-    mutable koios::shared_mutex m_mem_mutex;
+    mutable koios::mutex m_mem_mutex;
     ::std::unique_ptr<memtable> m_mem;
     garbage_collector m_gcer;
     memtable_flusher m_flusher;

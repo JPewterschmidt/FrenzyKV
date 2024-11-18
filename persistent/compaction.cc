@@ -22,46 +22,50 @@ namespace rv = ::std::ranges::views;
 namespace frenzykv
 {
 
-koios::task<::std::pair<::std::vector<::std::unique_ptr<in_mem_rw>>, version_delta>>
-compactor::compact_tombstones(version_guard vg, level_t l) const
+compactor::compactor(const kvdb_deps& deps, filter_policy* filter) noexcept
+    : m_deps{ &deps }, 
+      m_filter_policy{ filter }
 {
-    auto lk = co_await m_mutex.acquire();
-    spdlog::debug("compact_tombstones() start");
-    auto files = co_await compaction_policy_tombstone{*m_deps, m_filter_policy}.compacting_files(vg, l);
-    
-    ::std::vector<::std::unique_ptr<in_mem_rw>> result;
-    version_delta delta;
-
-    const uintmax_t size_bound = m_deps->opt()->allowed_level_file_size(l);
-    for (const file_guard& fg : files)
+    for (level_t i{}; i < m_deps->opt()->max_level; ++i)
     {
-        auto sst = co_await sstable::make(*m_deps, m_filter_policy, co_await fg.open_read());
-        if (sst->empty()) [[unlikely]] continue;
+        m_mutexes.emplace_back(new koios::mutex{});
+    }
+}
 
-        auto entries = co_await get_entries_from_sstable(*sst);
-        ::std::erase_if(entries, is_tomb_stone<kv_entry>);
-        auto filep = ::std::make_unique<in_mem_rw>();
-        sstable_builder builder{ *m_deps, size_bound, m_filter_policy, filep.get() };
-        [[maybe_unused]] bool add_ret = co_await builder.add(entries); toolpex_assert(add_ret);       
-        [[maybe_unused]] bool finish_ret = co_await builder.finish(); toolpex_assert(finish_ret);
+koios::task<::std::unique_ptr<in_mem_rw>> 
+compactor::merge_tables(::std::vector<::std::shared_ptr<sstable>> table_ptrs, 
+                        level_t tables_level) const
+{
+    assert(table_ptrs.size() >= 2);
 
-        result.emplace_back(::std::move(filep));
-        delta.add_compacted_file(fg);
+    auto file = co_await merge_two_tables(table_ptrs[0], table_ptrs[1], tables_level + 1);
+
+    for (auto t : table_ptrs | rv::drop(2))
+    {
+        auto temp = co_await sstable::make(*m_deps, m_filter_policy, file.get());
+        file = co_await merge_two_tables(temp, t, tables_level + 1);
     }
 
-    spdlog::debug("compact_tombstones() complete");
-    co_return { ::std::move(result), ::std::move(delta) };
+    co_return file;
 }
 
 koios::task<::std::pair<::std::unique_ptr<in_mem_rw>, version_delta>>
-compactor::compact(version_guard version, level_t from, ::std::unique_ptr<sstable_getter> table_getter) const
+compactor::compact(version_guard version, 
+                   level_t from, 
+                   ::std::unique_ptr<sstable_getter> table_getter, 
+                   double thresh_ratio)
 {
-    auto lk = co_await m_mutex.acquire();
-    spdlog::debug("compact() start");
+    auto lk_opt = co_await m_mutexes[from]->try_acquire();   
+    if (!lk_opt) co_return {};
+
+    // for debug
+    static ::std::unordered_map<level_t, size_t> count{};
+    spdlog::debug("compact() start - level: {}, count: {}", from, count[from]++);
 
     auto policy = make_default_compaction_policy(*m_deps, m_filter_policy);
     auto file_guards = co_await policy->compacting_files(version, from);
-    spdlog::debug("compact() after chosing compacting_files()");
+    const size_t dropped_sz = static_cast<size_t>(file_guards.size() * (1.0 - thresh_ratio));
+    if (dropped_sz) file_guards.resize(file_guards.size() - dropped_sz);   
 
     version_delta compacted;
     compacted.add_compacted_files(file_guards);
@@ -70,28 +74,24 @@ compactor::compact(version_guard version, level_t from, ::std::unique_ptr<sstabl
     for (auto& fg : file_guards)
         tables.emplace_back(co_await table_getter->get(fg));
 
-    auto newfile = co_await merge_tables(tables, from);
+    auto newfile = co_await merge_tables(::std::move(tables), from);
 
-    spdlog::debug("compact() complete");
+    spdlog::debug("compact() complete - level: {}", from);
     co_return { ::std::move(newfile), ::std::move(compacted) };
 }
 
 koios::task<::std::unique_ptr<in_mem_rw>>
 compactor::
-merge_two_tables(sstable& lhs, sstable& rhs, level_t new_level) const 
+merge_two_tables(::std::shared_ptr<sstable> lhs, ::std::shared_ptr<sstable> rhs, level_t new_level) const
 {
     ::std::vector<::std::unique_ptr<in_mem_rw>> result;
 
-    ::std::list<kv_entry> lhs_entries; 
-    ::std::list<kv_entry> rhs_entries; 
-
-    if (!lhs.empty()) lhs_entries = co_await get_entries_from_sstable(lhs);
-    if (!rhs.empty()) rhs_entries = co_await get_entries_from_sstable(rhs);
-
     ::std::list<kv_entry> merged;
-    ::std::merge(::std::move_iterator{ lhs_entries.begin() }, ::std::move_iterator{ lhs_entries.end() }, 
-                 ::std::move_iterator{ rhs_entries.begin() }, ::std::move_iterator{ rhs_entries.end() }, 
-                 ::std::front_inserter(merged));
+    auto merged_gen = koios::merge(
+        get_entries_from_sstable(*lhs), 
+        get_entries_from_sstable(*rhs)
+    );
+    co_await merged_gen.to(::std::front_inserter(merged));
 
     toolpex_assert(::std::is_sorted(merged.rbegin(), merged.rend()));
 

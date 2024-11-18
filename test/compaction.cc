@@ -76,12 +76,16 @@ public:
 
         ::std::unique_ptr<in_mem_rw> newfile = co_await c.merge_tables(tables, 3);
         auto final_table = co_await sstable::make(m_deps, m_filter.get(), newfile.get());
-        const auto entries = co_await get_entries_from_sstable(*final_table);
+        auto entries_gen = get_entries_from_sstable(*final_table);
+        const auto entries = co_await entries_gen.to<::std::vector>();
         
-        co_return newfile->file_size() < ::std::ranges::fold_left(
+        auto total_file_size = ::std::ranges::fold_left(
             fvec | rv::transform([](auto&& f){ 
                 return f->file_size(); }
-            ), 0, ::std::plus<uintmax_t>{}) 
+            ), 0, ::std::plus<uintmax_t>{}
+        );
+
+        co_return newfile->file_size() < total_file_size
             && ::std::is_sorted(entries.begin(), entries.end());
     }
 

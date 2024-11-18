@@ -52,7 +52,7 @@ struct options
 
     size_t allowed_level_file_number(level_t l) const noexcept;
     size_t allowed_level_file_size(level_t l) const noexcept;
-    bool is_appropriate_level_file_number(level_t l, size_t num) const noexcept;
+    bool is_appropriate_level_file_number(level_t l, size_t num, double thresh_ratio = 1) const noexcept;
     bool is_appropriate_level_file_size(level_t l, size_t num) const noexcept;
 };
 

@@ -29,13 +29,7 @@ public:
     memtable_flusher(const kvdb_deps& deps, 
                      version_center* vc, 
                      filter_policy* filter, 
-                     file_center* filec) noexcept
-        : m_deps{ &deps }, 
-          m_version_center{ vc },
-          m_filter{ filter }, 
-          m_file_center{ filec }
-    {
-    }
+                     file_center* filec) noexcept;
 
     // This function usually called with `.run()`
     koios::task<> flush_to_disk(::std::unique_ptr<memtable> table);

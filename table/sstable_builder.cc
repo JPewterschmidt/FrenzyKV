@@ -150,9 +150,9 @@ koios::task<bool> sstable_builder::finish()
     
     // Build meta block
     block_builder meta_builder{ *m_deps };
-    meta_builder.add({0, "last_uk"}, m_last_uk);
-    meta_builder.add({0, "first_uk"}, m_first_uk);
-    meta_builder.add({0, "bloom_filter"}, m_filter_rep);
+    meta_builder.add("last_uk", m_last_uk);
+    meta_builder.add("first_uk", m_first_uk);
+    meta_builder.add("bloom_filter", m_filter_rep);
     m_block_builder = ::std::move(meta_builder);
 
     const mbo_t mbo = m_bytes_appended_to_file;

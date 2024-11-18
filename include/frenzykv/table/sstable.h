@@ -15,6 +15,7 @@
 
 #include "koios/task.h"
 #include "koios/coroutine_mutex.h"
+#include "koios/generator.h"
 
 #include "frenzykv/io/readable.h"
 #include "frenzykv/kvdb_deps.h"
@@ -69,7 +70,10 @@ public:
     make(const kvdb_deps& deps, filter_policy* filter, auto file)
     {
         ::std::shared_ptr<sstable> result{ new sstable(deps, filter, ::std::move(file)) };
-        co_await result->parse_meta_data();
+        const bool parse_ret = co_await result->parse_meta_data();
+        toolpex_assert(parse_ret);
+        (void)parse_ret;
+
         co_return result;
     }
 
@@ -164,8 +168,6 @@ private:
     koios::task<bool>   parse_meta_data();
     
 private:
-    // Only protect parse_meta_data member function
-    mutable koios::mutex m_lock;
     ::std::unique_ptr<random_readable> m_self_managed_file{};
     const kvdb_deps* m_deps{};
     ::std::atomic_bool m_meta_data_parsed{};
@@ -181,7 +183,7 @@ private:
     size_t m_hash_value{};
 };
 
-koios::task<::std::list<kv_entry>>
+koios::generator<kv_entry>
 get_entries_from_sstable(sstable& table);
 
 } // namespace frenzykv

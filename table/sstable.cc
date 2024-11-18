@@ -56,8 +56,7 @@ bool sstable::empty() const noexcept
 koios::task<bool> sstable::parse_meta_data()
 { 
     if (m_meta_data_parsed.load()) co_return true;
-    
-    auto lk = co_await m_lock.acquire();
+
     if (m_file == nullptr)
     {
         m_meta_data_parsed = true;
@@ -302,22 +301,19 @@ block_offsets() const noexcept
     }
 }
 
-koios::task<::std::list<kv_entry>>
+koios::generator<kv_entry>
 get_entries_from_sstable(sstable& table)
 {
-    ::std::list<kv_entry> result;
+    if (table.empty()) co_return;
     for (auto blk_off : table.block_offsets())
     {
         auto blk_opt = co_await table.get_block(blk_off);
         toolpex_assert(blk_opt.has_value());
         for (auto kv : blk_opt->b.entries())
         {
-            result.push_back(::std::move(kv));
+            co_yield ::std::move(kv);
         }
     }
-    toolpex_assert(::std::is_sorted(result.begin(), result.end()));
-
-    co_return result;
 }
 
 ::std::string_view sstable::filename() const noexcept

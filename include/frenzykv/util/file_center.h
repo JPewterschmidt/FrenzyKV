@@ -18,7 +18,7 @@
 #include "toolpex/move_only.h"
 
 #include "koios/task.h"
-#include "koios/coroutine_shared_mutex.h"
+#include "koios/coroutine_mutex.h"
 
 #include "frenzykv/util/file_guard.h"
 #include "frenzykv/types.h"
@@ -44,10 +44,7 @@ retrive_level_and_id_from_sst_name(::std::string_view name);
 class file_center : public toolpex::move_only
 {
 public:
-    file_center(const kvdb_deps& deps) noexcept
-        : m_deps{ &deps }
-    {
-    }
+    file_center(const kvdb_deps& deps) noexcept;
 
     const kvdb_deps& deps() const noexcept { return *m_deps; }
     koios::lazy_task<> load_files();
@@ -61,7 +58,8 @@ public:
 
 private:
     const kvdb_deps* m_deps;
-    koios::shared_mutex m_mutex;
+    //koios::shared_mutex m_mutex;
+    koios::mutex m_mutex;
 
     // The reason why we need use a unique_ptr wrapper
     // is because we want to keep the address of those reps

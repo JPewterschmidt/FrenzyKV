@@ -27,12 +27,7 @@ namespace frenzykv
 class write_ahead_logger 
 {
 public:
-    write_ahead_logger(const kvdb_deps& deps)
-        : m_deps{ &deps }
-    {
-        auto env = m_deps->env();
-        m_log_file = env->get_seq_writable(env->write_ahead_log_path()/write_ahead_log_name());
-    }
+    write_ahead_logger(const kvdb_deps& deps);
 
     koios::task<> insert(const write_batch& b);
     koios::task<bool> empty() const noexcept;

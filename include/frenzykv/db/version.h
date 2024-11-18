@@ -17,7 +17,7 @@
 
 #include "koios/task.h"
 #include "koios/task_concepts.h"
-#include "koios/coroutine_shared_mutex.h"
+#include "koios/coroutine_mutex.h"
 
 #include "frenzykv/types.h"
 #include "frenzykv/kvdb_deps.h"
@@ -202,12 +202,12 @@ protected:
 class mutable_version_guard : public version_guard
 {
 private:
-    koios::unique_lock<koios::shared_mutex> m_version_center_lock;
+    koios::unique_lock<koios::mutex> m_version_center_lock;
 
 public:
     constexpr mutable_version_guard() noexcept = default;
 
-    mutable_version_guard(koios::unique_lock<koios::shared_mutex> version_center_lock, auto&& ver_rep) noexcept
+    mutable_version_guard(koios::unique_lock<koios::mutex> version_center_lock, auto&& ver_rep) noexcept
         : version_guard(ver_rep), m_version_center_lock{ ::std::move(version_center_lock) }
     {
         toolpex_assert(m_version_center_lock.is_hold());
@@ -219,16 +219,18 @@ public:
         (*m_rep) += delta;
         return *this;
     }
+    
+    version_guard decay_as_immutable()
+    {
+        m_version_center_lock.unlock();
+        return { ::std::move(*this) };
+    }
 };
 
 class version_center
 {
 public:
-    version_center(file_center& fc) noexcept
-        : m_file_center{ &fc }
-    {
-    }
-
+    version_center(file_center& fc) noexcept;
     version_center(version_center&& other) noexcept;
     version_center& operator=(version_center&& other) noexcept;
 
@@ -269,7 +271,7 @@ private:
 
     // If you want to add or remove a version, acquire a unique lock
     // Otherwise acquire a shared lock.
-    mutable koios::shared_mutex m_modify_lock;
+    mutable koios::mutex m_modify_lock;
 };
 
 } // namespace frenzykv

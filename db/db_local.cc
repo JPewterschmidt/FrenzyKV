@@ -133,7 +133,7 @@ koios::task<bool> db_local::init()
 }
 
 koios::task<::std::pair<bool, version_guard>> 
-db_local::need_compaction(level_t l)
+db_local::need_compaction(level_t l, double thresh_ratio)
 {
     auto cur_ver = co_await m_version_center.current_version();
     auto level_files_view = cur_ver.files()
@@ -146,34 +146,23 @@ db_local::need_compaction(level_t l)
     const size_t num = r::fold_left(level_files_view, 0, ::std::plus<size_t>{});
 
     co_return { 
-        !m_deps.opt()->is_appropriate_level_file_number(l, num), 
+        !m_deps.opt()->is_appropriate_level_file_number(l, num, thresh_ratio),
         ::std::move(cur_ver)
     };
 }
 
 koios::lazy_task<> db_local::compact_tombstones()
 {
-    spdlog::debug("db_local::compact_tombstones()");
-    const level_t max_level = m_deps.opt()->max_level;
-    version_delta delta;
-
-    // Can not remove tombstones from level 0
-    for (level_t l = max_level - 1; l >= 2; --l)
-    {
-        auto [fake_files, cur_delta] = co_await m_compactor.compact_tombstones(co_await m_version_center.current_version(), l);
-        if (fake_files.empty()) continue;
-        co_await fake_file_to_disk(::std::move(fake_files), cur_delta, l);
-        delta += ::std::move(cur_delta);
-        spdlog::debug("db_local::compact_tombstones(): level{} compacted", l);
-    }
-    co_await update_current_version(::std::move(delta));
+    toolpex::not_implemented();
+    co_return;
 }
 
 koios::task<> db_local::update_current_version(version_delta delta)
 {
     // Add a new version
-    auto cur_v = co_await m_version_center.add_new_version();
-    cur_v += delta;
+    auto mut_cur_v = co_await m_version_center.add_new_version();
+    mut_cur_v += delta;
+    auto cur_v = mut_cur_v.decay_as_immutable();
 
     // Write new version to version descriptor
     const auto new_desc_name = cur_v.version_desc_name();
@@ -198,14 +187,14 @@ koios::task<> db_local::fake_file_to_disk(::std::unique_ptr<in_mem_rw> fake_file
     }
 }
 
-koios::lazy_task<> db_local::may_compact(level_t from)
+koios::lazy_task<> db_local::may_compact(level_t from, double thresh_ratio)
 {
     const level_t max_level = m_deps.opt()->max_level;
     auto env = m_deps.env();
 
     for (level_t l = from; l <= max_level; ++l)
     {
-        auto [need, ver] = co_await need_compaction(l);
+        auto [need, ver] = co_await need_compaction(l, thresh_ratio);
         if (!need) continue;
 
         if (l >= 2)
@@ -216,12 +205,16 @@ koios::lazy_task<> db_local::may_compact(level_t from)
         // Do the actual compaction
         auto [fake_file, delta] = co_await m_compactor.compact(
             ::std::move(ver), l, 
-            ::std::make_unique<sstable_getter_from_file_and_cache>(m_cache, m_deps, m_filter_policy.get())
-            //::std::make_unique<sstable_getter_from_cache>(m_cache)
-            //::std::make_unique<sstable_getter_from_file>(m_deps, m_filter_policy.get())
+            //::std::make_unique<sstable_getter_from_file_and_cache>(m_cache, m_deps, m_filter_policy.get()),
+            ::std::make_unique<sstable_getter_from_cache>(m_cache),
+            //::std::make_unique<sstable_getter_from_file>(m_deps, m_filter_policy.get()),
+            thresh_ratio
         );
-        co_await fake_file_to_disk(::std::move(fake_file), delta, l + 1);
-        co_await update_current_version(::std::move(delta));
+        if (fake_file)
+        {
+            co_await fake_file_to_disk(::std::move(fake_file), delta, l + 1);
+            co_await update_current_version(::std::move(delta));
+        }
         break;
     }
 }
@@ -279,23 +272,22 @@ insert(write_batch batch, write_options opt)
     ::std::error_code ec{};
     while (is_frzkv_out_of_range(ec = co_await m_mem->insert(batch)))
     {
-        spdlog::debug("db_local::insert() need flushing");
         auto flushing_file = ::std::move(m_mem);
         m_mem = ::std::make_unique<memtable>(m_deps);
-        unilk.unlock();
+        //unilk.unlock();
         const size_t gc_hint = m_force_GC_hint.fetch_add(1, ::std::memory_order_acq_rel);
         co_await m_flusher.flush_to_disk(::std::move(flushing_file));
         if (gc_hint % (m_num_bound_level0 - 1) == 0)
         {
-            co_await unilk.lock();
+            //co_await unilk.lock();
             spdlog::debug("force compacting");
             co_await may_compact();
+            spdlog::debug("back to insert from may_compact()");
             do_GC().run();
             continue;
         }
-        co_await unilk.lock();
+        //co_await unilk.lock();
     }
-    spdlog::debug("db_local::insert() after insert to mem");
     
     co_return ec; 
 }
@@ -312,15 +304,13 @@ db_local::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noex
     snapshot snap = opt.snap.valid() ? ::std::move(opt.snap) : co_await get_snapshot();
 
     const sequenced_key skey = co_await this->make_query_key(key, snap);
-    spdlog::debug("db_local::get() get from mem");
 
-    auto lk = co_await m_mem_mutex.acquire_shared();
+    auto lk = co_await m_mem_mutex.acquire();
     auto result_opt = co_await m_mem->get(skey);
     lk.unlock();
 
     if (!result_opt) 
     {
-        spdlog::debug("db_local::get() get from sst");
         result_opt = co_await find_from_ssts(skey, ::std::move(snap));
     }
 
@@ -343,10 +333,8 @@ find_from_potiential_results(auto& potiential_results, const auto& key)
 koios::task<::std::optional<::std::pair<sequenced_key, kv_user_value>>> 
 db_local::file_to_async_potiential_ret(const file_guard& fg, const sequenced_key& key, const snapshot& snap) const
 {
-    spdlog::debug("db_local::find_from_ssts() >=> file_to_async_potiential_ret: getting table {} from cache", fg.name());
     ::std::shared_ptr<sstable> sst = co_await m_cache.finsert(fg);
     toolpex_assert(sst);
-    spdlog::debug("db_local::find_from_ssts() >=> file_to_async_potiential_ret: got table {} from cache", fg.name());
 
     auto entry_opt = co_await sst->get_kv_entry(key);
     if (!entry_opt.has_value() 
@@ -364,7 +352,6 @@ db_local::file_to_async_potiential_ret(const file_guard& fg, const sequenced_key
 koios::task<::std::optional<kv_entry>> 
 db_local::find_from_ssts(const sequenced_key& key, snapshot snap) const
 {
-    spdlog::debug("db_local::find_from_ssts() start, not complete log");
     version_guard ver = snap.valid() ? snap.version() : co_await m_version_center.current_version();
     auto files = ver.files();
     r::sort(files);
@@ -381,7 +368,6 @@ db_local::find_from_ssts(const sequenced_key& key, snapshot snap) const
                     | r::to<::std::vector>()
                     ;
 
-        spdlog::debug("db_local::find_from_ssts() start process current level{}", index);
         for (auto& fut : futvec)
         {
             auto opt = co_await fut.get_async();
@@ -390,7 +376,6 @@ db_local::find_from_ssts(const sequenced_key& key, snapshot snap) const
 
         if (auto ret = co_await find_from_potiential_results(potiential_results, key); ret.has_value())
             co_return ret;
-        spdlog::debug("db_local::find_from_ssts() one level through, getting to next level{}", index);
     }
 
     co_return {};
@@ -416,16 +401,19 @@ koios::lazy_task<> db_local::background_compacting_GC(::std::stop_token stp)
 {
     auto lk = co_await m_flying_GC_mutex.acquire();
     const level_t max_level = m_deps.opt()->max_level;
-    for (;;)
+    while (!stp.stop_requested())
     {
-        if (stp.stop_requested()) co_return;
+        lk.unlock();
+        co_await koios::this_task::sleep_for(100ms);
+        const bool held_lock = co_await lk.try_lock();
+        if (!held_lock) continue;
         for (level_t l = 1; l < max_level; ++l)
         {
-            co_await may_compact(l);
+            co_await may_compact(l, 0.6);
         }
         co_await do_GC();
-        co_await koios::this_task::sleep_for(100ms);
     }
+    co_return;
 }
 
 } // namespace frenzykv

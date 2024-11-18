@@ -8,7 +8,7 @@
 
 #include <utility>
 #include "koios/task.h"
-#include "koios/coroutine_shared_mutex.h"
+#include "koios/coroutine_mutex.h"
 
 namespace frenzykv
 {
@@ -57,7 +57,7 @@ private:
     size_t m_size_bytes{};
     system_health m_health{ system_health::GOOD };
 
-    mutable koios::shared_mutex m_mutex;
+    mutable koios::mutex m_mutex;
 };
 
 } // namespace frenzykv

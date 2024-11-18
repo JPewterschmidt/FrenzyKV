@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 #include "nlohmann/json.hpp"
 
 #include "toolpex/tic_toc.h"
@@ -30,10 +31,13 @@ using namespace ::std::chrono_literals;
 
 namespace r = ::std::ranges;
 namespace rv = r::views;
+namespace fs = ::std::filesystem;
 
 koios::lazy_task<> db_test(::std::string rootpath = "")
 {
-    spdlog::set_level(spdlog::level::debug);
+    fs::remove_all(rootpath);
+
+    spdlog::set_pattern("[%H:%M:%S %z] [%^---%L---%$] [thread %t] %v");
 
     auto opt = get_global_options();
     if (!rootpath.empty())
@@ -68,8 +72,13 @@ koios::lazy_task<> db_test(::std::string rootpath = "")
         //    db->insert(::std::to_string(i), "test value abcdefg abcdefg 3").run();
         //}
 
-        for (auto& item : fut_aw)
+        for (size_t i{}; i < fut_aw.size(); ++i)
+        {
+            auto& item = fut_aw[i];
+            spdlog::debug("waiting {}", i);
             co_await item.get_async();
+            spdlog::debug("{} got", i);
+        }
 
         spdlog::debug("db_test: insert complete");
     };
@@ -131,9 +140,15 @@ koios::lazy_task<> db_test(::std::string rootpath = "")
     co_return;
 }
 
-int main()
+int main(int argc, char** argv)
 {
-    koios::runtime_init(20);
+    size_t thrs{};
+    spdlog::info("addr of the first variable: 0x{:x}", reinterpret_cast<uint64_t>(&thrs));
+
+    if (argc == 1) thrs = 20;
+    else thrs = static_cast<size_t>(::atoi(argv[1]));
+
+    koios::runtime_init(thrs);
 
     auto f1 = db_test("/tmp/frenzykv1").run_and_get_future();
     //auto f2 = db_test("/tmp/frenzykv2").run_and_get_future();

@@ -27,6 +27,13 @@ namespace frenzykv
     return "log.frzkvlog";
 }
 
+write_ahead_logger::write_ahead_logger(const kvdb_deps& deps)
+    : m_deps{ &deps }
+{
+    auto env = m_deps->env();
+    m_log_file = env->get_seq_writable(env->write_ahead_log_path()/write_ahead_log_name());
+}
+
 koios::task<> write_ahead_logger::insert(const write_batch& b)
 {
     co_await koios::this_task::turn_into_scheduler();

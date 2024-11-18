@@ -15,7 +15,7 @@ statistics::
 approx_hot_data_scale() const noexcept
 {
     const size_t bl = hot_data_scale_baseline();
-    auto lk = co_await m_mutex.acquire_shared();
+    auto lk = co_await m_mutex.acquire();
     co_return ::std::max(bl, m_data_scale);
 }
 
@@ -23,7 +23,7 @@ koios::task<size_t>
 statistics::
 approx_hot_data_size_bytes() const noexcept
 {
-    auto lk = co_await m_mutex.acquire_shared();
+    auto lk = co_await m_mutex.acquire();
     co_return m_size_bytes;
 }
 
@@ -31,7 +31,7 @@ koios::task<system_health>
 statistics::
 system_health_state() const noexcept
 {
-    auto lk = co_await m_mutex.acquire_shared();
+    auto lk = co_await m_mutex.acquire();
     co_return m_health;
 }
 

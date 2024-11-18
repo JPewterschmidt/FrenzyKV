@@ -81,9 +81,9 @@ namespace frenzykv
         return level_file_size[l];
     }
 
-    bool options::is_appropriate_level_file_number(level_t l, size_t num) const noexcept
+    bool options::is_appropriate_level_file_number(level_t l, size_t num, double thresh_ratio) const noexcept
     {
-        const size_t val = allowed_level_file_number(l);
+        const size_t val = static_cast<size_t>(allowed_level_file_number(l) * thresh_ratio);
         return val >= num || val == 0;
     }
 
