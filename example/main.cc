@@ -37,7 +37,6 @@ koios::lazy_task<> db_test(::std::string rootpath = "")
 {
     fs::remove_all(rootpath);
 
-    spdlog::set_level(spdlog::level::debug);
     spdlog::set_pattern("[%H:%M:%S %z] [%^---%L---%$] [thread %t] %v");
 
     auto opt = get_global_options();
@@ -76,7 +75,9 @@ koios::lazy_task<> db_test(::std::string rootpath = "")
         for (size_t i{}; i < fut_aw.size(); ++i)
         {
             auto& item = fut_aw[i];
+            spdlog::debug("waiting {}", i);
             co_await item.get_async();
+            spdlog::debug("{} got", i);
         }
 
         spdlog::debug("db_test: insert complete");

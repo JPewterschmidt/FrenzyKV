@@ -28,7 +28,7 @@ compactor::compactor(const kvdb_deps& deps, filter_policy* filter) noexcept
 {
     for (level_t i{}; i < m_deps->opt()->max_level; ++i)
     {
-        m_mutexes.emplace_back(new koios::mutex{toolpex::lazy_string_concater{} + "compactor No." + i});
+        m_mutexes.emplace_back(new koios::mutex{});
     }
 }
 

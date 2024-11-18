@@ -271,7 +271,7 @@ private:
 
     // If you want to add or remove a version, acquire a unique lock
     // Otherwise acquire a shared lock.
-    mutable koios::mutex m_modify_lock{ "version_center" };
+    mutable koios::mutex m_modify_lock;
 };
 
 } // namespace frenzykv

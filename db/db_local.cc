@@ -61,8 +61,6 @@ db_local::db_local(::std::string dbname, options opt)
       m_gcer{ m_deps, &m_version_center, &m_file_center }, 
       m_flusher{ m_deps, &m_version_center, m_filter_policy.get(), &m_file_center }
 {
-    m_mem_mutex.set_name("db_local: mem_mutex");
-    m_flying_GC_mutex.set_name("db_local: flying_gc");
 }
 
 db_local::~db_local() noexcept
@@ -274,7 +272,6 @@ insert(write_batch batch, write_options opt)
     ::std::error_code ec{};
     while (is_frzkv_out_of_range(ec = co_await m_mem->insert(batch)))
     {
-        spdlog::debug("db_local::insert() need flushing");
         auto flushing_file = ::std::move(m_mem);
         m_mem = ::std::make_unique<memtable>(m_deps);
         //unilk.unlock();
@@ -285,6 +282,7 @@ insert(write_batch batch, write_options opt)
             //co_await unilk.lock();
             spdlog::debug("force compacting");
             co_await may_compact();
+            spdlog::debug("back to insert from may_compact()");
             do_GC().run();
             continue;
         }
@@ -306,7 +304,6 @@ db_local::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noex
     snapshot snap = opt.snap.valid() ? ::std::move(opt.snap) : co_await get_snapshot();
 
     const sequenced_key skey = co_await this->make_query_key(key, snap);
-    spdlog::debug("db_local::get() get from mem");
 
     auto lk = co_await m_mem_mutex.acquire();
     auto result_opt = co_await m_mem->get(skey);
@@ -314,7 +311,6 @@ db_local::get(const_bspan key, ::std::error_code& ec_out, read_options opt) noex
 
     if (!result_opt) 
     {
-        spdlog::debug("db_local::get() get from sst");
         result_opt = co_await find_from_ssts(skey, ::std::move(snap));
     }
 
@@ -337,10 +333,8 @@ find_from_potiential_results(auto& potiential_results, const auto& key)
 koios::task<::std::optional<::std::pair<sequenced_key, kv_user_value>>> 
 db_local::file_to_async_potiential_ret(const file_guard& fg, const sequenced_key& key, const snapshot& snap) const
 {
-    spdlog::debug("db_local::find_from_ssts() >=> file_to_async_potiential_ret: getting table {} from cache", fg.name());
     ::std::shared_ptr<sstable> sst = co_await m_cache.finsert(fg);
     toolpex_assert(sst);
-    spdlog::debug("db_local::find_from_ssts() >=> file_to_async_potiential_ret: got table {} from cache", fg.name());
 
     auto entry_opt = co_await sst->get_kv_entry(key);
     if (!entry_opt.has_value() 
@@ -358,7 +352,6 @@ db_local::file_to_async_potiential_ret(const file_guard& fg, const sequenced_key
 koios::task<::std::optional<kv_entry>> 
 db_local::find_from_ssts(const sequenced_key& key, snapshot snap) const
 {
-    spdlog::debug("db_local::find_from_ssts() start, not complete log");
     version_guard ver = snap.valid() ? snap.version() : co_await m_version_center.current_version();
     auto files = ver.files();
     r::sort(files);
@@ -375,7 +368,6 @@ db_local::find_from_ssts(const sequenced_key& key, snapshot snap) const
                     | r::to<::std::vector>()
                     ;
 
-        spdlog::debug("db_local::find_from_ssts() start process current level{}", index);
         for (auto& fut : futvec)
         {
             auto opt = co_await fut.get_async();
@@ -384,7 +376,6 @@ db_local::find_from_ssts(const sequenced_key& key, snapshot snap) const
 
         if (auto ret = co_await find_from_potiential_results(potiential_results, key); ret.has_value())
             co_return ret;
-        spdlog::debug("db_local::find_from_ssts() one level through, getting to next level{}", index);
     }
 
     co_return {};

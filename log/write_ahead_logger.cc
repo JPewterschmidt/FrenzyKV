@@ -32,7 +32,6 @@ write_ahead_logger::write_ahead_logger(const kvdb_deps& deps)
 {
     auto env = m_deps->env();
     m_log_file = env->get_seq_writable(env->write_ahead_log_path()/write_ahead_log_name());
-    m_mutex.set_name("WAL");
 }
 
 koios::task<> write_ahead_logger::insert(const write_batch& b)

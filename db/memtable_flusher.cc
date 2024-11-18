@@ -34,7 +34,6 @@ memtable_flusher(const kvdb_deps& deps,
       m_filter{ filter }, 
       m_file_center{ filec }
 {
-    m_mutex.set_name("memtable_flusher");
 }
 
 koios::task<> memtable_flusher::
