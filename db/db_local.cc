@@ -85,11 +85,11 @@ db_local::make_unique_db_local(::std::string dbname, options opt)
 
 koios::task<bool> db_local::init() 
 {
-    if (m_inited.load(::std::memory_order_acquire))
+    auto lk = co_await m_db_status_mutex.acquire();
+    if (m_inited)
         co_return true;
 
     spdlog::debug("db_local::init() start");
-    m_inited.store(true, ::std::memory_order_release);
 
     m_num_bound_level0 = m_deps.opt()->allowed_level_file_number(0);
 
@@ -113,13 +113,13 @@ koios::task<bool> db_local::init()
     auto [batch, max_seq_from_log] = co_await recover(envp.get());
     co_await m_log.truncate_file();
 
-    auto lk = co_await m_mem_mutex.acquire();
+    auto mem_lk = co_await m_mem_mutex.acquire();
     [[maybe_unused]] auto ec = co_await m_mem->insert(::std::move(batch));
     //toolpex_assert(ec.value() == 0);
     m_snapshot_center.set_init_leatest_used_sequence_number(max_seq_from_log);
 
     auto memp = ::std::exchange(m_mem, ::std::make_unique<memtable>(m_deps));
-    lk.unlock();
+    mem_lk.unlock();
 
     spdlog::debug("db_local::init() recoverying from pre-write log compact and flush and gc");
     co_await m_flusher.flush_to_disk(::std::move(memp));
@@ -129,6 +129,7 @@ koios::task<bool> db_local::init()
     background_compacting_GC(m_bg_gc_stop_src.get_token()).run();
     spdlog::debug("db_local::init() done");
 
+    m_inited = true;
     co_return true;
 }
 
@@ -221,10 +222,10 @@ koios::lazy_task<> db_local::may_compact(level_t from, double thresh_ratio)
 
 koios::task<> db_local::close()
 {
-    if (!m_inited.load(::std::memory_order_acquire))
+    auto lk = co_await m_db_status_mutex.acquire();
+    if (!m_inited)
         co_return;
-    
-    m_inited.store(false, ::std::memory_order_release);
+
     spdlog::debug("final table cache size = {}", co_await m_cache.size());
 
     // Make sure the background GC stopped.
@@ -234,7 +235,7 @@ koios::task<> db_local::close()
     auto fly_gc_lk = co_await m_flying_GC_mutex.acquire();
     fly_gc_lk.unlock();
 
-    auto lk = co_await m_mem_mutex.acquire();
+    auto mem_lk = co_await m_mem_mutex.acquire();
 
     if (co_await m_mem->empty()) co_return;
     co_await m_flusher.flush_to_disk(::std::move(m_mem));
@@ -247,6 +248,7 @@ koios::task<> db_local::close()
     co_await delete_all_prewrite_log();
     co_await m_gcer.do_GC();
     
+    m_inited = false;
     co_return;
 }
 

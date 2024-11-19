@@ -116,7 +116,8 @@ private:
     garbage_collector m_gcer;
     memtable_flusher m_flusher;
 
-    ::std::atomic_bool m_inited{};
+    koios::mutex m_db_status_mutex;
+    bool m_inited{};
 
     mutable koios::mutex m_flying_GC_mutex;
     ::std::atomic_size_t m_force_GC_hint;
