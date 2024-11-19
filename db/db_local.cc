@@ -89,6 +89,7 @@ koios::task<bool> db_local::init()
     if (m_inited)
         co_return true;
 
+    m_inited = true;
     spdlog::debug("db_local::init() start");
 
     m_num_bound_level0 = m_deps.opt()->allowed_level_file_number(0);
@@ -129,7 +130,6 @@ koios::task<bool> db_local::init()
     background_compacting_GC(m_bg_gc_stop_src.get_token()).run();
     spdlog::debug("db_local::init() done");
 
-    m_inited = true;
     co_return true;
 }
 
@@ -188,7 +188,7 @@ koios::task<> db_local::fake_file_to_disk(::std::unique_ptr<in_mem_rw> fake_file
     }
 }
 
-koios::lazy_task<> db_local::may_compact(level_t from, double thresh_ratio)
+koios::task<> db_local::may_compact(level_t from, double thresh_ratio)
 {
     const level_t max_level = m_deps.opt()->max_level;
     auto env = m_deps.env();
@@ -226,14 +226,12 @@ koios::task<> db_local::close()
     if (!m_inited)
         co_return;
 
+    m_inited = false;
     spdlog::debug("final table cache size = {}", co_await m_cache.size());
 
     // Make sure the background GC stopped.
     m_bg_gc_stop_src.request_stop();
-
-    // You get it, means you're the last one get the lock.
-    auto fly_gc_lk = co_await m_flying_GC_mutex.acquire();
-    fly_gc_lk.unlock();
+    co_await m_flying_GC_group.wait();
 
     auto mem_lk = co_await m_mem_mutex.acquire();
 
@@ -248,7 +246,6 @@ koios::task<> db_local::close()
     co_await delete_all_prewrite_log();
     co_await m_gcer.do_GC();
     
-    m_inited = false;
     co_return;
 }
 
@@ -402,6 +399,7 @@ koios::task<snapshot> db_local::get_snapshot()
 koios::lazy_task<> db_local::background_compacting_GC(::std::stop_token stp)
 {
     auto lk = co_await m_flying_GC_mutex.acquire();
+    koios::wait_group_guard g{ m_flying_GC_group };
     const level_t max_level = m_deps.opt()->max_level;
     while (!stp.stop_requested())
     {

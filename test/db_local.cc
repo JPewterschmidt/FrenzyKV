@@ -22,7 +22,7 @@ public:
         if (!m_db) m_db = co_await db_local::make_unique_db_local("test1", get_global_options());
     }
 
-    koios::task<> clean()
+    koios::lazy_task<> clean()
     {
         co_await m_db->close();
     }
