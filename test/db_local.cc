@@ -22,6 +22,11 @@ public:
         if (!m_db) m_db = co_await db_local::make_unique_db_local("test1", get_global_options());
     }
 
+    koios::lazy_task<> clean()
+    {
+        co_await m_db->close();
+    }
+
     ::std::unique_ptr<db_local> m_db;
 };
 
@@ -36,4 +41,5 @@ TEST_F(db_local_test, basic)
     ASSERT_TRUE(fs::exists(env->write_ahead_log_path(), ec));
     ASSERT_TRUE(fs::exists(env->system_log_path(), ec));
     ASSERT_TRUE(fs::exists(env->config_path(), ec));
+    clean().result();
 }

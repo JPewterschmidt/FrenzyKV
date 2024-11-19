@@ -85,11 +85,12 @@ db_local::make_unique_db_local(::std::string dbname, options opt)
 
 koios::task<bool> db_local::init() 
 {
-    if (m_inited.load(::std::memory_order_acquire))
+    auto lk = co_await m_db_status_mutex.acquire();
+    if (m_inited)
         co_return true;
 
+    m_inited = true;
     spdlog::debug("db_local::init() start");
-    m_inited.store(true, ::std::memory_order_release);
 
     m_num_bound_level0 = m_deps.opt()->allowed_level_file_number(0);
 
@@ -113,13 +114,13 @@ koios::task<bool> db_local::init()
     auto [batch, max_seq_from_log] = co_await recover(envp.get());
     co_await m_log.truncate_file();
 
-    auto lk = co_await m_mem_mutex.acquire();
+    auto mem_lk = co_await m_mem_mutex.acquire();
     [[maybe_unused]] auto ec = co_await m_mem->insert(::std::move(batch));
     //toolpex_assert(ec.value() == 0);
     m_snapshot_center.set_init_leatest_used_sequence_number(max_seq_from_log);
 
     auto memp = ::std::exchange(m_mem, ::std::make_unique<memtable>(m_deps));
-    lk.unlock();
+    mem_lk.unlock();
 
     spdlog::debug("db_local::init() recoverying from pre-write log compact and flush and gc");
     co_await m_flusher.flush_to_disk(::std::move(memp));
@@ -187,7 +188,7 @@ koios::task<> db_local::fake_file_to_disk(::std::unique_ptr<in_mem_rw> fake_file
     }
 }
 
-koios::lazy_task<> db_local::may_compact(level_t from, double thresh_ratio)
+koios::task<> db_local::may_compact(level_t from, double thresh_ratio)
 {
     const level_t max_level = m_deps.opt()->max_level;
     auto env = m_deps.env();
@@ -221,20 +222,18 @@ koios::lazy_task<> db_local::may_compact(level_t from, double thresh_ratio)
 
 koios::task<> db_local::close()
 {
-    if (!m_inited.load(::std::memory_order_acquire))
+    auto lk = co_await m_db_status_mutex.acquire();
+    if (!m_inited)
         co_return;
-    
-    m_inited.store(false, ::std::memory_order_release);
+
+    m_inited = false;
     spdlog::debug("final table cache size = {}", co_await m_cache.size());
 
     // Make sure the background GC stopped.
     m_bg_gc_stop_src.request_stop();
+    co_await m_flying_GC_group.wait();
 
-    // You get it, means you're the last one get the lock.
-    auto fly_gc_lk = co_await m_flying_GC_mutex.acquire();
-    fly_gc_lk.unlock();
-
-    auto lk = co_await m_mem_mutex.acquire();
+    auto mem_lk = co_await m_mem_mutex.acquire();
 
     if (co_await m_mem->empty()) co_return;
     co_await m_flusher.flush_to_disk(::std::move(m_mem));
@@ -400,6 +399,7 @@ koios::task<snapshot> db_local::get_snapshot()
 koios::lazy_task<> db_local::background_compacting_GC(::std::stop_token stp)
 {
     auto lk = co_await m_flying_GC_mutex.acquire();
+    koios::wait_group_guard g{ m_flying_GC_group };
     const level_t max_level = m_deps.opt()->max_level;
     while (!stp.stop_requested())
     {
