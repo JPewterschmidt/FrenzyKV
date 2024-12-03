@@ -3,6 +3,8 @@
 //
 // Copyleft 2023 - 2024, ShiXin Wang. All wrongs reserved.
 
+#include <print>
+
 #include "frenzykv/util/stdout_debug_record_writer.h"
 #include "toolpex/functional.h"
 
@@ -21,10 +23,7 @@ void
 stdout_debug_record_writer::awaitable::
 await_resume() const noexcept
 {
-    ::std::string temp = toolpex::lazy_string_concater{}
-        + "stdout debug writer: " + m_num + " "
-        + "batch = " + m_batch->to_string_debug();
-    ::std::cout << temp << ::std::endl;
+    ::std::println("stdout debug writer: {} batch = {}", m_num, m_batch->to_string_debug());
 }
 
 } // namespace frenzykv

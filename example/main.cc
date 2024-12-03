@@ -3,9 +3,9 @@
 //
 // Copyleft 2023 - 2024, ShiXin Wang. All wrongs reserved.
 
-#include <iostream>
 #include <fstream>
 #include <filesystem>
+#include <print>
 #include "nlohmann/json.hpp"
 
 #include "toolpex/tic_toc.h"
@@ -35,7 +35,7 @@ namespace fs = ::std::filesystem;
 
 koios::lazy_task<> db_test(::std::string rootpath = "")
 {
-    fs::remove_all(rootpath);
+    //fs::remove_all(rootpath);
 
     spdlog::set_pattern("[%H:%M:%S %z] [%^---%L---%$] [thread %t] %v");
 
@@ -52,7 +52,7 @@ koios::lazy_task<> db_test(::std::string rootpath = "")
 
     auto t = toolpex::tic();
 
-    snapshot s = co_await db->get_snapshot();
+    //snapshot s = co_await db->get_snapshot();
 
     auto insertion_func = [scale](db_interface* db) mutable -> koios::task<>
     { 
@@ -60,25 +60,25 @@ koios::lazy_task<> db_test(::std::string rootpath = "")
         co_await koios::this_task::sleep_for(1s);
 
         // #1
-        auto fut_aw = rv::iota(0) | rv::take(scale) | rv::transform([db](int i) { 
-            return db->insert(::std::to_string(i), "test value abcdefg abcdefg 3").run_and_get_future();
-        }) | r::to<::std::vector>();
+        //auto fut_aw = rv::iota(0) | rv::take(scale) | rv::transform([db](int i) { 
+        //    return db->insert(::std::to_string(i), "test value abcdefg abcdefg 3").run_and_get_future();
+        //}) | r::to<::std::vector>();
         
-        //// #1
-        //spdlog::debug("db_test: start insert");
-        //for (size_t i{}; i < scale; ++i)
-        //{
-        //    //co_await db->insert(::std::to_string(i), "test value abcdefg abcdefg 3");
-        //    db->insert(::std::to_string(i), "test value abcdefg abcdefg 3").run();
-        //}
-
-        for (size_t i{}; i < fut_aw.size(); ++i)
+        // #1
+        spdlog::debug("db_test: start insert");
+        for (size_t i{}; i < scale; ++i)
         {
-            auto& item = fut_aw[i];
-            spdlog::debug("waiting {}", i);
-            co_await item.get_async();
-            spdlog::debug("{} got", i);
+            co_await db->insert(::std::to_string(i), "test value abcdefg abcdefg 3");
+            //db->insert(::std::to_string(i), "test value abcdefg abcdefg 3").run();
         }
+
+        //for (size_t i{}; i < fut_aw.size(); ++i)
+        //{
+        //    auto& item = fut_aw[i];
+        //    spdlog::debug("waiting {}", i);
+        //    co_await item.get_async();
+        //    spdlog::debug("{} got", i);
+        //}
 
         spdlog::debug("db_test: insert complete");
     };
@@ -108,27 +108,28 @@ koios::lazy_task<> db_test(::std::string rootpath = "")
 
     {
         auto opt = co_await db->get(::std::to_string(50));
-        if (opt) ::std::cout << opt->to_string_debug() << ::std::endl;
-        else ::std::cout << "not found" << ::std::endl;
+        if (opt) ::std::println("{}", opt->to_string_debug());
+        else ::std::println("not found");
     }
 
     {
         auto opt = co_await db->get(::std::to_string(1000));
-        if (opt) ::std::cout << opt->to_string_debug() << ::std::endl;
-        else ::std::cout << "not found" << ::std::endl;
+        if (opt) ::std::println("{}", opt->to_string_debug());
+        else ::std::println("not found");
     }
 
     ::std::vector<::std::pair<int, koios::future<::std::optional<kv_entry>>>> futs_aw;
     for (size_t i{}; i < scale; i += 1000)
     {
-        futs_aw.emplace_back(i, db->get(::std::to_string(i), { .snap = s }).run_and_get_future());
+        futs_aw.emplace_back(i, db->get(::std::to_string(i)).run_and_get_future());
+        //futs_aw.emplace_back(i, db->get(::std::to_string(i), { .snap = s }).run_and_get_future());
     }
 
     for (auto& [i, futaw] : futs_aw)
     {
         auto opt = co_await futaw.get_async();
-        if (opt) ::std::cout << opt->to_string_debug() << ::std::endl;
-        else ::std::cout << "key: " << i << " not found" << ::std::endl;
+        if (opt) ::std::println("{}", opt->to_string_debug());
+        else ::std::println("key: {} not found", i);
     }
 
     spdlog::info(toolpex::toc(t));
