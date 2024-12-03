@@ -8,7 +8,6 @@
 #include <memory>
 #include <ranges>
 #include <string>
-#include <iostream>
 #include <string_view>
 
 #include "toolpex/skip_list.h"

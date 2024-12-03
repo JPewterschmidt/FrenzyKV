@@ -26,6 +26,7 @@ set_arch("x64")
 set_languages("c++23", "c17")
 set_policy("build.warning", true)
 set_policy("build.optimization.lto", false)
+set_toolset("cc", "mold", {force = true}) 
 add_packages("jeamalloc")
 
 if not is_mode("release") then
