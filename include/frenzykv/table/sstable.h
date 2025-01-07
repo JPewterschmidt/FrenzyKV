@@ -108,7 +108,7 @@ public:
      *              `block_segment` object is undefined behaviour.
      *  \param  user_key_ignore_seq Only take the serialized user key part, ignore the seq part
      */
-    koios::task<::std::optional<::std::pair<block_segment, block_with_storage>>> 
+    koios::task<::std::optional<::std::pair<block_segment, block>>> 
     get_segment(const sequenced_key& user_key_ignore_seq) const override;
 
     /*! \brief Searching specific sequenced key from this sstable
@@ -138,10 +138,10 @@ public:
     bool operator==(const disk_table& other) const noexcept override;
 
     // Required by `get_segment()`
-    koios::task<::std::optional<block_with_storage>> 
+    koios::task<::std::optional<block>> 
     get_block(uintmax_t offset, btl_t btl) const override;
 
-    koios::task<::std::optional<block_with_storage>> 
+    koios::task<::std::optional<block>> 
     get_block(::std::pair<uintmax_t, btl_t> p) const override
     {
         return get_block(p.first, p.second);
@@ -161,6 +161,9 @@ public:
      */
     size_t hash() const noexcept override { return m_hash_value; }
     ::std::string_view filename() const noexcept override;
+
+    auto* raw_file_ptr() noexcept { return m_file; }
+    auto& unique_file_ptr() noexcept { return m_self_managed_file; }
 
 private:
     koios::task<btl_t>  btl_value_impl(uintmax_t offset);        // Required by `generate_block_offsets()`

@@ -176,7 +176,7 @@ koios::task<> db_local::update_current_version(version_delta delta)
     co_await set_current_version_file(m_deps, new_desc_name);
 }
 
-koios::task<> db_local::fake_file_to_disk(::std::unique_ptr<in_mem_rw> fake_file, version_delta& delta, level_t l)
+koios::task<> db_local::fake_file_to_disk(::std::unique_ptr<random_readable> fake_file, version_delta& delta, level_t l)
 {
     if (fake_file && fake_file->file_size())
     {
@@ -204,16 +204,18 @@ koios::task<> db_local::may_compact(level_t from, double thresh_ratio)
         }
         
         // Do the actual compaction
-        auto [fake_file, delta] = co_await m_compactor.compact(
+        auto [mem_files, delta] = co_await m_compactor.compact(
             ::std::move(ver), l, 
             //::std::make_unique<sstable_getter_from_file_and_cache>(m_cache, m_deps, m_filter_policy.get()),
             ::std::make_unique<sstable_getter_from_cache>(m_cache),
             //::std::make_unique<sstable_getter_from_file>(m_deps, m_filter_policy.get()),
             thresh_ratio
         );
-        if (fake_file)
+
+        if (!mem_files.empty())
         {
-            co_await fake_file_to_disk(::std::move(fake_file), delta, l + 1);
+            for (auto& file : mem_files)
+                co_await fake_file_to_disk(::std::move(file), delta, l + 1);
             co_await update_current_version(::std::move(delta));
         }
         break;

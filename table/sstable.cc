@@ -150,10 +150,10 @@ koios::task<bool> sstable::generate_block_offsets_impl(mbo_t mbo)
     co_return true;
 }
 
-koios::task<::std::optional<block_with_storage>> 
+koios::task<::std::optional<block>> 
 sstable::get_block(uintmax_t offset, btl_t btl) const
 {
-    ::std::optional<block_with_storage> result{};
+    ::std::optional<block> result{};
 
     buffer<> buff{btl + 10}; // extra bytes to avoid unknow reason buffer overflow.
     
@@ -176,15 +176,15 @@ sstable::get_block(uintmax_t offset, btl_t btl) const
         buf.commit(w.size());
         
         bs = w;
-        result.emplace(block(bs), ::std::move(buf));
+        result.emplace(bs, ::std::move(buf));
         co_return result;
     }
     
-    result.emplace(block(bs), ::std::move(buff));
+    result.emplace(bs, ::std::move(buff));
     co_return result;
 }
 
-koios::task<::std::optional<::std::pair<block_segment, block_with_storage>>> 
+koios::task<::std::optional<::std::pair<block_segment, block>>> 
 sstable::
 get_segment(const sequenced_key& user_key_ignore_seq) const
 {
@@ -208,10 +208,10 @@ get_segment(const sequenced_key& user_key_ignore_seq) const
         toolpex_assert(blk1_opt.has_value());
 
         // Shot!
-        if (blk0_opt->b.larger_equal_than_this_first_segment_public_prefix(user_key_rep_b)
-           && blk1_opt->b.less_than_this_first_segment_public_prefix(user_key_rep_b))
+        if (blk0_opt->larger_equal_than_this_first_segment_public_prefix(user_key_rep_b)
+           && blk1_opt->less_than_this_first_segment_public_prefix(user_key_rep_b))
         {
-            auto seg_opt = blk0_opt->b.get(user_key_rep_b);
+            auto seg_opt = blk0_opt->get(user_key_rep_b);
             if (seg_opt)
             {
                 co_return ::std::pair{ ::std::move(*seg_opt), ::std::move(*blk0_opt) };
@@ -221,9 +221,9 @@ get_segment(const sequenced_key& user_key_ignore_seq) const
         
         last_block_opt = ::std::move(blk1_opt);
     }
-    if (last_block_opt->b.larger_equal_than_this_first_segment_public_prefix(user_key_rep_b))
+    if (last_block_opt->larger_equal_than_this_first_segment_public_prefix(user_key_rep_b))
     {
-        auto seg_opt = last_block_opt->b.get(user_key_rep_b);
+        auto seg_opt = last_block_opt->get(user_key_rep_b);
         if (seg_opt) 
         {
             co_return ::std::pair{ ::std::move(*seg_opt), ::std::move(*last_block_opt) };
@@ -309,7 +309,7 @@ get_entries_from_sstable(sstable& table)
     {
         auto blk_opt = co_await table.get_block(blk_off);
         toolpex_assert(blk_opt.has_value());
-        for (auto kv : blk_opt->b.entries())
+        for (auto kv : blk_opt->entries())
         {
             co_yield ::std::move(kv);
         }

@@ -33,14 +33,18 @@ public:
      *  \param  version the version going to be compacted
      *          from the level number of the level going to be compacted
      *          table_getter the table getter which could allows the caller to chose where the sstable be retrived.
-     *  \return A pair consisting a `in_mem_rw` object and a `version_delta` object
+     *
+     *  \return A vector consisting with `random_readable` objects, usually `in_mem_rw`,
+     *          and a `version_delta` object 
+     *          which only contains the compacted file info, the caller need to reterive newly added file info
+     *          from version center and file center then add to the delta object.
      *          if the `in_mem_rw` is nullptr, means that is an empty sstable.
      *          You have to do the null ptr check.
      *
      *  Non of business of sequence_number, because of the snapshot mechinaism 
      *  keep those files of version alive
      */
-    koios::task<::std::pair<::std::unique_ptr<in_mem_rw>, version_delta>>
+    koios::task<::std::pair<::std::vector<::std::unique_ptr<random_readable>>, version_delta>>
     compact(version_guard version, level_t from, 
             ::std::unique_ptr<sstable_getter> table_getter, 
             double thresh_ratio = 1);
@@ -54,10 +58,9 @@ public:
      *          compaction result is a empty table. 
      *          So you have to do the null pointer check.
      */
-    koios::task<::std::unique_ptr<in_mem_rw>> 
+    koios::task<::std::list<kv_entry>> 
     merge_tables(::std::vector<::std::shared_ptr<sstable>> table_ptrs, level_t tables_level) const;
 
-private:
     /*  \brief  Functiuon which merges two tables.
      *  \param  lhs the first table going to be merged.
      *          rhs the second table going to be merged.
@@ -69,8 +72,14 @@ private:
      *          compaction result is a empty table. 
      *          So you have to do the null pointer check.
      */
-    koios::task<::std::unique_ptr<in_mem_rw>>
+    koios::task<::std::list<kv_entry>>
     merge_two_tables(::std::shared_ptr<sstable> lhs, ::std::shared_ptr<sstable> rhs, level_t new_level) const;
+
+    koios::task<::std::list<kv_entry>>
+    merge_two_tables(::std::list<kv_entry>&& lhs, ::std::list<kv_entry>&& rhs, level_t new_level) const;
+
+    koios::task<::std::vector<::std::shared_ptr<sstable>>> 
+    merged_list_to_sst(::std::list<kv_entry> entries, level_t new_level) const;
 
 private:
     mutable ::std::vector<::std::unique_ptr<koios::mutex>> m_mutexes{};

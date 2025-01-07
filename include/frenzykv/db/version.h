@@ -210,7 +210,7 @@ public:
     mutable_version_guard(koios::unique_lock<koios::mutex> version_center_lock, auto&& ver_rep) noexcept
         : version_guard(ver_rep), m_version_center_lock{ ::std::move(version_center_lock) }
     {
-        toolpex_assert(m_version_center_lock.is_hold());
+        toolpex_assert(m_version_center_lock.owns_lock());
     }
 
     mutable_version_guard& operator+=(const version_delta& delta)

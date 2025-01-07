@@ -77,7 +77,7 @@ private:
     koios::task<::std::optional<kv_entry>> find_from_ssts(const sequenced_key& key, snapshot snap) const;
     koios::task<> delete_all_prewrite_log();
 
-    koios::task<> fake_file_to_disk(::std::unique_ptr<in_mem_rw> fake, version_delta& delta, level_t l);
+    koios::task<> fake_file_to_disk(::std::unique_ptr<random_readable> fake, version_delta& delta, level_t l);
     koios::task<> fake_file_to_disk(::std::ranges::range auto fakes, version_delta& delta, level_t l)
     {
         for (auto& f : fakes)
