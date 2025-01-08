@@ -401,13 +401,13 @@ koios::lazy_task<> db_local::background_compacting_GC(::std::stop_token stp)
         co_await koios::this_task::sleep_for(10ms * l);
         while (!stp.stop_requested())
         {
-            co_await koios::this_task::sleep_for(10ms);
-            co_await may_compact(l, 0.6);
+            co_await koios::this_task::sleep_for(10ms * (l + 1));
+            co_await may_compact(l, 0.7);
             do_GC().run();
         }
     };
     ::std::vector<koios::future<void>> futs;
-    for (level_t i{1}; i < max_level; ++i)
+    for (level_t i{0}; i < max_level; ++i)
     {
         futs.push_back(bg_gc(stp, i).run_and_get_future());
     } 
