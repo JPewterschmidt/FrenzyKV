@@ -57,6 +57,11 @@ public:
                     filter_policy* filter, 
                     seq_writable* file);
 
+    sstable_builder(const kvdb_deps& deps, 
+                    uintmax_t size_limit,
+                    filter_policy* filter, 
+                    ::std::unique_ptr<seq_writable> file);
+
     ~sstable_builder() noexcept { toolpex_assert(m_finish); }
 
     sstable_builder(sstable_builder&& other) noexcept;
@@ -99,6 +104,7 @@ private:
     block_builder m_block_builder;
 
     seq_writable* m_file;
+    ::std::unique_ptr<seq_writable> m_self_managed_file;
     mbo_t m_bytes_appended_to_file{};
 };
 
