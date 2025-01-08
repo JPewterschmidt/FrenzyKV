@@ -65,7 +65,7 @@ devide_and_conquer_merge(
     auto right_fut = devide_and_conquer_merge(c, thr_attrs, table_ptrs.subspan(table_ptrs.size() / 2), new_level)
         .run_and_get_future(*thr_attrs[dispatcher++ % attr_sz]);
 
-    co_return co_await c.merge_two_tables(co_await left_fut.get_async(), co_await right_fut.get_async(), new_level);
+    co_return co_await c.merge_two_tables(co_await left_fut, co_await right_fut, new_level);
 }
 
 koios::task<::std::list<kv_entry>> 

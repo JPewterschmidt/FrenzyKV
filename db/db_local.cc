@@ -363,14 +363,12 @@ db_local::find_from_ssts(const sequenced_key& key, snapshot snap) const
         auto futvec = files_same_level 
                     | rv::transform([&](auto&& f){ return file_to_async_potiential_ret(f, key, snap); }) 
                     | rv::transform([](auto task){ return task.run_and_get_future(); })
-                    | r::to<::std::vector>()
                     ;
 
-        for (auto& fut : futvec)
-        {
-            auto opt = co_await fut.get_async();
-            if (opt) potiential_results.insert(::std::move(opt.value()));
-        }
+        potiential_results.insert_range(co_await koios::co_await_all(::std::move(futvec)) 
+            | rv::filter([](auto&& opt) { return opt.has_value(); })
+            | rv::transform([](auto&& opt) { return ::std::move(opt.value()); })
+            );
 
         if (auto ret = co_await find_from_potiential_results(potiential_results, key); ret.has_value())
             co_return ret;
