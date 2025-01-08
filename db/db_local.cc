@@ -397,21 +397,25 @@ koios::task<snapshot> db_local::get_snapshot()
 
 koios::lazy_task<> db_local::background_compacting_GC(::std::stop_token stp)
 {
-    auto lk = co_await m_flying_GC_mutex.acquire();
     koios::wait_group_guard g{ m_flying_GC_group };
     const level_t max_level = m_deps.opt()->max_level;
-    while (!stp.stop_requested())
-    {
-        lk.unlock();
-        co_await koios::this_task::sleep_for(100ms);
-        const bool held_lock = co_await lk.try_lock();
-        if (!held_lock) continue;
-        for (level_t l = 1; l < max_level; ++l)
+    auto bg_gc = [this] (::std::stop_token stp, level_t l) mutable -> koios::task<> {
+        co_await koios::this_task::sleep_for(10ms * l);
+        while (!stp.stop_requested())
         {
+            co_await koios::this_task::sleep_for(10ms);
             co_await may_compact(l, 0.6);
+            do_GC().run();
         }
-        co_await do_GC();
-    }
+    };
+    ::std::vector<koios::future<void>> futs;
+    for (level_t i{1}; i < max_level; ++i)
+    {
+        futs.push_back(bg_gc(stp, i).run_and_get_future());
+    } 
+
+    co_await koios::co_await_all(::std::move(futs));
+
     co_return;
 }
 
