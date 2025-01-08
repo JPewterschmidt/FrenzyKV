@@ -77,14 +77,6 @@ compactor::merge_tables(::std::vector<::std::shared_ptr<sstable>> table_ptrs,
     const auto& task_consumer_attrs = koios::get_task_scheduler().consumer_attrs();
 
     co_return co_await devide_and_conquer_merge(*this, task_consumer_attrs, table_ptrs, tables_level + 1);
-
-    //for (auto t : table_ptrs | rv::drop(first_two_merged ? 1 : 0) | rv::chunk(2))
-    //{
-    //    auto temp = co_await sstable::make(*m_deps, m_filter_policy, file.get());
-    //    file = co_await merge_two_tables(temp, t, tables_level + 1);
-    //}
-
-    //co_return file;
 }
 
 koios::task<::std::pair<::std::vector<::std::unique_ptr<random_readable>>, version_delta>>
@@ -150,22 +142,10 @@ koios::task<::std::list<kv_entry>>
 compactor::
 merge_two_tables(::std::shared_ptr<sstable> lhs, ::std::shared_ptr<sstable> rhs, level_t new_level) const
 {
-    ::std::list<kv_entry> merged;
+    auto lhs_list = co_await get_entries_from_sstable_at_once(*lhs);
+    auto rhs_list = co_await get_entries_from_sstable_at_once(*rhs);
 
-    co_await koios::merge(
-        get_entries_from_sstable(*lhs), 
-        get_entries_from_sstable(*rhs)
-    ).unique(
-        [](const auto& lhs, const auto& rhs) { 
-            return lhs.key().user_key() == rhs.key().user_key(); 
-        }
-    ).to(::std::front_inserter(merged));
-
-    //co_await merged_gen.to(::std::front_inserter(merged));
-
-    toolpex_assert(::std::is_sorted(merged.rbegin(), merged.rend()));
-
-    co_return merged;
+    co_return co_await merge_two_tables(::std::move(lhs_list), ::std::move(rhs_list), new_level);
 }
 
 koios::task<::std::vector<::std::shared_ptr<sstable>>> 

@@ -8,6 +8,8 @@
 #include <ranges>
 #include <list>
 
+#include "koios/utility.h"
+
 #include "toolpex/exceptions.h"
 #include "toolpex/assert.h"
 
@@ -314,6 +316,44 @@ get_entries_from_sstable(sstable& table)
             co_yield ::std::move(kv);
         }
     }
+}
+
+koios::task<::std::list<kv_entry>>
+get_entries_from_sstable_at_once(sstable& table, bool backwards)
+{
+    ::std::list<kv_entry> result;
+    if (table.empty()) co_return result;
+
+    auto bool_var = koios::to_bool_variant(backwards);
+
+    ::std::vector<block> blocks;
+    for (auto blk_off : table.block_offsets())
+    {
+        auto blk_opt = co_await table.get_block(blk_off);
+        toolpex_assert(blk_opt.has_value());
+
+        blocks.push_back(::std::move(blk_opt.value()));
+    }
+
+    ::std::visit([&](auto backwards) mutable
+    {
+        for (const auto& blk : blocks)
+        {
+            for (auto kv : blk.entries())
+            {
+                if constexpr (backwards)
+                {
+                    result.push_front(::std::move(kv));
+                }
+                else
+                {
+                    result.push_back(::std::move(kv));
+                }
+            }
+        }
+    }, bool_var);
+
+    co_return result;
 }
 
 ::std::string_view sstable::filename() const noexcept

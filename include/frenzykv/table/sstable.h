@@ -189,6 +189,9 @@ private:
 koios::generator<kv_entry>
 get_entries_from_sstable(sstable& table);
 
+koios::task<::std::list<kv_entry>>
+get_entries_from_sstable_at_once(sstable& table, bool backwards = true);
+
 } // namespace frenzykv
 
 template<>

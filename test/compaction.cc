@@ -87,8 +87,10 @@ public:
             ), 0, ::std::plus<uintmax_t>{}
         );
 
-        co_return final_table->unique_file_ptr()->file_size() < total_file_size
-            && ::std::is_sorted(entries.begin(), entries.end());
+        const bool sz_tb_less_than_total_sz = final_table->unique_file_ptr()->file_size() < total_file_size;
+        const bool sorted = ::std::is_sorted(entries.begin(), entries.end());
+
+        co_return sz_tb_less_than_total_sz && sorted;
     }
 
 private:
