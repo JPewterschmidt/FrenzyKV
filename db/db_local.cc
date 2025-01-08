@@ -176,7 +176,7 @@ koios::task<> db_local::update_current_version(version_delta delta)
     co_await set_current_version_file(m_deps, new_desc_name);
 }
 
-koios::task<> db_local::fake_file_to_disk(::std::unique_ptr<in_mem_rw> fake_file, version_delta& delta, level_t l)
+koios::task<> db_local::fake_file_to_disk(::std::unique_ptr<random_readable> fake_file, version_delta& delta, level_t l)
 {
     if (fake_file && fake_file->file_size())
     {
@@ -204,16 +204,18 @@ koios::task<> db_local::may_compact(level_t from, double thresh_ratio)
         }
         
         // Do the actual compaction
-        auto [fake_file, delta] = co_await m_compactor.compact(
+        auto [mem_files, delta] = co_await m_compactor.compact(
             ::std::move(ver), l, 
             //::std::make_unique<sstable_getter_from_file_and_cache>(m_cache, m_deps, m_filter_policy.get()),
             ::std::make_unique<sstable_getter_from_cache>(m_cache),
             //::std::make_unique<sstable_getter_from_file>(m_deps, m_filter_policy.get()),
             thresh_ratio
         );
-        if (fake_file)
+
+        if (!mem_files.empty())
         {
-            co_await fake_file_to_disk(::std::move(fake_file), delta, l + 1);
+            for (auto& file : mem_files)
+                co_await fake_file_to_disk(::std::move(file), delta, l + 1);
             co_await update_current_version(::std::move(delta));
         }
         break;
@@ -361,14 +363,12 @@ db_local::find_from_ssts(const sequenced_key& key, snapshot snap) const
         auto futvec = files_same_level 
                     | rv::transform([&](auto&& f){ return file_to_async_potiential_ret(f, key, snap); }) 
                     | rv::transform([](auto task){ return task.run_and_get_future(); })
-                    | r::to<::std::vector>()
                     ;
 
-        for (auto& fut : futvec)
-        {
-            auto opt = co_await fut.get_async();
-            if (opt) potiential_results.insert(::std::move(opt.value()));
-        }
+        potiential_results.insert_range(co_await koios::co_await_all(::std::move(futvec)) 
+            | rv::filter([](auto&& opt) { return opt.has_value(); })
+            | rv::transform([](auto&& opt) { return ::std::move(opt.value()); })
+            );
 
         if (auto ret = co_await find_from_potiential_results(potiential_results, key); ret.has_value())
             co_return ret;
@@ -395,21 +395,25 @@ koios::task<snapshot> db_local::get_snapshot()
 
 koios::lazy_task<> db_local::background_compacting_GC(::std::stop_token stp)
 {
-    auto lk = co_await m_flying_GC_mutex.acquire();
     koios::wait_group_guard g{ m_flying_GC_group };
     const level_t max_level = m_deps.opt()->max_level;
-    while (!stp.stop_requested())
-    {
-        lk.unlock();
-        co_await koios::this_task::sleep_for(100ms);
-        const bool held_lock = co_await lk.try_lock();
-        if (!held_lock) continue;
-        for (level_t l = 1; l < max_level; ++l)
+    auto bg_gc = [this] (::std::stop_token stp, level_t l) mutable -> koios::task<> {
+        co_await koios::this_task::sleep_for(10ms * l);
+        while (!stp.stop_requested())
         {
+            co_await koios::this_task::sleep_for(10ms);
             co_await may_compact(l, 0.6);
+            do_GC().run();
         }
-        co_await do_GC();
-    }
+    };
+    ::std::vector<koios::future<void>> futs;
+    for (level_t i{1}; i < max_level; ++i)
+    {
+        futs.push_back(bg_gc(stp, i).run_and_get_future());
+    } 
+
+    co_await koios::co_await_all(::std::move(futs));
+
     co_return;
 }
 

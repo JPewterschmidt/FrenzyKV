@@ -24,6 +24,8 @@
 
 #include "frenzykv/db/kv_entry.h"
 
+#include "frenzykv/io/inner_buffer.h"
+
 
 namespace frenzykv
 {
@@ -148,6 +150,7 @@ public:
      *  Caller should decompress the block storage.
      */
     block(const_bspan block_storage);
+    block(const_bspan block_storage, buffer<> sto);
 
     const_bspan storage() const noexcept { return m_storage; }
     size_t special_segments_count() const noexcept { return m_special_segs.size(); }
@@ -173,6 +176,7 @@ private:
 
 private:
     const_bspan m_storage;
+    buffer<> m_actual_storage;
     ::std::vector<const ::std::byte*> m_special_segs;
     parse_result_t m_parse_result{};
     const_bspan m_first_seg_public_prefix{};

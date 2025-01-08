@@ -8,6 +8,7 @@
 #include <vector>
 #include <ranges>
 #include <algorithm>
+#include <span>
 
 #include "toolpex/assert.h"
 
@@ -17,7 +18,11 @@
 
 #include "frenzykv/table/sstable.h"
 
+#include "koios/per_consumer_attr.h"
+#include "koios/runtime.h"
+
 namespace rv = ::std::ranges::views;
+namespace r = ::std::ranges;
 
 namespace frenzykv
 {
@@ -32,24 +37,49 @@ compactor::compactor(const kvdb_deps& deps, filter_policy* filter) noexcept
     }
 }
 
-koios::task<::std::unique_ptr<in_mem_rw>> 
+static koios::task<::std::list<kv_entry>>
+devide_and_conquer_merge(
+    const compactor& c, 
+    const ::std::vector<const koios::per_consumer_attr*>& thr_attrs, 
+    ::std::span<::std::shared_ptr<sstable>> table_ptrs, 
+    level_t new_level)
+{
+    static unsigned dispatcher{};
+    toolpex_assert(table_ptrs.size() != 0);
+    if (table_ptrs.size() == 1)
+    {
+        ::std::list<kv_entry> result;
+        co_await get_entries_from_sstable(*table_ptrs[0]).to(::std::front_inserter(result));
+        co_return result;
+    }
+    
+    if (table_ptrs.size() == 2)
+    {
+        co_return co_await c.merge_two_tables(table_ptrs[0], table_ptrs[1], new_level);
+    }
+
+    const size_t attr_sz = thr_attrs.size();
+    auto left_fut = devide_and_conquer_merge(c, thr_attrs, table_ptrs.subspan(0, table_ptrs.size() / 2), new_level)
+        .run_and_get_future(*thr_attrs[dispatcher++ % attr_sz]);
+
+    auto right_fut = devide_and_conquer_merge(c, thr_attrs, table_ptrs.subspan(table_ptrs.size() / 2), new_level)
+        .run_and_get_future(*thr_attrs[dispatcher++ % attr_sz]);
+
+    co_return co_await c.merge_two_tables(co_await left_fut, co_await right_fut, new_level);
+}
+
+koios::task<::std::list<kv_entry>> 
 compactor::merge_tables(::std::vector<::std::shared_ptr<sstable>> table_ptrs, 
                         level_t tables_level) const
 {
-    assert(table_ptrs.size() >= 2);
+    toolpex_assert(table_ptrs.size() >= 2);
+    
+    const auto& task_consumer_attrs = koios::get_task_scheduler().consumer_attrs();
 
-    auto file = co_await merge_two_tables(table_ptrs[0], table_ptrs[1], tables_level + 1);
-
-    for (auto t : table_ptrs | rv::drop(2))
-    {
-        auto temp = co_await sstable::make(*m_deps, m_filter_policy, file.get());
-        file = co_await merge_two_tables(temp, t, tables_level + 1);
-    }
-
-    co_return file;
+    co_return co_await devide_and_conquer_merge(*this, task_consumer_attrs, table_ptrs, tables_level + 1);
 }
 
-koios::task<::std::pair<::std::unique_ptr<in_mem_rw>, version_delta>>
+koios::task<::std::pair<::std::vector<::std::unique_ptr<random_readable>>, version_delta>>
 compactor::compact(version_guard version, 
                    level_t from, 
                    ::std::unique_ptr<sstable_getter> table_getter, 
@@ -74,50 +104,85 @@ compactor::compact(version_guard version,
     for (auto& fg : file_guards)
         tables.emplace_back(co_await table_getter->get(fg));
 
-    auto newfile = co_await merge_tables(::std::move(tables), from);
+    auto newtables = co_await merged_list_to_sst(co_await merge_tables(::std::move(tables), from), from + 1);
 
     spdlog::debug("compact() complete - level: {}", from);
-    co_return { ::std::move(newfile), ::std::move(compacted) };
+    co_return { 
+        newtables | rv::transform([](auto&& item) { return ::std::move(item->unique_file_ptr()); }) 
+                  | r::to<::std::vector>(), 
+        ::std::move(compacted) 
+    };
 }
 
-koios::task<::std::unique_ptr<in_mem_rw>>
+koios::task<::std::list<kv_entry>>
+compactor::
+merge_two_tables(::std::list<kv_entry>&& lhs, ::std::list<kv_entry>&& rhs, level_t new_level) const
+{
+    toolpex_assert(!lhs.empty());
+    toolpex_assert(!rhs.empty());
+    toolpex_assert(::std::is_sorted(lhs.rbegin(), lhs.rend()));
+    toolpex_assert(::std::is_sorted(rhs.rbegin(), rhs.rend()));
+
+    ::std::list<kv_entry> result;
+    ::std::merge(::std::make_move_iterator(lhs.rbegin()), ::std::make_move_iterator(lhs.rend()), 
+                 ::std::make_move_iterator(rhs.rbegin()), ::std::make_move_iterator(rhs.rend()), 
+                 ::std::front_inserter(result));
+    result.erase(::std::unique(result.begin(), result.end(), 
+        [](const auto& lhs, const auto& rhs) { 
+            return lhs.key().user_key() == rhs.key().user_key(); 
+        }), result.end());
+
+    toolpex_assert(!result.empty());
+    toolpex_assert(::std::is_sorted(result.rbegin(), result.rend()));
+
+    co_return result;
+}
+
+koios::task<::std::list<kv_entry>>
 compactor::
 merge_two_tables(::std::shared_ptr<sstable> lhs, ::std::shared_ptr<sstable> rhs, level_t new_level) const
 {
-    ::std::vector<::std::unique_ptr<in_mem_rw>> result;
+    auto lhs_list = co_await get_entries_from_sstable_at_once(*lhs);
+    auto rhs_list = co_await get_entries_from_sstable_at_once(*rhs);
 
-    ::std::list<kv_entry> merged;
-    auto merged_gen = koios::merge(
-        get_entries_from_sstable(*lhs), 
-        get_entries_from_sstable(*rhs)
-    );
-    co_await merged_gen.to(::std::front_inserter(merged));
+    co_return co_await merge_two_tables(::std::move(lhs_list), ::std::move(rhs_list), new_level);
+}
 
-    toolpex_assert(::std::is_sorted(merged.rbegin(), merged.rend()));
+koios::task<::std::vector<::std::shared_ptr<sstable>>> 
+compactor::
+merged_list_to_sst(::std::list<kv_entry> merged, level_t new_level) const
+{
+    toolpex_assert(!merged.empty());
+    ::std::vector<::std::shared_ptr<sstable>> result;
 
-    merged.erase(::std::unique(merged.begin(), merged.end(), 
-                    [](const auto& lhs, const auto& rhs) { 
-                        return lhs.key().user_key() == rhs.key().user_key(); 
-                    }), 
-                 merged.end());
-
-    if (!merged.empty())
-    {
-        const uintmax_t newfilesizebound = m_deps->opt()->allowed_level_file_size(new_level);
+    const uintmax_t newfilesizebound = m_deps->opt()->allowed_level_file_size(new_level);
+    auto new_builder_and_file = [this, newfilesizebound] { 
         auto file = ::std::make_unique<in_mem_rw>(newfilesizebound);
-        sstable_builder builder{ 
+        return ::std::pair{ sstable_builder{ 
             *m_deps, newfilesizebound, 
             m_filter_policy, file.get() 
-        };
-        for (const auto& entry : merged | rv::reverse)
-        {
-            [[maybe_unused]] bool add_ret = co_await builder.add(entry);
-            toolpex_assert(add_ret);
-        }
-        co_await builder.finish();
-        co_return file;
+        }, ::std::move(file) };
+    };
+    auto [builder, file] = new_builder_and_file();
+
+    for (const auto& entry : merged | rv::reverse)
+    {
+         bool add_ret = co_await builder.add(entry);
+         if (!add_ret)
+         {
+             co_await builder.finish();
+             result.push_back(co_await sstable::make(*m_deps, m_filter_policy, ::std::move(file)));
+             auto [b, f] = new_builder_and_file();
+             builder = ::std::move(b);
+             file = ::std::move(f);
+             add_ret = co_await builder.add(entry);
+             toolpex_assert(add_ret);
+         }
     }
-    co_return {};
+    co_await builder.finish();
+    result.push_back(co_await sstable::make(*m_deps, m_filter_policy, ::std::move(file)));
+
+    co_return result;
 }
 
 } // namespace frenzykv

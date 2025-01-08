@@ -13,7 +13,7 @@
 
 #include "frenzykv/db/kv_entry.h"
 
-#include "frenzykv/persistent/block_with_storage.h"
+#include "frenzykv/persistent/block.h"
 
 namespace frenzykv
 {
@@ -36,7 +36,7 @@ public:
      *              `block_segment` object is undefined behaviour.
      *  \param  user_key_ignore_seq Only take the serialized user key part, ignore the seq part
      */
-    virtual koios::task<::std::optional<::std::pair<block_segment, block_with_storage>>> 
+    virtual koios::task<::std::optional<::std::pair<block_segment, block>>> 
     get_segment(const sequenced_key& user_key_ignore_seq) const = 0;
 
     /*! \brief Searching specific sequenced key from this disk_table 
@@ -62,10 +62,10 @@ public:
     virtual bool operator==(const disk_table& other) const noexcept = 0;
 
     // Required by `get_segment()`
-    virtual koios::task<::std::optional<block_with_storage>> 
+    virtual koios::task<::std::optional<block>> 
     get_block(uintmax_t offset, btl_t btl) const = 0;
 
-    virtual koios::task<::std::optional<block_with_storage>> 
+    virtual koios::task<::std::optional<block>> 
     get_block(::std::pair<uintmax_t, btl_t> p) const
     {
         return get_block(p.first, p.second);

@@ -295,6 +295,12 @@ block::block(const_bspan block_storage)
     m_first_seg_public_prefix = (*begin(segs)).public_prefix();
 }
 
+block::block(const_bspan block_storage, buffer<> sto)
+    : block(block_storage)
+{
+    m_actual_storage = ::std::move(sto);
+}
+
 // UnCompressed data only
 parse_result_t block::parse_meta_data()
 {

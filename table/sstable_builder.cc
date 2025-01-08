@@ -32,6 +32,15 @@ sstable_builder::sstable_builder(
     toolpex_assert(m_size_limit != 0);
 }
 
+sstable_builder::sstable_builder(const kvdb_deps& deps, 
+        uintmax_t size_limit,
+        filter_policy* filter, 
+        ::std::unique_ptr<seq_writable> file)
+    : sstable_builder(deps, size_limit, filter, file.get())
+{
+    m_self_managed_file = ::std::move(file);
+}
+
 sstable_builder::sstable_builder(sstable_builder&& other) noexcept
 {
     swap(::std::move(other));

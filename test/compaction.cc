@@ -13,6 +13,7 @@
 #include "koios/task.h"
 
 #include "frenzykv/io/in_mem_rw.h"
+#include "frenzykv/io/readable.h"
 #include "frenzykv/db/filter.h"
 #include "frenzykv/persistent/compaction.h"
 
@@ -73,9 +74,10 @@ public:
         {
             tables.push_back(co_await ta);   
         }
-
-        ::std::unique_ptr<in_mem_rw> newfile = co_await c.merge_tables(tables, 3);
-        auto final_table = co_await sstable::make(m_deps, m_filter.get(), newfile.get());
+        auto newtable_list = co_await c.merge_tables(tables, 3);
+        auto newtables = co_await c.merged_list_to_sst(::std::move(newtable_list), 3 + 1);
+        toolpex_assert(newtables.size() == 1);
+        auto final_table = newtables[0];
         auto entries_gen = get_entries_from_sstable(*final_table);
         const auto entries = co_await entries_gen.to<::std::vector>();
         
@@ -85,8 +87,10 @@ public:
             ), 0, ::std::plus<uintmax_t>{}
         );
 
-        co_return newfile->file_size() < total_file_size
-            && ::std::is_sorted(entries.begin(), entries.end());
+        const bool sz_tb_less_than_total_sz = final_table->unique_file_ptr()->file_size() < total_file_size;
+        const bool sorted = ::std::is_sorted(entries.begin(), entries.end());
+
+        co_return sz_tb_less_than_total_sz && sorted;
     }
 
 private:
