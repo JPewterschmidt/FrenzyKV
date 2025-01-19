@@ -389,25 +389,19 @@ koios::task<snapshot> db_local::get_snapshot()
 koios::lazy_task<> db_local::background_compacting_GC(::std::stop_token stp)
 {
     koios::wait_group_guard g{ m_flying_GC_group };
-    const level_t max_level = m_deps.opt()->max_level;
-    auto bg_gc = [this] (::std::stop_token stp, level_t l) mutable -> koios::task<> {
-        co_await koios::this_task::sleep_for(10ms * l);
-        while (!stp.stop_requested())
-        {
-            co_await koios::this_task::sleep_for(10ms * (l + 1));
-            co_await may_compact(l, 0.7);
-            do_GC().run();
-        }
-    };
-    ::std::vector<koios::future<void>> futs;
-    for (level_t i{0}; i < max_level; ++i)
-    {
-        futs.push_back(bg_gc(stp, i).run_and_get_future());
-    } 
 
-    co_await koios::co_await_all(::std::move(futs));
-
-    co_return;
+    co_await koios::for_each_dispatch_evenly(
+        rv::iota(level_t{0}, m_deps.opt()->max_level), 
+        [this] (level_t l, ::std::stop_token stp) mutable -> koios::task<> {
+            co_await koios::this_task::sleep_for(10ms * l);
+            while (!stp.stop_requested())
+            {
+                co_await koios::this_task::sleep_for(10ms * (l + 1));
+                co_await may_compact(l, 0.7);
+                do_GC().run();
+            }
+        }, 
+    stp);
 }
 
 } // namespace frenzykv
