@@ -52,37 +52,46 @@ public:
     /*  \brief  Merge sstables
      *  \param  tables a vector conatins several sstable pointer (not file pointer).
      *          l the level number of the level those tables belongs.
-     *  \return A `in_mem_rw` contains mergging result. 
-     *          You can later dump the file into a real fisk file.
-     *          but this file may be nullptr indicates that
-     *          compaction result is a empty table. 
-     *          So you have to do the null pointer check.
+     *
+     *  \return A list that conatains all the kv_entry that tables contain with in a descending order.
      */
     koios::task<::std::list<kv_entry>> 
     merge_tables(::std::vector<::std::shared_ptr<sstable>> table_ptrs, level_t tables_level) const;
 
     /*  \brief  Functiuon which merges two tables.
-     *  \param  lhs the first table going to be merged.
-     *          rhs the second table going to be merged.
+     *
+     *  \param  lhs the first table  going to be merged.
+     *          rhs the second table  going to be merged.
      *          l the new level number merged table belonging.
-     *  \return A awaitable object which result is a 
-     *          `in_mem_rw` contains merged result. 
-     *          You can later dump the file into a real fisk file.
-     *          but this file may be nullptr indicates that
-     *          compaction result is a empty table. 
-     *          So you have to do the null pointer check.
+     *
+     *  \return A awaitable object result in a list of kv_entry with descending sort.
+     *          This list is the result of merging `lhs`, and `rhs`
      */
     koios::task<::std::list<kv_entry>>
     merge_two_tables(::std::shared_ptr<sstable> lhs, ::std::shared_ptr<sstable> rhs, level_t new_level) const;
 
+    /*  \brief  Functiuon which merges two tables (represented by two descending list of kv_entry).
+     *
+     *  \param  lhs the first table (represented by a descending list) going to be merged.
+     *          rhs the second table (represented by a descending list) going to be merged.
+     *          l the new level number merged table belonging.
+     *
+     *  \return A awaitable object result in a list of kv_entry with descending sort.
+     *          This list is the result of merging `descending_lhs`, and `descending_rhs`
+     */
     koios::task<::std::list<kv_entry>>
-    merge_two_tables(::std::list<kv_entry>&& lhs, ::std::list<kv_entry>&& rhs, level_t new_level) const;
+    merge_two_tables(::std::list<kv_entry>&& descending_lhs, ::std::list<kv_entry>&& descending_rhs, level_t new_level) const;
 
+    /*  \brief  Function which convert a descending sorted list of kv_entry to a sstable.
+     *  
+     *  \param  descending_entries a list that contains kv_entries which probably the result of early stage of merging.
+     *          Assume that the `descending_entries` list is the return value of `merge_two_tables` function call.
+     */
     koios::task<::std::vector<::std::shared_ptr<sstable>>> 
-    merged_list_to_sst(::std::list<kv_entry> entries, level_t new_level) const;
+    merged_list_to_sst(::std::list<kv_entry> descending_entries, level_t new_level) const;
 
 private:
-    mutable ::std::vector<::std::unique_ptr<koios::mutex>> m_mutexes{};
+    ::std::vector<::std::unique_ptr<::std::atomic_flag>> m_mutexes{};
     const kvdb_deps* m_deps;
     filter_policy* m_filter_policy;
 };

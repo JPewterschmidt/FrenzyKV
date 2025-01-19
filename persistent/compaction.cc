@@ -33,7 +33,7 @@ compactor::compactor(const kvdb_deps& deps, filter_policy* filter) noexcept
 {
     for (level_t i{}; i < m_deps->opt()->max_level; ++i)
     {
-        m_mutexes.emplace_back(new koios::mutex{});
+        m_mutexes.emplace_back(new ::std::atomic_flag{ATOMIC_FLAG_INIT});
     }
 }
 
@@ -48,9 +48,7 @@ devide_and_conquer_merge(
     toolpex_assert(table_ptrs.size() != 0);
     if (table_ptrs.size() == 1)
     {
-        ::std::list<kv_entry> result;
-        co_await get_entries_from_sstable(*table_ptrs[0]).to(::std::front_inserter(result));
-        co_return result;
+        co_return co_await get_entries_from_sstable_at_once(*table_ptrs[0]);
     }
     
     if (table_ptrs.size() == 2)
@@ -85,8 +83,19 @@ compactor::compact(version_guard version,
                    ::std::unique_ptr<sstable_getter> table_getter, 
                    double thresh_ratio)
 {
-    auto lk_opt = co_await m_mutexes[from]->try_acquire();   
-    if (!lk_opt) co_return {};
+    if (m_mutexes[from]->test_and_set(::std::memory_order_acquire))
+        co_return {};
+
+    class unlocker
+    {
+    public: 
+        unlocker(::std::atomic_flag* f) noexcept : m_flag{ f } {}
+        ~unlocker() noexcept { m_flag->clear(::std::memory_order_release); }
+
+    private:
+        ::std::atomic_flag* m_flag{};
+
+    } _(m_mutexes[from].get());
 
     // for debug
     static ::std::unordered_map<level_t, size_t> count{};
@@ -120,6 +129,9 @@ merge_two_tables(::std::list<kv_entry>&& lhs, ::std::list<kv_entry>&& rhs, level
 {
     toolpex_assert(!lhs.empty());
     toolpex_assert(!rhs.empty());
+
+    // Descending sorted list natually let the entries with larger sequence number appear first.
+    // which will remain after unification.
     toolpex_assert(::std::is_sorted(lhs.rbegin(), lhs.rend()));
     toolpex_assert(::std::is_sorted(rhs.rbegin(), rhs.rend()));
 
@@ -132,7 +144,8 @@ merge_two_tables(::std::list<kv_entry>&& lhs, ::std::list<kv_entry>&& rhs, level
             return lhs.key().user_key() == rhs.key().user_key(); 
         }), result.end());
 
-    toolpex_assert(!result.empty());
+    // Consider the result likely to be merged with another table again, 
+    // the result list has also to be descending sorted.
     toolpex_assert(::std::is_sorted(result.rbegin(), result.rend()));
 
     co_return result;
@@ -153,6 +166,9 @@ compactor::
 merged_list_to_sst(::std::list<kv_entry> merged, level_t new_level) const
 {
     toolpex_assert(!merged.empty());
+
+    // Assume that teh merged list was the return value of `merge_two_tables` function call.
+    toolpex_assert(::std::is_sorted(merged.rbegin(), merged.rend()));
     ::std::vector<::std::shared_ptr<sstable>> result;
 
     const uintmax_t newfilesizebound = m_deps->opt()->allowed_level_file_size(new_level);
