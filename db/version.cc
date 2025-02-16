@@ -70,9 +70,9 @@ version_rep& version_rep::operator+=(const version_delta& delta)
     try 
     {
         m_files = {};
-        [] (auto p) ->koios::lazy_task<> { 
+        [] (auto p, auto g) ->koios::lazy_task<> { 
             co_await koios::uring::unlink(::std::move(p)); 
-        }(m_deps->env()->version_path()/version_desc_name()).run();
+        }(m_deps->env()->version_path()/version_desc_name(), m_deps->get_flying_wait_group_guard()).run();
     }
     catch (koios::exception& e)
     {
