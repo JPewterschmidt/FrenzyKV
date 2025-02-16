@@ -71,9 +71,8 @@ version_rep& version_rep::operator+=(const version_delta& delta)
     try 
     {
         m_files = {};
-        [] (auto p) ->koios::task<> { 
-            koios::uring::unlink(::std::move(p)); 
-            co_return;
+        [] (auto p) ->koios::lazy_task<> { 
+            co_await koios::uring::unlink(::std::move(p)); 
         }(m_env->version_path()/version_desc_name()).run();
     }
     catch (koios::exception& e)
