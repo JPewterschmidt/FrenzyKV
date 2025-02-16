@@ -31,15 +31,15 @@ version_delta& version_delta::operator+=(version_delta other_delta)
     return *this;
 }
 
-version_rep::version_rep(::std::string_view desc_name, ::std::shared_ptr<env> e)
-    : m_version_desc_name{ desc_name }, m_env{ ::std::move(e) }
+version_rep::version_rep(::std::string_view desc_name, const kvdb_deps* deps)
+    : m_version_desc_name{ desc_name }, m_deps{ deps }
 {
 }
 
 version_rep::version_rep(const version_rep& other)
     : m_files{ other.m_files }, 
       m_version_desc_name{ get_version_descriptor_name() }, 
-      m_env{ other.m_env }
+      m_deps{ other.m_deps }
 {
 }
 
@@ -65,7 +65,6 @@ version_rep& version_rep::operator+=(const version_delta& delta)
 
 ::std::ptrdiff_t version_rep::deref() noexcept
 {
-    toolpex_assert(!!m_env);
     const auto result = m_ref--;
     if (result == 1)
     try 
@@ -73,7 +72,7 @@ version_rep& version_rep::operator+=(const version_delta& delta)
         m_files = {};
         [] (auto p) ->koios::lazy_task<> { 
             co_await koios::uring::unlink(::std::move(p)); 
-        }(m_env->version_path()/version_desc_name()).run();
+        }(m_deps->env()->version_path()/version_desc_name()).run();
     }
     catch (koios::exception& e)
     {
@@ -101,12 +100,12 @@ koios::lazy_task<> version_center::load_current_version()
     toolpex_assert(m_versions.empty());
 
     const auto& deps = m_file_center->deps();
-    auto env = m_file_center->deps().env();
+    auto env = deps.env();
 
     // Load current version
     version_delta delta = co_await get_current_version(deps, m_file_center);
 
-    version_rep v((co_await current_descriptor_name(deps)).value_or(get_version_descriptor_name()), env);
+    version_rep v((co_await current_descriptor_name(deps)).value_or(get_version_descriptor_name()), &deps);
     m_current = (m_versions.emplace_back(::std::move(v)) += delta);
 
     const ::std::string_view cvd_name = m_current.version_desc_name();
@@ -117,7 +116,7 @@ koios::lazy_task<> version_center::load_current_version()
         if (const auto name = dir_entry.path().filename().string(); 
             name != cvd_name && is_version_descriptor_name(name))
         {
-            m_versions.emplace_front(name, env) += co_await get_version(deps, name, m_file_center);
+            m_versions.emplace_front(name, &deps) += co_await get_version(deps, name, m_file_center);
         }
     }
 }

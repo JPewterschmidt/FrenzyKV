@@ -81,7 +81,7 @@ private:
 class version_rep
 {
 public:
-    version_rep(::std::string_view desc_name, ::std::shared_ptr<env> e);
+    version_rep(::std::string_view desc_name, const kvdb_deps* deps);
 
     // It should be copyable, used by creating a nwe version based on an old one.
     version_rep(const version_rep& other);
@@ -108,7 +108,7 @@ private:
     ::std::vector<file_guard> m_files;
     toolpex::ref_count m_ref;
     ::std::string m_version_desc_name;
-    ::std::shared_ptr<env> m_env;
+    const kvdb_deps* m_deps;
 };
 
 class version_guard : public toolpex::move_only
