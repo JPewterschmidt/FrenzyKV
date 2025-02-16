@@ -57,6 +57,8 @@ public:
     auto stat()      const noexcept { return m_stat.load(::std::memory_order_relaxed); }
     auto get_flying_wait_group_guard() const noexcept { return koios::wait_group_guard{ m_wait_group }; }
 
+    auto& wait_group() noexcept { return m_wait_group; }
+
     // XXX Do not add any set_* function, see kvdb_deps_manipulator
 
 private: // Deps

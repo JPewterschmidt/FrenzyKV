@@ -227,7 +227,7 @@ koios::task<> db_local::close()
 
     // Make sure the background GC stopped.
     m_bg_gc_stop_src.request_stop();
-    co_await m_flying_GC_group.wait();
+    co_await m_deps.wait_group().wait();
 
     auto mem_lk = co_await m_mem_mutex.acquire();
 
@@ -388,7 +388,7 @@ koios::task<snapshot> db_local::get_snapshot()
 
 koios::lazy_task<> db_local::background_compacting_GC(::std::stop_token stp)
 {
-    koios::wait_group_guard g{ m_flying_GC_group };
+    koios::wait_group_guard g = m_deps.get_flying_wait_group_guard();
 
     co_await koios::for_each_dispatch_evenly(
         rv::iota(level_t{0}, m_deps.opt()->max_level), 

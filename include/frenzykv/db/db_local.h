@@ -120,7 +120,6 @@ private:
     koios::mutex m_db_status_mutex;
     bool m_inited{};
 
-    koios::wait_group m_flying_GC_group;
     ::std::atomic_size_t m_force_GC_hint;
     size_t m_num_bound_level0{};
 };  
