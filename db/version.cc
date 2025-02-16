@@ -5,6 +5,8 @@
 
 #include <iterator>
 
+#include "koios/iouring_awaitables.h"
+
 #include "frenzykv/db/version.h"
 #include "frenzykv/db/version_descriptor.h"
 
@@ -29,14 +31,15 @@ version_delta& version_delta::operator+=(version_delta other_delta)
     return *this;
 }
 
-version_rep::version_rep(::std::string_view desc_name)
-    : m_version_desc_name{ desc_name }
+version_rep::version_rep(::std::string_view desc_name, ::std::shared_ptr<env> e)
+    : m_version_desc_name{ desc_name }, m_env{ ::std::move(e) }
 {
 }
 
 version_rep::version_rep(const version_rep& other)
     : m_files{ other.m_files }, 
-      m_version_desc_name{ get_version_descriptor_name() }
+      m_version_desc_name{ get_version_descriptor_name() }, 
+      m_env{ other.m_env }
 {
 }
 
@@ -60,12 +63,35 @@ version_rep& version_rep::operator+=(const version_delta& delta)
     return *this;
 }
 
+::std::ptrdiff_t version_rep::deref() noexcept
+{
+    toolpex_assert(!!m_env);
+    const auto result = m_ref--;
+    if (result == 1)
+    try 
+    {
+        m_files = {};
+        [] (auto p) ->koios::task<> { 
+            koios::uring::unlink(::std::move(p)); 
+            co_return;
+        }(m_env->version_path()/version_desc_name()).run();
+    }
+    catch (koios::exception& e)
+    {
+        e.log();
+    }
+
+    return result;
+}
+
 koios::task<mutable_version_guard> version_center::add_new_version()
 {
     auto lk = co_await m_modify_lock.acquire();
+    erase_if(m_versions, [](const auto& v) { return v.outdated(); });
     auto& new_ver = m_versions.emplace_back(m_versions.back());
     new_ver.set_version_desc_name(get_version_descriptor_name());
     m_current = { new_ver };
+
     co_return { ::std::move(lk), m_current };
 }
 
@@ -76,12 +102,15 @@ koios::lazy_task<> version_center::load_current_version()
     toolpex_assert(m_versions.empty());
 
     const auto& deps = m_file_center->deps();
+    auto env = m_file_center->deps().env();
 
     // Load current version
     version_delta delta = co_await get_current_version(deps, m_file_center);
-    m_current = (m_versions.emplace_back((co_await current_descriptor_name(deps)).value_or(get_version_descriptor_name())) += delta);
+
+    version_rep v((co_await current_descriptor_name(deps)).value_or(get_version_descriptor_name()), env);
+    m_current = (m_versions.emplace_back(::std::move(v)) += delta);
+
     const ::std::string_view cvd_name = m_current.version_desc_name();
-    auto env = m_file_center->deps().env();
     
     // Load other versions for GC
     for (const auto& dir_entry : fs::directory_iterator(env->version_path()))
@@ -89,7 +118,7 @@ koios::lazy_task<> version_center::load_current_version()
         if (const auto name = dir_entry.path().filename().string(); 
             name != cvd_name && is_version_descriptor_name(name))
         {
-            m_versions.emplace_front(name) += co_await get_version(deps, name, m_file_center);
+            m_versions.emplace_front(name, env) += co_await get_version(deps, name, m_file_center);
         }
     }
 }

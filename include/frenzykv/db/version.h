@@ -81,14 +81,14 @@ private:
 class version_rep
 {
 public:
-    version_rep(::std::string_view desc_name);
+    version_rep(::std::string_view desc_name, ::std::shared_ptr<env> e);
 
     // It should be copyable, used by creating a nwe version based on an old one.
     version_rep(const version_rep& other);
 
     const auto& files() const noexcept { return m_files; }
     auto ref() noexcept { return m_ref++; }
-    auto deref() noexcept { return m_ref--; }
+    ::std::ptrdiff_t deref() noexcept; 
     version_rep& operator+=(const version_delta& delta);
     version_rep& apply(const version_delta& delta)
     {
@@ -102,11 +102,13 @@ public:
     
     ::std::string_view version_desc_name() const noexcept { toolpex_assert(!m_version_desc_name.empty()); return m_version_desc_name; }
     auto approx_ref_count() const noexcept { return m_ref.load(::std::memory_order_relaxed); }
+    bool outdated() const noexcept { return approx_ref_count() == 0; }
 
 private:
     ::std::vector<file_guard> m_files;
     toolpex::ref_count m_ref;
     ::std::string m_version_desc_name;
+    ::std::shared_ptr<env> m_env;
 };
 
 class version_guard : public toolpex::move_only
