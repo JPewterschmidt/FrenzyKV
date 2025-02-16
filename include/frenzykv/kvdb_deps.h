@@ -9,6 +9,9 @@
 #include <memory>
 #include <atomic>
 #include <functional>
+
+#include "koios/wait_group.h"
+
 #include "frenzykv/options.h"
 #include "frenzykv/env.h"
 #include "frenzykv/statistics.h"
@@ -52,13 +55,15 @@ public:
     const auto opt() const noexcept { return m_opt; }
     const auto env() const noexcept { return m_env.load(::std::memory_order_relaxed); } 
     auto stat()      const noexcept { return m_stat.load(::std::memory_order_relaxed); }
+    auto get_flying_wait_group_guard() const noexcept { return koios::wait_group_guard{ m_wait_group }; }
 
     // XXX Do not add any set_* function, see kvdb_deps_manipulator
 
 private: // Deps
     ::std::shared_ptr<options> m_opt;
-    ::std::atomic<::std::shared_ptr<frenzykv::env>>         m_env;
-    ::std::atomic<::std::shared_ptr<statistics>>  m_stat;
+    ::std::atomic<::std::shared_ptr<frenzykv::env>> m_env;
+    ::std::atomic<::std::shared_ptr<statistics>> m_stat;
+    mutable koios::wait_group m_wait_group;
 };
 
 class kvdb_deps_manipulator
