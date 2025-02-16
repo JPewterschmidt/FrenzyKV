@@ -22,13 +22,6 @@ koios::lazy_task<> garbage_collector::do_GC() const
     if (!lk_opt)
         co_return;
 
-    auto delete_garbage_version_desc = [env = this->m_deps->env()](const auto& vrep) -> koios::task<> { 
-        assert(vrep.approx_ref_count() == 0);
-        co_await koios::uring::unlink(env->version_path()/vrep.version_desc_name());
-    };
-
-    // delete those garbage version descriptor files
-    co_await m_version_center->GC_with(delete_garbage_version_desc);
     co_await m_file_center->GC();
 }
 
