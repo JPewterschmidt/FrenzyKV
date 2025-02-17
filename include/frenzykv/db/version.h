@@ -155,6 +155,7 @@ public:
     bool valid() const noexcept { return !!m_rep; }
 
     const auto& rep() const noexcept { toolpex_assert(m_rep); return *m_rep; }
+    auto& rep() noexcept { toolpex_assert(m_rep); return *m_rep; }
     decltype(auto) version_desc_name() const noexcept { return rep().version_desc_name(); }
 
     const auto& operator*() const noexcept { return rep(); }
@@ -233,6 +234,7 @@ class version_center
 {
 public:
     version_center(file_center& fc) noexcept;
+    ~version_center() noexcept { prepare_dbclose(); }
     version_center(version_center&& other) noexcept;
     version_center& operator=(version_center&& other) noexcept;
 
@@ -259,6 +261,8 @@ public:
     koios::task<size_t> size() const;
 
 private:
+    void prepare_dbclose() noexcept;
+
     static bool is_garbage_in_mem(const version_rep& vg)
     {
         return vg.approx_ref_count() == 0;

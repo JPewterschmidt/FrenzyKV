@@ -166,4 +166,9 @@ koios::task<size_t> version_center::size() const
     co_return m_versions.size();
 }
 
+void version_center::prepare_dbclose() noexcept
+{
+    m_current.rep().ref();
+}
+
 } // namespace frenzykv
