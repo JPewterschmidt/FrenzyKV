@@ -89,7 +89,7 @@ public:
     bool empty() const noexcept;
 
 private:
-    koios::task<bool> flush_current_block(bool need_flush = true);
+    koios::task<bool> flush_current_block(bool need_flush = false);
     void swap(sstable_builder&& other);
 
 private:

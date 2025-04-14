@@ -144,7 +144,7 @@ koios::task<bool> sstable_builder::finish()
 
     if (!m_block_builder.was_finish())
     {
-        co_await flush_current_block(false); // wont flush.
+        co_await flush_current_block(); // wont flush.
     }
 
     if (empty())
@@ -165,7 +165,7 @@ koios::task<bool> sstable_builder::finish()
     m_block_builder = ::std::move(meta_builder);
 
     const mbo_t mbo = m_bytes_appended_to_file;
-    co_await flush_current_block(false);
+    co_await flush_current_block();
 
     ::std::array<::std::byte, sizeof(mbo) + sizeof(magic_number)> mbo_and_magic_number_buffer{};
     toolpex::encode_big_endian_to(mbo, mbo_and_magic_number_buffer);

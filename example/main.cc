@@ -158,4 +158,5 @@ int main(int argc, char** argv)
     //f2.get();
     
     koios::runtime_exit();
+    ::std::cout << "shit flushed out!" << ::std::endl;
 }
