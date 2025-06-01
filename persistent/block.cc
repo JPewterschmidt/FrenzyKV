@@ -97,9 +97,7 @@ bool block_segment::fit_public_prefix(const_bspan user_prefix) const noexcept
 
 bool block_segment::larger_equal_than_this_public_prefix(const_bspan user_prefix) const noexcept
 {
-    auto cmp_ret = memcmp_comparator{}(
-        user_prefix, m_prefix.subspan(0, user_prefix.size())
-    );
+    auto cmp_ret = memcmp_comparator{}(user_prefix, m_prefix);
 
     return cmp_ret == ::std::strong_ordering::greater
         || cmp_ret == ::std::strong_ordering::equal;

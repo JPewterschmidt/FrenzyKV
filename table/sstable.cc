@@ -158,8 +158,10 @@ sstable::get_block(uintmax_t offset, btl_t btl) const
     ::std::optional<block> result{};
 
     buffer<> buff{btl + 10}; // extra bytes to avoid unknow reason buffer overflow.
+    auto writable_sp = buff.writable_span();
+    toolpex_assert(writable_sp.size() >= btl);
     
-    size_t readed = co_await m_file->read(buff.writable_span().subspan(0, btl), offset);
+    size_t readed = co_await m_file->read(writable_sp.subspan(0, btl), offset);
     toolpex_assert(readed == btl);
     buff.commit(readed);
 
@@ -201,7 +203,7 @@ get_segment(const sequenced_key& user_key_ignore_seq) const
           });
 
     auto last_block_opt = co_await *begin(blk_aws);
-    for (auto [blk0aw, blk1aw] : blk_aws | rv::adjacent<2>)
+    for (auto [blk0aw, blk1aw] : blk_aws | ::std::views::pairwise)
     {
         auto blk0_opt = co_await blk0aw;
         auto blk1_opt = co_await blk1aw;
